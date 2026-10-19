@@ -23,7 +23,6 @@ public class TheLastCheckIn : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
 
-		// Game code includes headers relative to the module root, e.g. #include "Player/TheLastCheckInCharacter.h"
 		PublicIncludePaths.AddRange(new string[] {
 			"TheLastCheckIn",
 			// Template variant samples kept for reference only

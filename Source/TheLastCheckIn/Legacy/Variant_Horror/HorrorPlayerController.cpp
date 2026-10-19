@@ -5,7 +5,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
 #include "InputMappingContext.h"
-#include "Player/TheLastCheckInCameraManager.h"
+#include "TheLastCheckInCameraManager.h"
 #include "HorrorCharacter.h"
 #include "HorrorUI.h"
 #include "TheLastCheckIn.h"

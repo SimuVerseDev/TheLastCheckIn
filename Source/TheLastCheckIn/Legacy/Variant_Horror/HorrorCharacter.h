@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Player/TheLastCheckInCharacter.h"
+#include "TheLastCheckInCharacter.h"
 #include "HorrorCharacter.generated.h"
 
 class USpotLightComponent;
