@@ -1,11 +1,11 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 
-#include "Variant_Horror/HorrorPlayerController.h"
+#include "Legacy/Variant_Horror/HorrorPlayerController.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
 #include "InputMappingContext.h"
-#include "TheLastCheckInCameraManager.h"
+#include "Player/TheLastCheckInCameraManager.h"
 #include "HorrorCharacter.h"
 #include "HorrorUI.h"
 #include "TheLastCheckIn.h"

@@ -23,14 +23,16 @@ public class TheLastCheckIn : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
 
+		// Game code includes headers relative to the module root, e.g. #include "Player/TheLastCheckInCharacter.h"
 		PublicIncludePaths.AddRange(new string[] {
 			"TheLastCheckIn",
-			"TheLastCheckIn/Variant_Horror",
-			"TheLastCheckIn/Variant_Horror/UI",
-			"TheLastCheckIn/Variant_Shooter",
-			"TheLastCheckIn/Variant_Shooter/AI",
-			"TheLastCheckIn/Variant_Shooter/UI",
-			"TheLastCheckIn/Variant_Shooter/Weapons"
+			// Template variant samples kept for reference only
+			"TheLastCheckIn/Legacy/Variant_Horror",
+			"TheLastCheckIn/Legacy/Variant_Horror/UI",
+			"TheLastCheckIn/Legacy/Variant_Shooter",
+			"TheLastCheckIn/Legacy/Variant_Shooter/AI",
+			"TheLastCheckIn/Legacy/Variant_Shooter/UI",
+			"TheLastCheckIn/Legacy/Variant_Shooter/Weapons"
 		});
 
 		// Uncomment if you are using Slate UI
