@@ -1,0 +1,68 @@
+# =========================================================
+#  Perforce ignore for Unreal Engine 5 (TheLastCheckIn)
+#  Activate with:  p4 set P4IGNORE=.p4ignore
+#  Hybrid VCS: Perforce = Content/, Git = Source/Config/.uproject
+# =========================================================
+
+# ---------- Code & config are managed by Git ----------
+Source/
+Config/
+*.uproject
+README.md
+.vsconfig
+.p4ignore
+
+# ---------- UE generated / cache folders ----------
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+Plugins/**/Saved/
+Plugins/**/DerivedDataCache/
+
+# Builds (keep PakBlacklist and icons)
+Build/**
+!Build/**/PakBlacklist*.txt
+!Build/**/*.ico
+
+# ---------- IDE / generated project files ----------
+.vs/
+.vscode/
+.idea/
+*.sln
+*.slnx
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+*.code-workspace
+*.DotSettings.user
+*.xcodeproj
+*.xcworkspace
+
+# ---------- Compiled output ----------
+*.o
+*.pch
+*.ipch
+*.pdb
+*.exp
+*.ilk
+*.tmp
+
+# ---------- Git metadata (when Git and P4 share the same root) ----------
+.git/
+.gitignore
+.gitattributes
+
+# ---------- OS / misc ----------
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.bak
+*.log
+
+# ---------- Tool-local config ----------
+.claude/settings.local.json
