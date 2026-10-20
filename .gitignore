@@ -1,13 +1,7 @@
 # =========================================================
 #  Unreal Engine 5 C++ Project .gitignore (TheLastCheckIn)
-#  Hybrid VCS: Git = Source/Config/.uproject, Perforce = Content/
+#  Assets (Content/) are tracked with Git LFS — see .gitattributes
 # =========================================================
-
-# ---------- Assets are managed by Perforce (P4V) ----------
-Content/
-Plugins/**/Content/
-*.uasset
-*.umap
 
 # ---------- UE generated / cache folders ----------
 Binaries/
