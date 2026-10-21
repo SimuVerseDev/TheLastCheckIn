@@ -1,11 +1,12 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Housekeeping/Interaction/HKInteractable.h"
 #include "HKBlanketActor.generated.h"
 class UProceduralMeshComponent;
 class UMaterialInterface;
 UCLASS()
-class AHKBlanketActor : public AActor
+class AHKBlanketActor : public AActor, public IHKInteractable
 {
 	GENERATED_BODY()
 public:
