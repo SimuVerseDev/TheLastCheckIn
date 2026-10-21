@@ -17,7 +17,7 @@ UHKInteractionComponent::UHKInteractionComponent()
 	{
 		InteractAction = InteractFinder.Object;
 	}
-	static ConstructorHelpers::FObjectFinder<UInputAction> UseFinder(TEXT("/Game/Input/Actions/IA_Use"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> UseFinder(TEXT("/Game/Input/Actions/IA_Use.IA_Use"));
 	if (UseFinder.Succeeded())
 	{
 		UseAction = UseFinder.Object;

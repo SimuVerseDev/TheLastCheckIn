@@ -33,4 +33,11 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Housekeeping|Interaction")
 	void OnInteractFocusEnd(AActor* Interactor);
+	
+	virtual bool CanInteract_Implementation(AActor* Interactor) const;
+	virtual FText GetInteractPrompt_Implementation(AActor* Interactor) const;
+	virtual float GetInteractHoldDuration_Implementation(AActor* Interactor) const;
+	virtual void Interact_Implementation(AActor* Interactor);
+	virtual void OnInteractFocusBegin_Implementation(AActor* Interactor);
+	virtual void OnInteractFocusEnd_Implementation(AActor* Interactor);
 };
