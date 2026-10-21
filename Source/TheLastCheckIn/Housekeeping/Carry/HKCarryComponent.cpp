@@ -1,7 +1,5 @@
 ﻿#include "Components/PrimitiveComponent.h"
 #include "Housekeeping/Carry/HKCarryComponent.h"
-
-#include "ShaderCompilerJobTypes.h"
 #include "Housekeeping/Carry/HKPhysicsPickupActor.h"
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "GameFramework/Pawn.h"
@@ -14,7 +12,7 @@ UHKCarryComponent::UHKCarryComponent()
 }
 
 /*
-virual
+virtual
 */
 void UHKCarryComponent::BeginPlay()
 {
@@ -31,7 +29,25 @@ void UHKCarryComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void UHKCarryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
-	
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	if (!IsCarrying())
+	{
+		return;
+	}
+	FVector HoldLocation;
+	FRotator ViewRotation;
+	if (!IsValid(CarriedComponent) || !CarriedComponent->IsSimulatingPhysics() || !GetViewTransform(HoldLocation, ViewRotation))
+	{
+		Release(false);
+		return;
+	}
+	if (FVector::Dist(CarriedComponent->GetComponentLocation(), HoldLocation) > BreakDistance)
+	{
+		Release(false);
+		return;
+	}
+	const FQuat YawQuat = FRotator(0.0f, ViewRotation.Yaw, 0.0f).Quaternion();
+	PhysicsHandle->SetTargetLocationAndRotation(HoldLocation, (YawQuat * RotationOffset).Rotator());
 }
 
 bool UHKCarryComponent::TryPickup(UPrimitiveComponent* Target)

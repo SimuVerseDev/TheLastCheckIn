@@ -62,7 +62,7 @@ private:
 	void Release(bool bThrown);
 	
 	/*
-	댕글링 포인터 방지용 transient : Transient 지정자를 포함한 UPROPERTY는 휘발성 데이터로 지정
+	댕글링 포인터 방지용 UPROPERTY : Transient 지정자를 포함한 UPROPERTY는 휘발성 데이터로 지정
 	*/
 	UPROPERTY(Transient)
 	TObjectPtr<UPhysicsHandleComponent> PhysicsHandle;
