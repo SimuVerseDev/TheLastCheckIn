@@ -1,5 +1,4 @@
 ﻿#include "Housekeeping/Carry/HKPhysicsPickupActor.h"
-#include "Housekeeping/Carry/HKCarryComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "UObject/ConstructorHelpers.h"
@@ -21,7 +20,7 @@ AHKPhysicsPickupActor::AHKPhysicsPickupActor()
 		Mesh->SetStaticMesh(CubeMesh.Object);
 		Mesh->SetRelativeScale3D(FVector(0.3f));
 	}
-	InteractPrompt = NSLOCTEXT("Housekeeping", "PickupPrompt", "줍기");
+	PickupPrompt = NSLOCTEXT("Housekeeping", "PickupPrompt", "잡기");
 }
 
 void AHKPhysicsPickupActor::NotifyPickedUp(AActor* InCarrier)
@@ -36,20 +35,7 @@ void AHKPhysicsPickupActor::NotifyReleased(bool bThrown)
 	BP_OnReleased(bThrown);
 }
 
-bool AHKPhysicsPickupActor::CanInteract_Implementation(AActor* Interactor) const
+bool AHKPhysicsPickupActor::CanBePickedUp() const
 {
 	return bCanBePickedUp && !IsCarried() && Mesh->IsSimulatingPhysics();
-}
-
-FText AHKPhysicsPickupActor::GetInteractPrompt_Implementation(AActor* Interactor) const
-{
-	return InteractPrompt;
-}
-
-void AHKPhysicsPickupActor::Interact_Implementation(AActor* Interactor)
-{
-	if (UHKCarryComponent* Carry = Interactor ? Interactor->FindComponentByClass<UHKCarryComponent>() : nullptr)
-	{
-		Carry->TryPickup(Mesh);
-	}
 }

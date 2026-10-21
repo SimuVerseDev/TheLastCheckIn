@@ -46,6 +46,12 @@ void UHKCarryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 		Release(false);
 		return;
 	}
+	if (DeltaTime > KINDA_SMALL_NUMBER)
+	{
+		const FVector FrameVelocity = (HoldLocation - LastHoldLocation) / DeltaTime;
+		HoldVelocity = FMath::VInterpTo(HoldVelocity, FrameVelocity, DeltaTime, 20.0f);
+	}
+	LastHoldLocation = HoldLocation;
 	const FQuat YawQuat = FRotator(0.0f, ViewRotation.Yaw, 0.0f).Quaternion();
 	PhysicsHandle->SetTargetLocationAndRotation(HoldLocation, (YawQuat * RotationOffset).Rotator());
 }
@@ -69,6 +75,8 @@ bool UHKCarryComponent::TryPickup(UPrimitiveComponent* Target)
 		return false;
 	}
 	CarriedComponent = Target;
+	LastHoldLocation = HoldLocation;
+	HoldVelocity = FVector::ZeroVector;
 	const FQuat YawQuat = FRotator(0.0f, ViewRotation.Yaw, 0.0f).Quaternion();
 	RotationOffset = YawQuat.Inverse() * Target->GetComponentQuat();
 	
@@ -85,13 +93,6 @@ bool UHKCarryComponent::TryPickup(UPrimitiveComponent* Target)
 }
 
 void UHKCarryComponent::Drop()
-{
-	if (IsCarrying())
-	{
-		Release(false);
-	}
-}
-void UHKCarryComponent::Throw()
 {
 	if (IsCarrying())
 	{
@@ -113,7 +114,7 @@ bool UHKCarryComponent::GetViewTransform(FVector& OutHoldLocation, FRotator& Out
 	return true;
 }
 
-void UHKCarryComponent::Release(bool bThrown)
+void UHKCarryComponent::Release(bool bInheritHandVelocity)
 {
 	UPrimitiveComponent* Released = CarriedComponent;
 	CarriedComponent = nullptr;
@@ -126,15 +127,14 @@ void UHKCarryComponent::Release(bool bThrown)
 		return;
 	}
 	Released->SetCollisionResponseToChannel(ECC_Pawn, SavedPawnResponse);
-	if (bThrown)
+	bool bThrown = false;
+	if (bInheritHandVelocity)
 	{
-		FVector HoldLocation;
-		FRotator ViewRotation;
-		if (GetViewTransform(HoldLocation, ViewRotation))
-		{
-			Released->AddImpulse(ViewRotation.Vector() * ThrowSpeed, NAME_None, true);
-		}
+		const FVector ThrowVelocity = (HoldVelocity * ThrowVelocityScale).GetClampedToMaxSize(MaxThrowSpeed);
+		Released->SetPhysicsLinearVelocity(ThrowVelocity);
+		bThrown = ThrowVelocity.Size() >= ThrowSpeedThreshold;
 	}
+	HoldVelocity = FVector::ZeroVector;
 	OnReleased.Broadcast(Released, bThrown);
 	if (AHKPhysicsPickupActor* Pickup = Cast<AHKPhysicsPickupActor>(Released->GetOwner()))
 	{

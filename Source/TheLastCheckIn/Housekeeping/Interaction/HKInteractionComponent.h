@@ -6,6 +6,7 @@
 class UInputAction;
 class UEnhancedInputComponent;
 class UHKCarryComponent;
+class AHKPhysicsPickupActor;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHKOnFocusChanged, AActor*, NewFocus, const FText&, Prompt);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnHoldProgress, float, Alpha);
 UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
@@ -51,6 +52,8 @@ protected:
 private:
 	APlayerController* GetOwningPlayerController() const;
 	UHKCarryComponent* GetCarryComponent() const;
+	AHKPhysicsPickupActor* GetFocusedPickup() const;
+	static bool IsInteractable(AActor* Actor);
 
 	void EnsureInputSetup(APlayerController* PC);
 	void UpdateFocus(APlayerController* PC);
@@ -60,6 +63,7 @@ private:
 	void ShowDebugPrompt() const;
 	void HandleInteractStarted();
 	void HandleUseStarted();
+	void HandleUseCompleted();
 
 	bool IsActionKeyDown(const UInputAction* Action) const;
 	UPROPERTY(Transient)

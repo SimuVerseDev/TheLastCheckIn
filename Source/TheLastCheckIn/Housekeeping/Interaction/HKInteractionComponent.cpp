@@ -1,6 +1,7 @@
 ﻿#include "Housekeeping/Interaction/HKInteractionComponent.h"
 #include "Housekeeping/Interaction/HKInteractable.h"
 #include "Housekeeping/Carry/HKCarryComponent.h"
+#include "Housekeeping/Carry/HKPhysicsPickupActor.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
@@ -69,6 +70,16 @@ UHKCarryComponent* UHKInteractionComponent::GetCarryComponent() const
 	return GetOwner()->FindComponentByClass<UHKCarryComponent>();
 }
 
+AHKPhysicsPickupActor* UHKInteractionComponent::GetFocusedPickup() const
+{
+	return Cast<AHKPhysicsPickupActor>(FocusedActor.Get());
+}
+
+bool UHKInteractionComponent::IsInteractable(AActor* Actor)
+{
+	return Actor && Actor->Implements<UHKInteractable>();
+}
+
 void UHKInteractionComponent::EnsureInputSetup(APlayerController* PC)
 {
 	if (InputOwner.Get() == PC)
@@ -90,6 +101,7 @@ void UHKInteractionComponent::EnsureInputSetup(APlayerController* PC)
 		if (UseAction)
 		{
 			InteractionInput->BindAction(UseAction, ETriggerEvent::Started, this, &UHKInteractionComponent::HandleUseStarted);
+			InteractionInput->BindAction(UseAction, ETriggerEvent::Completed, this, &UHKInteractionComponent::HandleUseCompleted);
 		}
 	}
 	PC->PushInputComponent(InteractionInput);
@@ -119,7 +131,12 @@ void UHKInteractionComponent::UpdateFocus(APlayerController* PC)
 	FHitResult Hit;
 	const bool bHit = GetWorld()->SweepSingleByChannel(Hit, ViewLocation, TraceEnd, FQuat::Identity, TraceChannel, FCollisionShape::MakeSphere(TraceRadius), Params);
 	AActor* HitActor = bHit ? Hit.GetActor() : nullptr;
-	if (HitActor && HitActor->Implements<UHKInteractable>() && IHKInteractable::Execute_CanInteract(HitActor, Pawn))
+	const AHKPhysicsPickupActor* Pickup = Cast<AHKPhysicsPickupActor>(HitActor);
+	if (IsInteractable(HitActor) && IHKInteractable::Execute_CanInteract(HitActor, Pawn))
+	{
+		SetFocus(HitActor);
+	}
+	else if (Pickup && Pickup->CanBePickedUp())
 	{
 		SetFocus(HitActor);
 	}
@@ -137,17 +154,21 @@ void UHKInteractionComponent::SetFocus(AActor* NewFocus)
 		return;
 	}
 	AActor* Pawn = GetOwner();
-	if (OldFocus)
+	if (IsInteractable(OldFocus))
 	{
 		IHKInteractable::Execute_OnInteractFocusEnd(OldFocus, Pawn);
 	}
 	FocusedActor = NewFocus;
 	CancelHold();
 	FText Prompt;
-	if (NewFocus)
+	if (IsInteractable(NewFocus))
 	{
 		IHKInteractable::Execute_OnInteractFocusBegin(NewFocus, Pawn);
 		Prompt = IHKInteractable::Execute_GetInteractPrompt(NewFocus, Pawn);
+	}
+	else if (const AHKPhysicsPickupActor* Pickup = Cast<AHKPhysicsPickupActor>(NewFocus))
+	{
+		Prompt = Pickup->GetPickupPrompt();
 	}
 	OnFocusChanged.Broadcast(NewFocus, Prompt);
 }
@@ -196,9 +217,13 @@ void UHKInteractionComponent::ShowDebugPrompt() const
 	const UHKCarryComponent* Carry = GetCarryComponent();
 	if (Carry && Carry->IsCarrying())
 	{
-		Message = TEXT("[E] 놓기   [LMB] 던지기");
+		Message = TEXT("[LMB 떼기] 놓기");
 	}
-	else if (AActor* Target = FocusedActor.Get())
+	else if (const AHKPhysicsPickupActor* Pickup = GetFocusedPickup())
+	{
+		Message = FString::Printf(TEXT("[LMB] %s"), *Pickup->GetPickupPrompt().ToString());
+	}
+	else if (AActor* Target = FocusedActor.Get(); IsInteractable(Target))
 	{
 		Message = FString::Printf(TEXT("[E] %s"), *IHKInteractable::Execute_GetInteractPrompt(Target, GetOwner()).ToString());
 	}
@@ -211,20 +236,9 @@ void UHKInteractionComponent::ShowDebugPrompt() const
 
 void UHKInteractionComponent::HandleInteractStarted()
 {
-	//1
 	AActor* Pawn = GetOwner();
-	if (UHKCarryComponent* Carry = GetCarryComponent())
-	{
-		if (Carry->IsCarrying())
-		{
-			Carry->Drop();
-			return;
-		}
-	}
-	
-	//2
 	AActor* Target = FocusedActor.Get();
-	if (!Target || !IHKInteractable::Execute_CanInteract(Target, Pawn))
+	if (!IsInteractable(Target) || !IHKInteractable::Execute_CanInteract(Target, Pawn))
 	{
 		return;
 	}
@@ -243,9 +257,19 @@ void UHKInteractionComponent::HandleInteractStarted()
 
 void UHKInteractionComponent::HandleUseStarted()
 {
+	UHKCarryComponent* Carry = GetCarryComponent();
+	AHKPhysicsPickupActor* Pickup = GetFocusedPickup();
+	if (Carry && Pickup && Pickup->CanBePickedUp())
+	{
+		Carry->TryPickup(Pickup->GetMesh());
+	}
+}
+
+void UHKInteractionComponent::HandleUseCompleted()
+{
 	if (UHKCarryComponent* Carry = GetCarryComponent())
 	{
-		Carry->Throw();
+		Carry->Drop();
 	}
 }
 
