@@ -3,6 +3,7 @@
 #include "Components/ActorComponent.h"
 #include "HKCarryComponent.generated.h"
 
+class AHKBlanketActor;
 class UPhysicsHandleComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnPickedUp, UPrimitiveComponent*, Component);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHKOnReleased, UPrimitiveComponent*, Component, bool, bThrown);
@@ -71,6 +72,10 @@ private:
 	TObjectPtr<UPhysicsHandleComponent> PhysicsHandle;
 	UPROPERTY(Transient)
 	TObjectPtr<UPrimitiveComponent> CarriedComponent;
+	/*
+	blanket
+	*/
+	TWeakObjectPtr<AHKBlanketActor> CarriedBlanket;
 	
 	FQuat RotationOffset = FQuat::Identity; // 몸을 돌리면 물체 방향도 같이 따라올 수 있도록 내 시선 기준으로 물체가 어떻게 돌아가는지 저장
 	TEnumAsByte<ECollisionResponse> SavedPawnResponse = ECR_Block;

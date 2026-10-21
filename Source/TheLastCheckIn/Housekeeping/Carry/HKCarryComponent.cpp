@@ -4,6 +4,7 @@
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/Controller.h"
+#include "Housekeeping/Carry/PickupActor/Blanket/HKBlanketActor.h"
 
 UHKCarryComponent::UHKCarryComponent()
 {
@@ -41,6 +42,33 @@ void UHKCarryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 		Release(false);
 		return;
 	}
+	
+	/*
+	if picking blanket
+	*/
+	if (CarriedBlanket.IsValid())
+	{
+		if (FVector::Dist(CarriedComponent->GetComponentLocation(), HoldLocation) > BreakDistance * 1.5f)
+		{
+			Release(false);
+			return;
+		}
+		if (DeltaTime > KINDA_SMALL_NUMBER)
+		{
+			const FVector FrameVelocity = (HoldLocation - LastHoldLocation) / DeltaTime;
+			HoldVelocity = FMath::VInterpTo(HoldVelocity, FrameVelocity, DeltaTime, 20.0f);
+		}
+		LastHoldLocation = HoldLocation;
+		CarriedBlanket->SetGrabTarget(HoldLocation);
+		return;
+	}
+	// else
+	if (!IsValid(CarriedComponent) || !CarriedComponent->IsSimulatingPhysics())
+	{
+		Release(false);
+		return;
+	}
+	
 	if (FVector::Dist(CarriedComponent->GetComponentLocation(), HoldLocation) > BreakDistance)
 	{
 		Release(false);
@@ -58,12 +86,8 @@ void UHKCarryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 
 bool UHKCarryComponent::TryPickup(UPrimitiveComponent* Target)
 {
-	if (IsCarrying() || !PhysicsHandle || !IsValid(Target) || !Target->IsSimulatingPhysics())
-	{
-		return false;
-	}
-	
-	if (Target->GetMass() > MaxCarryMass)
+	// 기존 코드의 맨 처음 있던 IsSimulatingPhysics() 조건은 이불 때문에 제거하거나 아래로 내려야 합니다.
+	if (IsCarrying() || !PhysicsHandle || !IsValid(Target))
 	{
 		return false;
 	}
@@ -74,16 +98,48 @@ bool UHKCarryComponent::TryPickup(UPrimitiveComponent* Target)
 	{
 		return false;
 	}
+	
+	/*
+	blanket
+	*/
+	if (AHKBlanketActor* Blanket = Cast<AHKBlanketActor>(Target->GetOwner()))
+	{
+		const FVector RayStart = HoldLocation;
+		const FVector RayEnd = RayStart + ViewRotation.Vector() * 300.0f; // * 기호 확인
+		
+		int32 ParticleIndex = Blanket->FindParticleNearRay(RayStart, RayEnd, 50.0f);
+		if (ParticleIndex == INDEX_NONE)
+		{
+			return false;
+		}
+
+		Blanket->Grab(ParticleIndex);
+		CarriedBlanket = Blanket;
+		CarriedComponent = Target;
+		LastHoldLocation = HoldLocation;
+		HoldVelocity = FVector::ZeroVector;
+		
+		OnPickedUp.Broadcast(Target);
+		return true;
+	}
+	
+	// else
+	if (!Target->IsSimulatingPhysics() || Target->GetMass() > MaxCarryMass)
+	{
+		return false;
+	}
+    
 	CarriedComponent = Target;
 	LastHoldLocation = HoldLocation;
 	HoldVelocity = FVector::ZeroVector;
 	const FQuat YawQuat = FRotator(0.0f, ViewRotation.Yaw, 0.0f).Quaternion();
-	RotationOffset = YawQuat.Inverse() * Target->GetComponentQuat();
-	
-	SavedPawnResponse = Target->GetCollisionResponseToChannel(ECC_Pawn); // Drop호출 시 원래 상태로 되돌리려면 Object가 원래 가지고 있던 플레이어와의 충돌반응 설정값 백업이 필요
+	RotationOffset = YawQuat.Inverse() * Target->GetComponentQuat(); // * 기호 확인
+    
+	SavedPawnResponse = Target->GetCollisionResponseToChannel(ECC_Pawn);
 	Target->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 	Target->WakeRigidBody();
 	PhysicsHandle->GrabComponentAtLocationWithRotation(Target, NAME_None, Target->GetComponentLocation(), Target->GetComponentRotation());
+	
 	if (AHKPhysicsPickupActor* Pickup = Cast<AHKPhysicsPickupActor>(Target->GetOwner()))
 	{
 		Pickup->NotifyPickedUp(GetOwner());
@@ -118,6 +174,21 @@ void UHKCarryComponent::Release(bool bInheritHandVelocity)
 {
 	UPrimitiveComponent* Released = CarriedComponent;
 	CarriedComponent = nullptr;
+	
+	/*
+	blanket
+	*/
+	if (AHKBlanketActor* Blanket = CarriedBlanket.Get())
+	{
+		CarriedBlanket.Reset();
+		const FVector ThrowVelocity = bInheritHandVelocity ? (HoldVelocity * ThrowVelocityScale).GetClampedToMaxSize(MaxThrowSpeed) : FVector::ZeroVector;
+		Blanket->Release(ThrowVelocity);
+		
+		HoldVelocity = FVector::ZeroVector;
+		OnReleased.Broadcast(Released, ThrowVelocity.Size() >= ThrowSpeedThreshold);
+		return;
+	}
+	
 	if (PhysicsHandle)
 	{
 		PhysicsHandle->ReleaseComponent();
