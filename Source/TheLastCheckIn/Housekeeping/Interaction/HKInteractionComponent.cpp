@@ -1,7 +1,7 @@
 ﻿#include "Housekeeping/Interaction/HKInteractionComponent.h"
 #include "Housekeeping/Interaction/HKInteractable.h"
 #include "Housekeeping/Carry/HKCarryComponent.h"
-#include "Housekeeping/Carry/HKPhysicsPickupActor.h"
+#include "Housekeeping/Carry/PickupActor/HKPhysicsPickupActor.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"

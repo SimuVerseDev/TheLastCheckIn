@@ -1,6 +1,6 @@
 ﻿#include "Housekeeping/Carry/HKCarryComponent.h"
 #include "Components/PrimitiveComponent.h"
-#include "Housekeeping/Carry/HKPhysicsPickupActor.h"
+#include "Housekeeping/Carry/PickupActor/HKPhysicsPickupActor.h"
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/Controller.h"

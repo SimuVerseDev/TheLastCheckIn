@@ -18,7 +18,10 @@ public class TheLastCheckIn : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
-			"Slate"
+			"Slate",
+			"UMG",
+			"Slate",
+			"ProceduralMeshComponent",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
