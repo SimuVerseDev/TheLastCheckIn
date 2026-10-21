@@ -4,6 +4,17 @@
 #include "Engine/DataTable.h"
 #include "GuestDataTypes.generated.h"
 
+//손님의 현재 행동 단계
+UENUM(BlueprintType)
+enum class EGuestState : uint8 
+{
+	MovingToCounter UMETA(DisplayName = "Moving To Counter"),
+	WaitingForCheckIn UMETA(DisplayName = "Waiting for Check In"),
+	MovingToRoom UMETA(DisplayName = "Moving To Room"),
+	Staying UMETA(DisplayName = "Staying")
+	
+};
+
 // 손님의 퇴실 방식 선택지 (자동, 플레이어의 요청, 랜덤)
 UENUM(BlueprintType)
 enum class EGuestCheckoutPolicy : uint8

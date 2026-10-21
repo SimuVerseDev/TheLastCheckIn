@@ -4,6 +4,29 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
 
+bool AGuestAIController::SetGuestMoveTarget(AActor* NewTarget)
+{
+	if (!IsValid(NewTarget))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] Move target is invalid."), *GetName());
+		
+		return false;
+	}
+	
+	UBlackboardComponent* BlackboardComponent = GetBlackboardComponent();
+	
+	if (BlackboardComponent == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] Blackboard component is not initialized."), *GetName());
+		
+		return false;
+	}
+	
+	BlackboardComponent->SetValueAsObject(TEXT("TargetActor"),NewTarget);
+	
+	return true;
+}
+
 void AGuestAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
@@ -23,12 +46,7 @@ void AGuestAIController::OnPossess(APawn* InPawn)
 		BehaviorTree -> BlackboardAsset == nullptr ||
 		MoveTarget == nullptr)
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[%s] Behavior Tree, Blackboard, or target is missing."),
-			*GetName()
-		);
+		UE_LOG(LogTemp, Warning, TEXT("[%s] Behavior Tree, Blackboard, or target is missing."), *GetName());
 
 		return;
 	}
@@ -39,12 +57,7 @@ void AGuestAIController::OnPossess(APawn* InPawn)
 		BehaviorTree->BlackboardAsset,
 		BlackboardComponent))
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[%s] Failed to initialize Blackboard."),
-			*GetName()
-		);
+		UE_LOG(LogTemp, Warning, TEXT("[%s] Failed to initialize Blackboard."), *GetName());
 
 		return;
 	}
@@ -54,12 +67,7 @@ void AGuestAIController::OnPossess(APawn* InPawn)
 	// 목적지를 등록한 뒤 행동 트리를 시작
 	if (!RunBehaviorTree(BehaviorTree))
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[%s] Failed to start Behavior Tree."),
-			*GetName()
-		);
+		UE_LOG(LogTemp, Warning, TEXT("[%s] Failed to start Behavior Tree."), *GetName());
 	}
 	
 	
