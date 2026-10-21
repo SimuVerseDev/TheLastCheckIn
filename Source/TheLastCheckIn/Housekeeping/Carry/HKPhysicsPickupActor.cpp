@@ -23,3 +23,33 @@ AHKPhysicsPickupActor::AHKPhysicsPickupActor()
 	}
 	InteractPrompt = NSLOCTEXT("Housekeeping", "PickupPrompt", "줍기");
 }
+
+void AHKPhysicsPickupActor::NotifyPickedUp(AActor* InCarrier)
+{
+	Carrier = InCarrier;
+	BP_OnPickedUp(InCarrier);
+}
+
+void AHKPhysicsPickupActor::NotifyReleased(bool bThrown)
+{
+	Carrier.Reset();
+	BP_OnReleased(bThrown);
+}
+
+bool AHKPhysicsPickupActor::CanInteract_Implementation(AActor* Interactor) const
+{
+	return bCanBePickedUp && !IsCarried() && Mesh->IsSimulatingPhysics();
+}
+
+FText AHKPhysicsPickupActor::GetInteractPrompt_Implementation(AActor* Interactor) const
+{
+	return InteractPrompt;
+}
+
+void AHKPhysicsPickupActor::Interact_Implementation(AActor* Interactor)
+{
+	if (UHKCarryComponent* Carry = Interactor ? Interactor->FindComponentByClass<UHKCarryComponent>() : nullptr)
+	{
+		Carry->TryPickup(Mesh);
+	}
+}
