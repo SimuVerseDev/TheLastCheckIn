@@ -36,34 +36,51 @@ protected:
 	*/
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UProceduralMeshComponent> Mesh;
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Shape", meta=(Units="cm"))
 	FVector2D Size = FVector2D(200.0f, 220.0f);
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Shape", meta=(ClampMin=2, ClampMax=64))
 	int32 SegmentsX = 20;
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Shape", meta=(ClampMin=2, ClampMax=64))
 	int32 SegmentsY = 22;
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Shape", meta=(ClampMin=0, Units="cm"))
 	float Thickness = 4.0f;
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Shape")
 	TObjectPtr<UMaterialInterface> Material;
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=1, ClampMax=32))
 	int32 SolverIterations = 8;
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
 	float Damping = 0.02f;
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
 	float StretchStiffness = 1.0f;
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
 	float ShearStiffness = 0.6f;
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
 	float BendStiffness = 0.1f;
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
 	float Friction = 0.6f;
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm/s"))
 	float MaxReleaseSpeed = 1500.0f;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Blanket")
 	FText GrabPrompt;
+	
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm"))
+	float CollisionOffset = 2.0f;
 	
 private:
 	struct FDistanceConstraint

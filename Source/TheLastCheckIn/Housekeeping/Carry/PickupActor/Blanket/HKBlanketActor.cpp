@@ -123,9 +123,8 @@ void AHKBlanketActor::BuildConstraints()
 void AHKBlanketActor::Step(float Dt)
 {
 	const int32 Total = Positions.Num();
-	const FVector Gravity(0.0f, 0.0f, -980.05f); // cm 단위 중력
-
-	// 1. Verlet Integration (위치 업데이트 및 중력 적용)
+	const FVector Gravity(0.0f, 0.0f, -980.05f);
+	
 	for (int32 I = 0; I < Total; ++I)
 	{
 		if (I == GrabbedIndex)
@@ -138,20 +137,19 @@ void AHKBlanketActor::Step(float Dt)
 		Positions[I] += Velocity + Gravity * (Dt * Dt);
 		PrevPositions[I] = Temp;
 	}
-
-	// 잡힌 점 위치 강제 고정
+	
 	if (GrabbedIndex != INDEX_NONE && Positions.IsValidIndex(GrabbedIndex))
 	{
 		PrevPositions[GrabbedIndex] = Positions[GrabbedIndex];
 		Positions[GrabbedIndex] = GrabTarget;
 	}
-
-	// 2. Constraints & Collisions 반복 해결
+	
 	for (int32 Iter = 0; Iter < SolverIterations; ++Iter)
 	{
 		SolveConstraints();
-		SolveCollisions();
+		
 	}
+	SolveCollisions();
 }
 
 void AHKBlanketActor::SolveConstraints()
@@ -177,23 +175,56 @@ void AHKBlanketActor::SolveConstraints()
 
 void AHKBlanketActor::SolveCollisions()
 {
-	// 월드 레이캐스트 등을 통한 간단한 바닥/침대 충돌 처리 자리 (기본 높이 Z=0 평면 예시 혹은 콜리전 탐색)
-	const int32 Total = Positions.Num();
-	for (int32 I = 0; I < Total; ++I)
+	UWorld* World = GetWorld();
+	if (!World)
 	{
-		if (I == GrabbedIndex) continue;
+		return;
+	}
+	
+	/*
+	고정된 물체(ECC_WorldStatic)와 움직이는 물체(ECC_WorldDynamic)를 대상으로 충돌을 감지, 자기자신은 제외
+	*/
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
+	ObjectParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+	
+	const FCollisionQueryParams Params(SCENE_QUERY_STAT(HKBlanketCollision), false, this);
+	
+	const float SurfaceOffset = Thickness * 0.5f + CollisionOffset;
 
-		FVector& Pos = Positions[I];
-		// 단순 바닥 예시 (추후 침대 높이나 바닥 높이에 맞게 조정 가능)
-		const float FloorZ = Thickness * 0.5f;
-		if (Pos.Z < FloorZ)
+	/*
+	각 파티클이 이전 위치에서 현재 위치로 이동한 궤적을 바탕으로 라인 트레이스 발사
+	*/
+	for (int32 I = 0; I < Positions.Num(); ++I)
+	{
+		if (I == GrabbedIndex)
 		{
-			const FVector Prev = PrevPositions[I];
-			Pos.Z = FloorZ;
-			// 마찰력 적용
-			FVector TangentVel = (Pos - Prev);
-			TangentVel.Z = 0.0f;
-			Pos -= TangentVel * Friction;
+			continue;
+		}
+		FVector& Pos = Positions[I];
+		const FVector Start = PrevPositions[I];
+		const FVector Move = Pos - Start;
+		
+		if (Move.IsNearlyZero())
+		{
+			continue;
+		}
+		const FVector End = Pos + Move.GetSafeNormal() * SurfaceOffset;
+
+		FHitResult Hit;
+		
+		if (World->LineTraceSingleByObjectType(Hit, Start, End, ObjectParams, Params))
+		{
+			const FVector Normal = Hit.ImpactNormal;
+			
+			FVector NewPos = Hit.ImpactPoint + Normal * SurfaceOffset;
+			
+			/*
+			마찰력 처리
+			*/
+			const FVector Slide = FVector::VectorPlaneProject(NewPos - Start, Normal);
+			NewPos -= Slide * Friction;
+			Pos = NewPos;
 		}
 	}
 }
