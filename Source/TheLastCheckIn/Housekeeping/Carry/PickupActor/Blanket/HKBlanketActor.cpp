@@ -36,15 +36,12 @@ void AHKBlanketActor::Tick(float DeltaTime)
 	{
 		return;
 	}
-
-	// 고정된 서브스텝 (안정적인 물리 시뮬레이션을 위해 분할)
-	TimeAccumulator += DeltaTime;
-	const float SubStep = 0.016f; // 약 60fps 기준
-
-	while (TimeAccumulator >= SubStep)
+	
+	const int32 NumSteps = FMath::Clamp(FMath::CeilToInt(DeltaTime / 0.016f), 1, 4);
+	const float SubStep = DeltaTime / NumSteps;
+	for (int32 S = 0; S < NumSteps; ++S)
 	{
 		Step(SubStep);
-		TimeAccumulator -= SubStep;
 	}
 
 	ComputeParticleNormals();
@@ -240,6 +237,7 @@ void AHKBlanketActor::SolveCollisions()
 			NewPos -= Slide * Friction;
 		}
 		Pos = NewPos;
+		PrevPositions[I] = NewPos - FVector::VectorPlaneProject(NewPos - Start, Normal);
 	}
 }
 
