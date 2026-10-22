@@ -7,6 +7,8 @@ class UInputAction;
 class UEnhancedInputComponent;
 class UHKCarryComponent;
 class AHKPhysicsPickupActor;
+class AHKBlanketActor;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHKOnFocusChanged, AActor*, NewFocus, const FText&, Prompt);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnHoldProgress, float, Alpha);
 UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
@@ -34,6 +36,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Interaction",  meta=(ClampMin=0, Units="cm"))
 	float TraceRadius = 8.0f;
 	
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Interaction", meta=(ClampMin=0, Units="cm"))
+	float BlanketGrabRadius = 30.0f;
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Interaction")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
 	
@@ -53,6 +58,9 @@ private:
 	APlayerController* GetOwningPlayerController() const;
 	UHKCarryComponent* GetCarryComponent() const;
 	AHKPhysicsPickupActor* GetFocusedPickup() const;
+	AHKBlanketActor* GetFocusedBlanket() const;
+	AHKBlanketActor* FindBlanketOnRay(const FVector& Start, const FVector& End) const;
+
 	static bool IsInteractable(AActor* Actor);
 
 	void EnsureInputSetup(APlayerController* PC);

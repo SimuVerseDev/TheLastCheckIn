@@ -19,8 +19,6 @@ public class TheLastCheckIn : ModuleRules
 			"GameplayStateTreeModule",
 			"UMG",
 			"Slate",
-			"UMG",
-			"Slate",
 			"ProceduralMeshComponent",
 		});
 

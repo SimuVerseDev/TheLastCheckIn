@@ -9,6 +9,7 @@ AHKBlanketActor::AHKBlanketActor()
 	Mesh = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("BlanketMesh"));
 	RootComponent = Mesh;
 	Mesh->bUseAsyncCooking = true;
+	GrabPrompt = NSLOCTEXT("Housekeeping", "BlanketGrapPrompt", "잡기");
 }
 
 void AHKBlanketActor::OnConstruction(const FTransform& Transform)

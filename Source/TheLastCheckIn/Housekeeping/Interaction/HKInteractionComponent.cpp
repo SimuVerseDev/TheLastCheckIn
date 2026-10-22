@@ -10,6 +10,9 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Housekeeping/Carry/PickupActor/Blanket/HKBlanketActor.h"
+#include "EngineUtils.h"
+
 UHKInteractionComponent::UHKInteractionComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -75,6 +78,27 @@ AHKPhysicsPickupActor* UHKInteractionComponent::GetFocusedPickup() const
 	return Cast<AHKPhysicsPickupActor>(FocusedActor.Get());
 }
 
+/*
+Blanket
+*/
+AHKBlanketActor* UHKInteractionComponent::GetFocusedBlanket() const
+{
+	return Cast<AHKBlanketActor>(FocusedActor.Get());
+}
+
+AHKBlanketActor* UHKInteractionComponent::FindBlanketOnRay(const FVector& Start, const FVector& End) const
+{
+	for (TActorIterator<AHKBlanketActor> It(GetWorld()); It; ++It)
+	{
+		if (!It->IsGrabbed() && It->FindParticleNearRay(Start, End, BlanketGrabRadius) != INDEX_NONE)
+		{
+			return *It;
+		}
+	}
+	return nullptr;
+}
+
+
 bool UHKInteractionComponent::IsInteractable(AActor* Actor)
 {
 	return Actor && Actor->Implements<UHKInteractable>();
@@ -136,9 +160,14 @@ void UHKInteractionComponent::UpdateFocus(APlayerController* PC)
 	{
 		SetFocus(HitActor);
 	}
+	// 일반 물건과 이불을 분기
 	else if (Pickup && Pickup->CanBePickedUp())
 	{
 		SetFocus(HitActor);
+	}
+	else if (AHKBlanketActor* Blanket = FindBlanketOnRay(ViewLocation, bHit ? Hit.Location : TraceEnd))
+	{
+		SetFocus(Blanket);
 	}
 	else
 	{
@@ -169,6 +198,10 @@ void UHKInteractionComponent::SetFocus(AActor* NewFocus)
 	else if (const AHKPhysicsPickupActor* Pickup = Cast<AHKPhysicsPickupActor>(NewFocus))
 	{
 		Prompt = Pickup->GetPickupPrompt();
+	}
+	else if (const AHKBlanketActor* Blanket = Cast<AHKBlanketActor>(NewFocus))
+	{
+		Prompt = Blanket->GetGrabPrompt();
 	}
 	OnFocusChanged.Broadcast(NewFocus, Prompt);
 }
@@ -227,6 +260,10 @@ void UHKInteractionComponent::ShowDebugPrompt() const
 	{
 		Message = FString::Printf(TEXT("[E] %s"), *IHKInteractable::Execute_GetInteractPrompt(Target, GetOwner()).ToString());
 	}
+	else if (const AHKBlanketActor* Blanket = GetFocusedBlanket())
+	{
+		Message = FString::Printf(TEXT("[LMB] 이불 %s"), *Blanket->GetGrabPrompt().ToString());
+	}
 	if (!Message.IsEmpty())
 	{
 		GEngine->AddOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()), 0.0f, FColor::Yellow, Message);
@@ -258,10 +295,17 @@ void UHKInteractionComponent::HandleInteractStarted()
 void UHKInteractionComponent::HandleUseStarted()
 {
 	UHKCarryComponent* Carry = GetCarryComponent();
-	AHKPhysicsPickupActor* Pickup = GetFocusedPickup();
-	if (Carry && Pickup && Pickup->CanBePickedUp())
+	if (!Carry)
+	{
+		return;
+	}
+	if (AHKPhysicsPickupActor* Pickup = GetFocusedPickup(); Pickup && Pickup->CanBePickedUp())
 	{
 		Carry->TryPickup(Pickup->GetMesh());
+	}
+	else if (AHKBlanketActor* Blanket = GetFocusedBlanket())
+	{
+		Carry->TryPickup(Cast<UPrimitiveComponent>(Blanket->GetRootComponent()));
 	}
 }
 

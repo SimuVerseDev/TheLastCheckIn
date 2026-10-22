@@ -37,39 +37,7 @@ void UHKCarryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 	}
 	FVector HoldLocation;
 	FRotator ViewRotation;
-	if (!IsValid(CarriedComponent) || !CarriedComponent->IsSimulatingPhysics() || !GetViewTransform(HoldLocation, ViewRotation))
-	{
-		Release(false);
-		return;
-	}
-	
-	/*
-	if picking blanket
-	*/
-	if (CarriedBlanket.IsValid())
-	{
-		if (FVector::Dist(CarriedComponent->GetComponentLocation(), HoldLocation) > BreakDistance * 1.5f)
-		{
-			Release(false);
-			return;
-		}
-		if (DeltaTime > KINDA_SMALL_NUMBER)
-		{
-			const FVector FrameVelocity = (HoldLocation - LastHoldLocation) / DeltaTime;
-			HoldVelocity = FMath::VInterpTo(HoldVelocity, FrameVelocity, DeltaTime, 20.0f);
-		}
-		LastHoldLocation = HoldLocation;
-		CarriedBlanket->SetGrabTarget(HoldLocation);
-		return;
-	}
-	// else
-	if (!IsValid(CarriedComponent) || !CarriedComponent->IsSimulatingPhysics())
-	{
-		Release(false);
-		return;
-	}
-	
-	if (FVector::Dist(CarriedComponent->GetComponentLocation(), HoldLocation) > BreakDistance)
+	if (!GetViewTransform(HoldLocation, ViewRotation))
 	{
 		Release(false);
 		return;
@@ -80,6 +48,24 @@ void UHKCarryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 		HoldVelocity = FMath::VInterpTo(HoldVelocity, FrameVelocity, DeltaTime, 20.0f);
 	}
 	LastHoldLocation = HoldLocation;
+	/*
+	if picking blanket
+	*/
+	if (AHKBlanketActor* Blanket = CarriedBlanket.Get())
+	{
+		Blanket->SetGrabTarget(HoldLocation);
+		return;
+	}
+
+	// A = CarriedComponent->GetComponentLocation(): 들고 있는 물체가 지금 실제로 있는 위치
+	// B = HoldLocation: 물체가 있어야 할 위치
+	// FVector::Dist(A, B)는 두 점 사이의 거리(cm)를 구하는 함수  
+	if (!IsValid(CarriedComponent) || !CarriedComponent->IsSimulatingPhysics() || FVector::Dist(CarriedComponent->GetComponentLocation(), HoldLocation) > BreakDistance)
+	{
+		Release(false);
+		return;
+	}
+
 	const FQuat YawQuat = FRotator(0.0f, ViewRotation.Yaw, 0.0f).Quaternion();
 	PhysicsHandle->SetTargetLocationAndRotation(HoldLocation, (YawQuat * RotationOffset).Rotator());
 }
@@ -104,10 +90,10 @@ bool UHKCarryComponent::TryPickup(UPrimitiveComponent* Target)
 	*/
 	if (AHKBlanketActor* Blanket = Cast<AHKBlanketActor>(Target->GetOwner()))
 	{
-		const FVector RayStart = HoldLocation;
-		const FVector RayEnd = RayStart + ViewRotation.Vector() * 300.0f; // * 기호 확인
-		
-		int32 ParticleIndex = Blanket->FindParticleNearRay(RayStart, RayEnd, 50.0f);
+		const APawn* Pawn = Cast<APawn>(GetOwner());
+		const FVector RayStart = Pawn->GetPawnViewLocation();
+		const FVector RayEnd = RayStart + ViewRotation.Vector() * 300.0f;
+		const int32 ParticleIndex = Blanket->FindParticleNearRay(RayStart, RayEnd, 30.0f); // 이불을 이루는 점(파티클) 중 몇 번째 점
 		if (ParticleIndex == INDEX_NONE)
 		{
 			return false;
