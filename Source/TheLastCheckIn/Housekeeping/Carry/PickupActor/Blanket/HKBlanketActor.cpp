@@ -213,19 +213,33 @@ void AHKBlanketActor::SolveCollisions()
 
 		FHitResult Hit;
 		
-		if (World->LineTraceSingleByObjectType(Hit, Start, End, ObjectParams, Params))
+		bool bContact = World->LineTraceSingleByObjectType(Hit, Start, End, ObjectParams, Params);
+		if (!bContact)
 		{
-			const FVector Normal = Hit.ImpactNormal;
-			
-			FVector NewPos = Hit.ImpactPoint + Normal * SurfaceOffset;
-			
-			/*
-			마찰력 처리
-			*/
-			const FVector Slide = FVector::VectorPlaneProject(NewPos - Start, Normal);
-			NewPos -= Slide * Friction;
-			Pos = NewPos;
+			const FVector ProbeEnd = Pos - FVector::UpVector * (SurfaceOffset + ContactTolerance);
+			bContact = World->LineTraceSingleByObjectType(Hit, Pos, ProbeEnd, ObjectParams, Params);
 		}
+		if (!bContact)
+		{
+			continue;
+		}
+		const FVector Normal = Hit.ImpactNormal;
+		FVector NewPos = Pos;
+		const float Height = FVector::DotProduct(Pos - Hit.ImpactPoint, Normal);
+		if (Height < SurfaceOffset)
+		{
+			NewPos += Normal * (SurfaceOffset - Height);
+		}
+		const FVector Slide = FVector::VectorPlaneProject(NewPos - Start, Normal);
+		if (Slide.Size() < StaticFrictionDistance)
+		{
+			NewPos -= Slide;
+		}
+		else
+		{
+			NewPos -= Slide * Friction;
+		}
+		Pos = NewPos;
 	}
 }
 

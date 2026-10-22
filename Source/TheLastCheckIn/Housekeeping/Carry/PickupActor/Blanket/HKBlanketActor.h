@@ -50,7 +50,7 @@ protected:
 	int32 SegmentsY = 22;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Shape", meta=(ClampMin=0, Units="cm"))
-	float Thickness = 10.0f;
+	float Thickness = 25.0f;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Shape")
 	TObjectPtr<UMaterialInterface> Material;
@@ -70,8 +70,17 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
 	float BendStiffness = 0.5f;
 	
+	/*
+    Friction
+    */
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
 	float Friction = 0.6f;
+	
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm"))
+	float StaticFrictionDistance = 0.5f;
+    
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm"))
+	float ContactTolerance = 1.0f;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm/s"))
 	float MaxReleaseSpeed = 1500.0f;
@@ -81,6 +90,8 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm"))
 	float CollisionOffset = 2.0f;
+	
+	
 	
 private:
 	struct FDistanceConstraint
