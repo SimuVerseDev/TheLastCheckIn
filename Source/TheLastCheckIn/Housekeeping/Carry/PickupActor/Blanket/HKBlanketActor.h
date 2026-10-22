@@ -50,25 +50,25 @@ protected:
 	int32 SegmentsY = 22;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Shape", meta=(ClampMin=0, Units="cm"))
-	float Thickness = 4.0f;
+	float Thickness = 10.0f;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Shape")
 	TObjectPtr<UMaterialInterface> Material;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=1, ClampMax=32))
-	int32 SolverIterations = 8;
+	int32 SolverIterations = 16;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
-	float Damping = 0.02f;
+	float Damping = 0.08f;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
 	float StretchStiffness = 1.0f;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
-	float ShearStiffness = 0.6f;
+	float ShearStiffness = 0.8f;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
-	float BendStiffness = 0.1f;
+	float BendStiffness = 0.5f;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
 	float Friction = 0.6f;
