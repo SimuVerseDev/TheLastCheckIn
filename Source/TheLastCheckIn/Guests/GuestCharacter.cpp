@@ -1,10 +1,10 @@
 ﻿#include "GuestCharacter.h"
-
 #include "GuestAIController.h"
 #include "Data/GuestDataTypes.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Rooms/RoomActor.h"
-
+#include "Components/SkeletalMeshComponent.h"
+#include "Pool/GuestPoolManager.h"
 
 AGuestCharacter::AGuestCharacter()
 {
@@ -70,6 +70,29 @@ bool AGuestCharacter::TryAssignRoom(ARoomActor* NewRoom)
 		GuestState = EGuestState::WaitingForCheckIn;
 
 		return false;
+	}
+	
+	//객실 배정에 성공하면 이번 투숙의 잔류 여부 결정
+	switch (CheckoutPolicy)
+	{
+	case EGuestCheckoutPolicy::Automatic:
+		bWillStayBehind = false;
+		break;
+
+	case EGuestCheckoutPolicy::RequireRequest:
+		bWillStayBehind = true;
+		break;
+
+	case EGuestCheckoutPolicy::Random:
+		bWillStayBehind =
+			StayBehindChance >= 1.0f ||
+			(StayBehindChance > 0.0f &&
+			 FMath::FRand() < StayBehindChance);
+		break;
+
+	default:
+		bWillStayBehind = false;
+		break;
 	}
 
 	return true;
@@ -156,6 +179,12 @@ bool AGuestCharacter::NotifyDestinationReached(AActor* ReachedTarget)
 			CheckoutExitTarget = nullptr;
 			GuestState = EGuestState::ExitCompleted;
 			
+			if (IsValid(PoolManager.Get()))
+			{
+				PoolReturnTimerHandle = 
+					GetWorldTimerManager().SetTimerForNextTick(this, &AGuestCharacter::ReturnToPool);
+			}
+			
 			return true;
 		}
 
@@ -166,7 +195,8 @@ bool AGuestCharacter::NotifyDestinationReached(AActor* ReachedTarget)
 
 bool AGuestCharacter::TryBeginCheckout(AActor* LobbyTarget)
 {
-	if (GuestState!=EGuestState::Staying)
+	if (GuestState!=EGuestState::Staying &&
+		GuestState != EGuestState::WaitingForCheckoutRequest)
 	{
 		return false;
 	}
@@ -185,6 +215,9 @@ bool AGuestCharacter::TryBeginCheckout(AActor* LobbyTarget)
 		return false;
 	}
 	
+	// 이동 요청 실패 시 돌아갈 상태
+	const EGuestState PreviousState = GuestState;
+	
 	CheckoutLobbyTarget = LobbyTarget;
 	GuestState = EGuestState::MovingToLobby;
 	
@@ -192,7 +225,7 @@ bool AGuestCharacter::TryBeginCheckout(AActor* LobbyTarget)
 	if (!GuestController->SetGuestMoveTarget(LobbyTarget))
 	{
 		CheckoutLobbyTarget = nullptr;
-		GuestState = EGuestState::Staying;
+		GuestState = PreviousState;
 		
 		return false;
 	}
@@ -233,12 +266,187 @@ bool AGuestCharacter::TryBeginExit(AActor* ExitTarget)
 	return true;
 }
 
+bool AGuestCharacter::HandleCheckoutTime(AActor* LobbyTarget)
+{
+	if (GuestState != EGuestState::Staying ||
+	!IsValid(AssignedRoom.Get()) ||
+	!StayId.IsValid() ||
+	!IsValid(LobbyTarget))
+	{
+		return false;
+	}
+
+	// 객실 배정 시 결정한 잔류 여부 사용
+	if (bWillStayBehind)
+	{
+		GuestState = EGuestState::WaitingForCheckoutRequest;
+		return true;
+	}
+
+	return TryBeginCheckout(LobbyTarget);
+	
+}
+
+bool AGuestCharacter::RequestCheckout(AActor* LobbyTarget)
+{
+	if (GuestState != EGuestState::WaitingForCheckoutRequest)
+	{
+		return false;
+	}
+
+	return TryBeginCheckout(LobbyTarget);
+}
+
+bool AGuestCharacter::ActivateFromPool(const FVector& SpawnLocation, const FRotator& SpawnRotation,
+	AActor* CounterTarget, const FDataTableRowHandle& InGuestTypeRow)
+{
+	// 대기 중인 손님만 꺼낼 수 있음
+	if (GuestState != EGuestState::Inactive ||
+		AssignedRoom != nullptr ||
+		!IsValid(CounterTarget))
+	{
+		return false;
+	}
+
+	AGuestAIController* GuestController =
+		Cast<AGuestAIController>(GetController());
+
+	if (!IsValid(GuestController))
+	{
+		return false;
+	}
+
+	// 새 손님의 유형, 이동 속도, 퇴실 정책 적용
+	if (!ApplyGuestData(InGuestTypeRow))
+	{
+		return false;
+	}
+
+	// 아직 충돌이 꺼진 상태에서 입장 위치로 이동
+	if (!SetActorLocationAndRotation(
+		SpawnLocation,
+		SpawnRotation,
+		false,
+		nullptr,
+		ETeleportType::TeleportPhysics))
+	{
+		DeactivateToPool();
+		return false;
+	}
+
+	StayId.Invalidate();
+	CheckoutLobbyTarget = nullptr;
+	CheckoutExitTarget = nullptr;
+	bWillStayBehind = false;
+
+	// 카운터 도착 판정에 사용하는 목적지도 갱신
+	InitialMoveTarget = CounterTarget;
+	GuestState = EGuestState::MovingToCounter;
+
+	SetActorHiddenInGame(false);
+	SetActorEnableCollision(true);
+
+	GetMesh()->SetComponentTickEnabled(true);
+
+	GetCharacterMovement()->SetComponentTickEnabled(true);
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+
+	GuestController->SetActorTickEnabled(true);
+
+	if (!GuestController->StartGuestAI(CounterTarget))
+	{
+		// 입장 시작에 실패하면 다시 풀 대기로 복구
+		GuestState = EGuestState::Inactive;
+		DeactivateToPool();
+		return false;
+	}
+
+	return true;
+	
+}
+
+bool AGuestCharacter::DeactivateToPool()
+{
+	// 최초 풀 대기 또는 정상 퇴실 완료 상태에서만 허용
+	if (GuestState != EGuestState::Inactive &&
+		GuestState != EGuestState::ExitCompleted)
+	{
+		return false;
+	}
+
+	// 객실과 연결된 손님은 반환하지 않음
+	if (AssignedRoom != nullptr)
+	{
+		return false;
+	}
+	
+	GetWorldTimerManager().ClearTimer(PoolReturnTimerHandle);
+	GuestState = EGuestState::Inactive;
+
+	AGuestAIController* GuestController =
+		Cast<AGuestAIController>(GetController());
+
+	if (IsValid(GuestController))
+	{
+		GuestController->StopGuestAI();
+		GuestController->SetActorTickEnabled(false);
+	}
+
+	// 이동과 애니메이션 업데이트 정지
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->SetComponentTickEnabled(false);
+
+	GetMesh()->SetComponentTickEnabled(false);
+
+	SetActorEnableCollision(false);
+	SetActorHiddenInGame(true);
+
+	// 이전 투숙 정보 초기화
+	StayId.Invalidate();
+	InitialMoveTarget = nullptr;
+	CheckoutLobbyTarget = nullptr;
+	CheckoutExitTarget = nullptr;
+
+	GuestTypeRow = FDataTableRowHandle{};
+	CheckoutPolicy = EGuestCheckoutPolicy::Random;
+	StayBehindChance = 0.0f;
+	bWillStayBehind = false;
+
+	return true;
+}
+
+void AGuestCharacter::SetPoolManager(AGuestPoolManager* InPoolManager)
+{
+	PoolManager = InPoolManager;
+}
+
 void AGuestCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	if (bStartInPool)
+	{
+		GuestState = EGuestState::Inactive;
+		DeactivateToPool();
+		return;
+	}
+	
 	ApplyGuestData(GuestTypeRow);
 	
+}
+
+void AGuestCharacter::ReturnToPool()
+{
+	PoolReturnTimerHandle.Invalidate();
+
+	if (GuestState != EGuestState::ExitCompleted ||
+		!IsValid(PoolManager.Get()))
+	{
+		return;
+	}
+
+	PoolManager->ReleaseGuest(this);
 }
 
 bool AGuestCharacter::ApplyGuestData(const FDataTableRowHandle& InGuestTypeRow)
@@ -262,6 +470,26 @@ bool AGuestCharacter::ApplyGuestData(const FDataTableRowHandle& InGuestTypeRow)
 
 		return false;
 	}
+	
+	if (GuestData->BehaviorRow.IsNull())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Guest behavior row is not assigned."));
+		return false;
+	}
+
+	const FGuestBehaviorRow* BehaviorData =
+		GuestData->BehaviorRow.GetRow<FGuestBehaviorRow>(
+			TEXT("AGuestCharacter::ApplyGuestData"));
+
+	if (BehaviorData == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Failed to read guest behavior row."));
+		return false;
+	}
+
+	CheckoutPolicy = BehaviorData->CheckoutPolicy;
+	StayBehindChance = FMath::Clamp(
+		BehaviorData->StayBehindChance, 0.0f, 1.0f);
 	
 	GuestTypeRow = InGuestTypeRow;
 

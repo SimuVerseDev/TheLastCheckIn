@@ -6,10 +6,13 @@
 #include "GameFramework/Character.h"
 #include "Engine/DataTable.h"
 #include "Data/GuestDataTypes.h"
+#include "TimerManager.h"
+
 #include "GuestCharacter.generated.h"
 
 class UBehaviorTree;
 class ARoomActor;
+class AGuestPoolManager;
 
 UCLASS()
 class THELASTCHECKIN_API AGuestCharacter : public ACharacter
@@ -51,6 +54,32 @@ public:
 	//로비에서 출구로 이동 시작
 	UFUNCTION(BlueprintCallable, Category="Guests|Checkout")
 	bool TryBeginExit(AActor* ExitTarget);
+	
+	// 퇴실 시각 도달 시 호출
+	UFUNCTION(BlueprintCallable, Category = "Guests|Checkout")
+	bool HandleCheckoutTime(AActor* LobbyTarget);
+	
+	//플레이어가 잔류손님을 내쫓을 때 호출
+	UFUNCTION(BlueprintCallable, Category = "Guests|Checkout")
+	bool RequestCheckout(AActor* LobbyTarget);
+	
+	// 생성 직후 풀에서 대기할 손님인지
+	bool ShouldStartInPool() const
+	{
+		return bStartInPool;
+	}
+
+	// 풀에서 꺼내 입장시키기
+	bool ActivateFromPool(
+		const FVector& SpawnLocation,
+		const FRotator& SpawnRotation,
+		AActor* CounterTarget,
+		const FDataTableRowHandle& InGuestTypeRow);
+
+	// 퇴실이 끝난 손님을 풀 대기 상태로 전환
+	bool DeactivateToPool();
+	
+	void SetPoolManager(AGuestPoolManager* InPoolManager);
 
 protected:
 	virtual void BeginPlay() override;
@@ -81,5 +110,30 @@ protected:
 	
 	UPROPERTY(VisibleInstanceOnly, BluePrintReadOnly, Category="Guests|Checkout")
 	TObjectPtr<AActor> CheckoutExitTarget;
+	
+	// 데이터 테이블에서 읽은 퇴실 정책
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Guests|Checkout")
+	EGuestCheckoutPolicy CheckoutPolicy = EGuestCheckoutPolicy::Random;
+
+	// Random 정책에서 사용하는 잔류 확률
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Guests|Checkout")
+	float StayBehindChance = 0.0f;
+
+	// 퇴실 시간이 지나도 남을 손님인지
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Guests|Checkout")
+	bool bWillStayBehind = false;
+	
+	// 풀용 BP에서 켜면 생성 직후 비활성 상태로 대기
+	UPROPERTY(EditDefaultsOnly, Category = "Guests|Pool")
+	bool bStartInPool = false;
+	
+
+	UPROPERTY()
+	TObjectPtr<AGuestPoolManager> PoolManager;
+
+	// 도착 처리가 끝난 후 실행할 반환 예약
+	FTimerHandle PoolReturnTimerHandle;
+
+	void ReturnToPool();
 
 };
