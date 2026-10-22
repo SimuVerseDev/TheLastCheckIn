@@ -82,6 +82,7 @@ private:
 	void Step(float Dt);
 	void SolveConstraints();
 	void SolveCollisions();
+	void BuildTriangles();
 	void BuildMesh(bool bCreate);
 	void ComputeParticleNormals();
 	TArray<FVector> Positions;

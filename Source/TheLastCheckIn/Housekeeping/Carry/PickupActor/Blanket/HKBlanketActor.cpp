@@ -185,10 +185,11 @@ void AHKBlanketActor::SolveCollisions()
 
 		FVector& Pos = Positions[I];
 		// 단순 바닥 예시 (추후 침대 높이나 바닥 높이에 맞게 조정 가능)
-		if (Pos.Z < 0.0f)
+		const float FloorZ = Thickness * 0.5f;
+		if (Pos.Z < FloorZ)
 		{
 			const FVector Prev = PrevPositions[I];
-			Pos.Z = 0.0f;
+			Pos.Z = FloorZ;
 			// 마찰력 적용
 			FVector TangentVel = (Pos - Prev);
 			TangentVel.Z = 0.0f;
@@ -271,63 +272,84 @@ void AHKBlanketActor::ComputeParticleNormals()
 	}
 }
 
+void AHKBlanketActor::BuildTriangles()
+{
+	const int32 NumGrid = (SegmentsX + 1) * (SegmentsY + 1);
+	MeshTriangles.Reset();
+
+	for (int32 Y = 0; Y < SegmentsY; ++Y)
+	{
+		for (int32 X = 0; X < SegmentsX; ++X)
+		{
+			const int32 I00 = ToIndex(X, Y);
+			const int32 I10 = ToIndex(X + 1, Y);
+			const int32 I01 = ToIndex(X, Y + 1);
+			const int32 I11 = ToIndex(X + 1, Y + 1);
+
+			MeshTriangles.Append({ I00, I11, I10, I00, I01, I11 });
+			MeshTriangles.Append({ NumGrid + I00, NumGrid + I10, NumGrid + I11, NumGrid + I00, NumGrid + I11, NumGrid + I01 });
+		}
+	}
+
+	TArray<int32> Border;
+	for (int32 X = 0; X < SegmentsX; ++X) Border.Add(ToIndex(X, 0));
+	for (int32 Y = 0; Y < SegmentsY; ++Y) Border.Add(ToIndex(SegmentsX, Y));
+	for (int32 X = SegmentsX; X > 0; --X) Border.Add(ToIndex(X, SegmentsY));
+	for (int32 Y = SegmentsY; Y > 0; --Y) Border.Add(ToIndex(0, Y));
+
+	for (int32 I = 0; I < Border.Num(); ++I)
+	{
+		const int32 A = Border[I];
+		const int32 B = Border[(I + 1) % Border.Num()];
+		MeshTriangles.Append({ A, B, NumGrid + A, B, NumGrid + B, NumGrid + A });
+	}
+}
+
 void AHKBlanketActor::BuildMesh(bool bCreate)
 {
 	const int32 CountX = SegmentsX + 1;
 	const int32 CountY = SegmentsY + 1;
-	const int32 NumVerts = CountX * CountY;
+	const int32 NumGrid = CountX * CountY;
+	const float HalfThickness = Thickness * 0.5f;
+	const FTransform WorldToLocal = ActorToWorld().Inverse();
 
-	MeshVertices.SetNum(NumVerts);
-	MeshNormals.SetNum(NumVerts);
-	MeshUVs.SetNum(NumVerts);
-
-	const FTransform LocalTransform = ActorToWorld().Inverse();
+	MeshVertices.SetNum(NumGrid * 2);
+	MeshNormals.SetNum(NumGrid * 2);
+	MeshUVs.SetNum(NumGrid * 2);
 
 	for (int32 Y = 0; Y < CountY; ++Y)
 	{
 		for (int32 X = 0; X < CountX; ++X)
 		{
 			const int32 Idx = ToIndex(X, Y);
-			const FVector WorldPos = Positions[Idx];
-			
-			MeshVertices[Idx] = LocalTransform.TransformPosition(WorldPos);
-			MeshNormals[Idx] = LocalTransform.TransformVector(ParticleNormals[Idx]);
-			MeshUVs[Idx] = FVector2D(static_cast<float>(X) / SegmentsX, static_cast<float>(Y) / SegmentsY);
+			const FVector Normal = ParticleNormals[Idx];
+			const FVector2D UV(static_cast<float>(X) / SegmentsX, static_cast<float>(Y) / SegmentsY);
+
+			MeshVertices[Idx] = WorldToLocal.TransformPosition(Positions[Idx] + Normal * HalfThickness);
+			MeshNormals[Idx] = WorldToLocal.TransformVectorNoScale(Normal);
+			MeshUVs[Idx] = UV;
+
+			MeshVertices[NumGrid + Idx] = WorldToLocal.TransformPosition(Positions[Idx] - Normal * HalfThickness);
+			MeshNormals[NumGrid + Idx] = -MeshNormals[Idx];
+			MeshUVs[NumGrid + Idx] = UV;
 		}
 	}
 
 	if (bCreate || MeshTriangles.Num() == 0)
 	{
-		MeshTriangles.Empty();
-		for (int32 Y = 0; Y < SegmentsY; ++Y)
-		{
-			for (int32 X = 0; X < SegmentsX; ++X)
-			{
-				const int32 I00 = ToIndex(X, Y);
-				const int32 I10 = ToIndex(X + 1, Y);
-				const int32 I01 = ToIndex(X, Y + 1);
-				const int32 I11 = ToIndex(X + 1, Y + 1);
-
-				// Triangle 1
-				MeshTriangles.Add(I00);
-				MeshTriangles.Add(I10);
-				MeshTriangles.Add(I11);
-
-				// Triangle 2
-				MeshTriangles.Add(I00);
-				MeshTriangles.Add(I11);
-				MeshTriangles.Add(I01);
-			}
-		}
+		BuildTriangles();
 	}
 
-	TArray<FColor> VertexColors;
-	TArray<FProcMeshTangent> Tangents;
-
-	Mesh->CreateMeshSection(0, MeshVertices, MeshTriangles, MeshNormals, MeshUVs, VertexColors, Tangents, false);
-
-	if (Material)
+	if (bCreate || Mesh->GetNumSections() == 0)
 	{
-		Mesh->SetMaterial(0, Material);
+		Mesh->CreateMeshSection(0, MeshVertices, MeshTriangles, MeshNormals, MeshUVs, TArray<FColor>(), TArray<FProcMeshTangent>(), false);
+		if (Material)
+		{
+			Mesh->SetMaterial(0, Material);
+		}
+	}
+	else
+	{
+		Mesh->UpdateMeshSection(0, MeshVertices, MeshNormals, MeshUVs, TArray<FColor>(), TArray<FProcMeshTangent>());
 	}
 }
