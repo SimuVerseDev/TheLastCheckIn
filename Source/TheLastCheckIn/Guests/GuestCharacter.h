@@ -43,6 +43,14 @@ public:
 	{
 		return GuestState;
 	}
+	
+	//퇴실을 시작하고 로비 지점으로 이동
+	UFUNCTION(BlueprintCallable, Category ="Guests|Checkout")
+	bool TryBeginCheckout(AActor* LobbyTarget);
+	
+	//로비에서 출구로 이동 시작
+	UFUNCTION(BlueprintCallable, Category="Guests|Checkout")
+	bool TryBeginExit(AActor* ExitTarget);
 
 protected:
 	virtual void BeginPlay() override;
@@ -66,5 +74,12 @@ protected:
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Guests|State")
 	EGuestState GuestState = EGuestState::MovingToCounter;
+	
+	//퇴실에서 도착해야 할 로비 지점
+	UPROPERTY(VisibleInstanceOnly, BluePrintReadOnly, Category="Guests|Checkout")
+	TObjectPtr<AActor> CheckoutLobbyTarget;
+	
+	UPROPERTY(VisibleInstanceOnly, BluePrintReadOnly, Category="Guests|Checkout")
+	TObjectPtr<AActor> CheckoutExitTarget;
 
 };

@@ -119,10 +119,118 @@ bool AGuestCharacter::NotifyDestinationReached(AActor* ReachedTarget)
 
 			return true;
 		}
+	
+	case EGuestState::MovingToLobby:
+		{
+			if (!IsValid(CheckoutLobbyTarget.Get()) ||
+				ReachedTarget != CheckoutLobbyTarget.Get())
+			{
+				return false;
+			}
+			
+			if (!IsValid(AssignedRoom.Get()) || !StayId.IsValid())
+			{
+				return false;
+			}
+			
+			if (!AssignedRoom->TryEndStay(StayId))
+			{
+				return false;
+			}
+			
+			AssignedRoom = nullptr;
+			CheckoutLobbyTarget = nullptr;
+			
+			GuestState = EGuestState::ReadyToExit;
+			
+			return true;
+		}
+	case EGuestState::MovingToExit:
+		{
+			if (!IsValid(CheckoutExitTarget.Get())||
+				ReachedTarget!=CheckoutExitTarget.Get())
+			{
+				return false;
+			}
+			
+			CheckoutExitTarget = nullptr;
+			GuestState = EGuestState::ExitCompleted;
+			
+			return true;
+		}
 
 	default:
 		return false;
 	}
+}
+
+bool AGuestCharacter::TryBeginCheckout(AActor* LobbyTarget)
+{
+	if (GuestState!=EGuestState::Staying)
+	{
+		return false;
+	}
+	
+	if (!IsValid(AssignedRoom.Get()) ||
+		!StayId.IsValid() ||
+		!IsValid(LobbyTarget))
+	{
+		return false;
+	}
+	
+	AGuestAIController* GuestController = Cast<AGuestAIController>(GetController());
+	
+	if (!IsValid(GuestController))
+	{
+		return false;
+	}
+	
+	CheckoutLobbyTarget = LobbyTarget;
+	GuestState = EGuestState::MovingToLobby;
+	
+	//로비를 새 이동 목적지로 등록
+	if (!GuestController->SetGuestMoveTarget(LobbyTarget))
+	{
+		CheckoutLobbyTarget = nullptr;
+		GuestState = EGuestState::Staying;
+		
+		return false;
+	}
+	
+	return true;
+}
+
+bool AGuestCharacter::TryBeginExit(AActor* ExitTarget)
+{
+	if (GuestState != EGuestState::ReadyToExit)
+	{
+		return false;
+	}
+	
+	if (!IsValid(ExitTarget) || AssignedRoom != nullptr)
+	{
+		return false;
+	}
+	
+	AGuestAIController* GuestController = Cast<AGuestAIController>(GetController());
+	
+	if (!IsValid(GuestController))
+	{
+		return false;
+	}
+	
+	CheckoutExitTarget = ExitTarget;
+	GuestState = EGuestState::MovingToExit;
+
+	if (!GuestController->SetGuestMoveTarget(ExitTarget))
+	{
+		CheckoutExitTarget = nullptr;
+		GuestState = EGuestState::ReadyToExit;
+
+		return false;
+	}
+
+	return true;
 }
 
 void AGuestCharacter::BeginPlay()

@@ -11,7 +11,13 @@ enum class EGuestState : uint8
 	MovingToCounter UMETA(DisplayName = "Moving To Counter"),
 	WaitingForCheckIn UMETA(DisplayName = "Waiting for Check In"),
 	MovingToRoom UMETA(DisplayName = "Moving To Room"),
-	Staying UMETA(DisplayName = "Staying")
+	Staying UMETA(DisplayName = "Staying"),
+	
+	MovingToLobby UMETA(DisplayName = "Moving To Lobby"),
+	ReadyToExit UMETA(DisplayName = "Ready to Exit"),
+	
+	MovingToExit UMETA(DisplayName = "Moving To Exit"),
+	ExitCompleted UMETA(DisplayName = "Exit Completed"),
 	
 };
 

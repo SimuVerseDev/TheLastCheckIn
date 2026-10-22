@@ -52,6 +52,10 @@ public:
 	// 배정된 숙박 입실 완료 처리
 	bool MarkOccupied(const FGuid& InStayId);
 	
+	//객실 사용 종료 후 다시 배정 가능한 상태로 변경
+	UFUNCTION(BlueprintCallable, Category = "Room")
+	bool TryEndStay(const FGuid& InStayId);
+	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Room")
 	TObjectPtr<USceneComponent> SceneRoot;

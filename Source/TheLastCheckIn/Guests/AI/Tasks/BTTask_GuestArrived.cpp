@@ -43,13 +43,13 @@ EBTNodeResult::Type UBTTask_GuestArrived::ExecuteTask(UBehaviorTreeComponent& Ow
 	const bool bArrivalHandled =
 		Guest->NotifyDestinationReached(ReachedTarget);
 
-
-	BlackboardComponent->ClearValue(TargetKey);
-
 	if (!bArrivalHandled)
 	{
 		return EBTNodeResult::Failed;
 	}
+	
+	//도착 처리가 성공한 경우에만 목적지를 정리
+	BlackboardComponent->ClearValue(TargetKey);
 
 	return EBTNodeResult::Succeeded;
 }
