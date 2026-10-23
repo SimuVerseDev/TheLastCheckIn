@@ -9,6 +9,7 @@ AHKTrashActor::AHKTrashActor()
 	PrimaryActorTick.bStartWithTickEnabled = false; // 흡수 연출 중에만 Tick
 
 	Dirt = CreateDefaultSubobject<UHKTrashDirtComponent>(TEXT("TrashDirt"));
+	Mesh->SetRelativeScale3D(FVector::OneVector); // 부모의 테스트 큐브용 0.3 대신 원본 크기
 
 	PickupPrompt = NSLOCTEXT("Housekeeping", "TrashPickupPrompt", "줍기");
 	AbsorbPrompt = NSLOCTEXT("Housekeeping", "TrashAbsorbPrompt", "카트에 넣기");
