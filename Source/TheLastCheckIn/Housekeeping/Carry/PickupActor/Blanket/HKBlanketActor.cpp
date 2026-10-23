@@ -396,3 +396,47 @@ void AHKBlanketActor::BuildMesh(bool bCreate)
 		Mesh->UpdateMeshSection(0, MeshVertices, MeshNormals, MeshUVs, TArray<FColor>(), TArray<FProcMeshTangent>());
 	}
 }
+
+void AHKBlanketActor::Scramble(FRandomStream& Random, const FVector& Center, float MaxOffset)
+{
+	GrabbedIndex = INDEX_NONE;
+
+	const int32 LayersX = Random.RandRange(1, 3);
+	const int32 LayersY = Random.RandRange(1, 2);
+	const float FoldX = Size.X / LayersX;
+	const float FoldY = Size.Y / LayersY;
+	const float DX = Size.X / SegmentsX;
+	const float DY = Size.Y / SegmentsY;
+	const float LayerGap = Thickness * 0.5f;
+
+	const FQuat Yaw(FVector::UpVector, FMath::DegreesToRadians(Random.FRandRange(0.0f, 360.0f)));
+	const FVector2D Offset2D = FVector2D(Random.FRandRange(-1.0f, 1.0f), Random.FRandRange(-1.0f, 1.0f)) * MaxOffset;
+	const FVector Base = Center + FVector(Offset2D, 0.0f);
+
+	/*
+	아코디언 접기 : 홀수 겹은 좌표를 뒤집어서 접힌 면이 이어지게 함 (점 사이 거리 유지)
+	*/
+	auto Fold = [](float Coord, float FoldSize, int32 NumLayers, int32& OutLayer)
+	{
+		OutLayer = FMath::Min(FMath::FloorToInt(Coord / FoldSize), NumLayers - 1);
+		const float Local = Coord - OutLayer * FoldSize;
+		return (OutLayer % 2 == 1) ? FoldSize - Local : Local;
+	};
+
+	for (int32 Y = 0; Y <= SegmentsY; ++Y)
+	{
+		for (int32 X = 0; X <= SegmentsX; ++X)
+		{
+			int32 LayerX = 0;
+			int32 LayerY = 0;
+			const float U = Fold(X * DX, FoldX, LayersX, LayerX);
+			const float V = Fold(Y * DY, FoldY, LayersY, LayerY);
+			const int32 Layer = LayerY * LayersX + LayerX;
+
+			const FVector Local(U - FoldX * 0.5f, V - FoldY * 0.5f, Layer * LayerGap);
+			const int32 Idx = ToIndex(X, Y);
+			Positions[Idx] = Base + Yaw.RotateVector(Local);
+			PrevPositions[Idx] = Positions[Idx];
+		}
+	}
+}

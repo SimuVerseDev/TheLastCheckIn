@@ -30,6 +30,12 @@ public:
 		return GrabPrompt;
 	}
 	
+	const TArray<FVector>& GetParticlePositions() const
+	{
+		return Positions;
+	}
+	void Scramble(FRandomStream& Random, const FVector& Center, float MaxOffset);
+	
 protected:
 	/*
 	유연한 오브젝트를 프로시저럴(절차적)로 생성하고 물리 시뮬레이션(스프링-댐퍼 방식의 천 시뮬레이션)과 상호작용하기 위한 설정 값들을 정의
@@ -90,8 +96,6 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm"))
 	float CollisionOffset = 2.0f;
-	
-	
 	
 private:
 	struct FDistanceConstraint
