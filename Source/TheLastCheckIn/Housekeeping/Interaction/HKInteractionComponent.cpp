@@ -11,6 +11,7 @@
 #include "GameFramework/PlayerController.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Housekeeping/Carry/PickupActor/Blanket/HKBlanketActor.h"
+#include "Housekeeping/Cleaning/Trash/HKTrashActor.h"
 #include "EngineUtils.h"
 
 UHKInteractionComponent::UHKInteractionComponent()
@@ -98,6 +99,17 @@ AHKBlanketActor* UHKInteractionComponent::FindBlanketOnRay(const FVector& Start,
 	return nullptr;
 }
 
+/*
+Trash
+*/
+USceneComponent* UHKInteractionComponent::GetTrashAbsorbTarget() const
+{
+	if (USceneComponent* Target = TrashAbsorbTarget.Get())
+	{
+		return Target;
+	}
+	return bDebugTrashMode ? GetOwner()->GetRootComponent() : nullptr;
+}
 
 bool UHKInteractionComponent::IsInteractable(AActor* Actor)
 {
@@ -160,6 +172,10 @@ void UHKInteractionComponent::UpdateFocus(APlayerController* PC)
 	{
 		SetFocus(HitActor);
 	}
+	else if (const AHKTrashActor* Trash = Cast<AHKTrashActor>(HitActor); Trash && !Trash->IsAbsorbed() && CanAbsorbTrash())
+	{
+		SetFocus(HitActor);
+	}
 	// 일반 물건과 이불을 분기
 	else if (Pickup && Pickup->CanBePickedUp())
 	{
@@ -183,17 +199,29 @@ void UHKInteractionComponent::SetFocus(AActor* NewFocus)
 		return;
 	}
 	AActor* Pawn = GetOwner();
+	if (AHKTrashActor* OldTrash = Cast<AHKTrashActor>(OldFocus))
+	{
+		OldTrash->SetHighlighted(false);
+	}
 	if (IsInteractable(OldFocus))
 	{
 		IHKInteractable::Execute_OnInteractFocusEnd(OldFocus, Pawn);
 	}
 	FocusedActor = NewFocus;
 	CancelHold();
+	if (AHKTrashActor* NewTrash = Cast<AHKTrashActor>(NewFocus))
+	{
+		NewTrash->SetHighlighted(true);
+	}
 	FText Prompt;
 	if (IsInteractable(NewFocus))
 	{
 		IHKInteractable::Execute_OnInteractFocusBegin(NewFocus, Pawn);
 		Prompt = IHKInteractable::Execute_GetInteractPrompt(NewFocus, Pawn);
+	}
+	else if (const AHKTrashActor* Trash = Cast<AHKTrashActor>(NewFocus))
+	{
+		Prompt = Trash->GetAbsorbPrompt();
 	}
 	else if (const AHKPhysicsPickupActor* Pickup = Cast<AHKPhysicsPickupActor>(NewFocus))
 	{
@@ -252,6 +280,10 @@ void UHKInteractionComponent::ShowDebugPrompt() const
 	{
 		Message = TEXT("[LMB 떼기] 놓기");
 	}
+	else if (const AHKTrashActor* Trash = Cast<AHKTrashActor>(FocusedActor.Get()))
+	{
+		Message = FString::Printf(TEXT("[LMB] %s"), *Trash->GetAbsorbPrompt().ToString());
+	}
 	else if (const AHKPhysicsPickupActor* Pickup = GetFocusedPickup())
 	{
 		Message = FString::Printf(TEXT("[LMB] %s"), *Pickup->GetPickupPrompt().ToString());
@@ -294,6 +326,16 @@ void UHKInteractionComponent::HandleInteractStarted()
 
 void UHKInteractionComponent::HandleUseStarted()
 {
+	if (AHKTrashActor* Trash = Cast<AHKTrashActor>(FocusedActor.Get()))
+	{
+		if (Trash->Absorb(GetTrashAbsorbTarget()))
+		{
+			OnTrashAbsorbed.Broadcast(Trash);
+			SetFocus(nullptr);
+		}
+		return;
+	}
+
 	UHKCarryComponent* Carry = GetCarryComponent();
 	if (!Carry)
 	{
