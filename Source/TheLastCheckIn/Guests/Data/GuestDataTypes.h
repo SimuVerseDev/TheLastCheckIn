@@ -11,11 +11,22 @@ enum class EGuestState : uint8
 	MovingToCounter UMETA(DisplayName = "Moving To Counter"),
 	WaitingForCheckIn UMETA(DisplayName = "Waiting for Check In"),
 	MovingToRoom UMETA(DisplayName = "Moving To Room"),
-	Staying UMETA(DisplayName = "Staying")
+	Staying UMETA(DisplayName = "Staying"),
+	
+	MovingToLobby UMETA(DisplayName = "Moving To Lobby"),
+	ReadyToExit UMETA(DisplayName = "Ready to Exit"),
+	
+	MovingToExit UMETA(DisplayName = "Moving To Exit"),
+	ExitCompleted UMETA(DisplayName = "Exit Completed"),
+	
+	WaitingForCheckoutRequest UMETA(DisplayName = "Waiting For Checkout Request"),
+	
+	//풀 대기 상태
+	Inactive UMETA(DisplayName = "Inactive"),
 	
 };
 
-// 손님의 퇴실 방식 선택지 (자동, 플레이어의 요청, 랜덤)
+// 손님의 퇴실 방식 선택지 (자동, 플레이어의 요청, 랜덤) :
 UENUM(BlueprintType)
 enum class EGuestCheckoutPolicy : uint8
 {
@@ -31,7 +42,7 @@ struct THELASTCHECKIN_API FGuestBehaviorRow : public FTableRowBase
 	GENERATED_BODY()
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Checkout")
-	EGuestCheckoutPolicy CheckoutPolicy = EGuestCheckoutPolicy::Automatic;
+	EGuestCheckoutPolicy CheckoutPolicy = EGuestCheckoutPolicy::Random;
 	
 	// 손님의 잔류 확률
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Checkout", 
