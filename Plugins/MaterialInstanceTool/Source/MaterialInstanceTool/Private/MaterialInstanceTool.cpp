@@ -1,0 +1,389 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#include "MaterialInstanceTool.h"
+
+#include "MaterialInstanceToolSettings.h"
+#include "AssetToolsModule.h"
+#include "Factories/MaterialInstanceConstantFactoryNew.h"
+#include "MaterialEditingLibrary.h"
+#include "Engine/Texture.h"
+#include "Engine/StaticMesh.h"
+#include "Materials/MaterialInterface.h"
+#include "Materials/MaterialInstanceConstant.h"
+#include "UObject/StrongObjectPtr.h"
+
+// LogTemp 대신 전용 카테고리를 쓰면 Output Log 에서 필터링된다
+DEFINE_LOG_CATEGORY_STATIC(LogMITool, Log, All);
+
+namespace MaterialInstanceTool
+{
+
+// ── 이 파일 안에서만 쓰는 것들 ──
+namespace
+{
+	/** 한 묶음 — 베이스 이름 하나가 갖는 "파라미터 → 텍스처" 들 */
+	struct FTextureSet
+	{
+		FString BaseName;
+		TMap<FName, UTexture*> ParameterToTexture;
+	};
+
+	/** 만들어진 인스턴스 하나. 메쉬에 입힐 때 이름으로 짝을 찾아야 해서 베이스 이름을 들고 다닌다 */
+	struct FCreatedInstance
+	{
+		FString BaseName;
+		UMaterialInstanceConstant* Instance = nullptr;
+	};
+
+	/** 선택 목록에서 설정 에셋을 집어낸다. 없으면 nullptr */
+	UMaterialInstanceToolSettings* FindSettings(const TArray<UObject*>& Selected)
+	{
+		for (UObject* Object : Selected)
+		{
+			if (UMaterialInstanceToolSettings* Settings = Cast<UMaterialInstanceToolSettings>(Object))
+			{
+				return Settings;
+			}
+		}
+
+		return nullptr;
+	}
+
+	/**
+	 *  설정 에셋을 고르지 않았을 때 쓸 규칙을 만든다.
+	 *
+	 *  프로젝트에 있던 DA 네 개를 비교해보니 접미사 표가 넷 다 같았고, 달라지는 것은
+	 *  마스터와 Emissive 한 줄뿐이었다. 마스터는 콘텐츠 브라우저에서 같이 고르면
+	 *  FindMaster 가 집어내므로, 표를 여기 두면 평범한 경우에 DA 가 아예 필요하지 않다.
+	 *
+	 *  여기 적은 것은 이 프로젝트의 에셋에서 실제로 확인한 접미사뿐이다. _Albedo, _D, _AO 같은
+	 *  다른 관례를 넣지 않은 이유는, 마스터에 없는 파라미터 이름을 추측해 적으면
+	 *  CreateInstance 가 "마스터에 그 파라미터가 없다" 경고만 늘리기 때문이다. 그런 관례는 DA 로 덮는다.
+	 *
+	 *  트랜지언트 객체이므로 에셋이 생기지 않는다. 부르는 쪽이 들고 있는 동안만 산다
+	 */
+	UMaterialInstanceToolSettings* MakeDefaultSettings()
+	{
+		UMaterialInstanceToolSettings* Settings = NewObject<UMaterialInstanceToolSettings>();
+
+		// 같은 파라미터에 짧은 이름과 긴 이름을 함께 둔다. GroupTextures 가 긴 접미사를
+		// 우선하므로 _N 과 _Normal 이 함께 있어도 베이스 이름이 깨지지 않는다
+		TMap<FString, FName>& Rules = Settings->SuffixToParameter;
+		Rules.Add(TEXT("_BC"), TEXT("BaseColor"));
+		Rules.Add(TEXT("_BaseColor"), TEXT("BaseColor"));
+		Rules.Add(TEXT("_N"), TEXT("Normal"));
+		Rules.Add(TEXT("_Normal"), TEXT("Normal"));
+		Rules.Add(TEXT("_R"), TEXT("Roughness"));
+		Rules.Add(TEXT("_Roughness"), TEXT("Roughness"));
+		Rules.Add(TEXT("_M"), TEXT("Metallic"));
+		Rules.Add(TEXT("_Metallic"), TEXT("Metallic"));
+		Rules.Add(TEXT("_ORM"), TEXT("ORM"));
+		Rules.Add(TEXT("_E"), TEXT("Emissive"));
+		Rules.Add(TEXT("_Emissive"), TEXT("Emissive"));
+
+		// 나머지 필드는 헤더에 이미 기본값이 있다. TexturePrefix "T_", InstancePrefix "MI_",
+		// OutputFolder 비움(텍스처가 있던 자리), bUpdateExisting false, bAssignToAllSlots true
+		return Settings;
+	}
+
+	/** 선택 목록의 마스터가 우선, 없으면 설정의 DefaultMaster */
+	UMaterialInterface* FindMaster(const TArray<UObject*>& Selected, const UMaterialInstanceToolSettings* Settings)
+	{
+		for (UObject* Object : Selected)
+		{
+			if (UMaterialInterface* Material = Cast<UMaterialInterface>(Object))
+			{
+				// 직접 고른 쪽이 설정의 기본값보다 우선한다
+				return Material;
+			}
+		}
+
+		return Settings ? Settings->DefaultMaster : nullptr;
+	}
+
+	/** 텍스처들을 베이스 이름으로 묶는다. 접미사가 규칙에 없으면 건너뛴다 */
+	void GroupTextures(const TArray<UObject*>& Selected, const UMaterialInstanceToolSettings* Settings, TArray<FTextureSet>& OutSets)
+	{
+		// 베이스 이름 → OutSets 안의 위치
+		TMap<FString, int32> BaseToIndex;
+
+		for (UObject* Object : Selected)
+		{
+			UTexture* Texture = Cast<UTexture>(Object);
+			if (!Texture)
+			{
+				continue;
+			}
+
+			const FString Name = Texture->GetName();
+
+			// 어느 접미사로 끝나는지 찾는다
+			FString MatchedSuffix;
+			FName ParameterName = NAME_None;
+
+			for (const TPair<FString, FName>& Rule : Settings->SuffixToParameter)
+			{
+				// 더 긴 접미사가 이긴다. "_N" 과 "_Normal" 이 함께 있을 때
+				// "_N" 으로 자르면 베이스 이름이 Concrete_Normal 이 되어 묶음이 깨진다
+				if (Name.EndsWith(Rule.Key) && Rule.Key.Len() > MatchedSuffix.Len())
+				{
+					MatchedSuffix = Rule.Key;
+					ParameterName = Rule.Value;
+				}
+			}
+
+			if (ParameterName.IsNone())
+			{
+				// 조용히 무시하면 "왜 이것만 안 들어갔지" 로 돌아온다. 이름을 남긴다
+				UE_LOG(LogMITool, Warning, TEXT("접미사 규칙에 없는 텍스처라 건너뛴다: %s"), *Name);
+				continue;
+			}
+
+			// T_Concrete_BC → Concrete
+			FString BaseName = Name.LeftChop(MatchedSuffix.Len());
+			BaseName.RemoveFromStart(Settings->TexturePrefix);
+
+			int32* Found = BaseToIndex.Find(BaseName);
+			if (!Found)
+			{
+				FTextureSet NewSet;
+				NewSet.BaseName = BaseName;
+
+				Found = &BaseToIndex.Add(BaseName, OutSets.Add(MoveTemp(NewSet)));
+			}
+
+			OutSets[*Found].ParameterToTexture.Add(ParameterName, Texture);
+		}
+	}
+
+	/** 마스터가 가진 텍스처 파라미터 이름들을 모은다. 없는 이름에 꽂으면 조용히 무시되므로 미리 거른다 */
+	void CollectTextureParameterNames(UMaterialInterface* Master, TSet<FName>& OutNames)
+	{
+		TArray<FMaterialParameterInfo> Infos;
+		TArray<FGuid> Ids;
+		Master->GetAllTextureParameterInfo(Infos, Ids);
+
+		for (const FMaterialParameterInfo& Info : Infos)
+		{
+			OutNames.Add(Info.Name);
+		}
+	}
+
+	/** 묶음 하나로 머티리얼 인스턴스 에셋을 만들거나, 이미 있으면 갱신한다. 실패하면 nullptr */
+	UMaterialInstanceConstant* CreateInstance(const FTextureSet& Set, UMaterialInterface* Master, const UMaterialInstanceToolSettings* Settings, const TSet<FName>& ValidParameters, const FString& PackagePath)
+	{
+		const FString AssetName = Settings->InstancePrefix + Set.BaseName;
+		const FString PackageName = PackagePath + TEXT("/") + AssetName;
+
+		UMaterialInstanceConstant* Instance = nullptr;
+		bool bWasExisting = false;
+
+		// 이미 있으면 지우고 다시 만들지 않고 그 자리에서 갱신한다.
+		// 한 번 돌린 뒤 메쉬에 입혀두면 그 메쉬가 참조를 쥐고 있어서, 교체하려 들면
+		// "is in use" 로 막힌다. 갱신은 참조를 그대로 두므로 그 문제가 생기지 않는다
+		if (FPackageName::DoesPackageExist(PackageName))
+		{
+			Instance = LoadObject<UMaterialInstanceConstant>(nullptr, *(PackageName + TEXT(".") + AssetName));
+
+			if (Instance && !Settings->bUpdateExisting)
+			{
+				UE_LOG(LogMITool, Warning, TEXT("%s 가 이미 있어 건너뛴다. 갱신하려면 bUpdateExisting 을 켤 것"), *AssetName);
+				return nullptr;
+			}
+
+			if (Instance)
+			{
+				Instance->Modify();
+				bWasExisting = true;
+			}
+		}
+
+		if (!Instance)
+		{
+			IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
+
+			UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
+			Factory->InitialParent = Master;
+
+			Instance = Cast<UMaterialInstanceConstant>(AssetTools.CreateAsset(
+				AssetName,
+				PackagePath,
+				UMaterialInstanceConstant::StaticClass(),
+				Factory));
+
+			if (!Instance)
+			{
+				UE_LOG(LogMITool, Error, TEXT("%s 생성 실패"), *AssetName);
+				return nullptr;
+			}
+		}
+
+		// 팩토리의 InitialParent 는 새로 만들 때만 잡는다.
+		// 갱신 경로에서는 옛 부모가 남아 있으므로 한 번 더 못박는다. 중복 호출 비용은 없다
+		UMaterialEditingLibrary::SetMaterialInstanceParent(Instance, Master);
+
+		for (const TPair<FName, UTexture*>& Pair : Set.ParameterToTexture)
+		{
+			// 없는 이름을 줘도 에러 없이 무시된다. MI 는 멀쩡히 만들어지고 텍스처만 비어서,
+			// 원인이 "마스터 파라미터가 BaseColor 가 아니라 Base Color 였다" 같은 것이면 찾는 데 한참 걸린다
+			if (!ValidParameters.Contains(Pair.Key))
+			{
+				UE_LOG(LogMITool, Warning, TEXT("%s: 마스터에 '%s' 텍스처 파라미터가 없다. %s 는 안 꽂힌다"),
+					*AssetName, *Pair.Key.ToString(), *Pair.Value->GetName());
+				continue;
+			}
+
+			UMaterialEditingLibrary::SetMaterialInstanceTextureParameterValue(Instance, Pair.Key, Pair.Value);
+		}
+
+		// 셰이더 재컴파일과 썸네일 갱신. 안 부르면 썸네일이 회색으로 남아 "안 들어갔나" 싶어진다
+		UMaterialEditingLibrary::UpdateMaterialInstance(Instance);
+
+		UE_LOG(LogMITool, Log, TEXT("%s: %s/%s"), bWasExisting ? TEXT("갱신") : TEXT("만듦"), *PackagePath, *AssetName);
+
+		return Instance;
+	}
+
+	/**
+	 *  선택 목록에 스태틱 메쉬가 있으면 만든 인스턴스를 입힌다.
+	 *  메쉬를 안 골랐으면 아무것도 하지 않는다 — 인스턴스를 만드는 데까지가 기본 동작이다.
+	 */
+	void AssignToMeshes(const TArray<UObject*>& Selected, const TArray<FCreatedInstance>& Created, const UMaterialInstanceToolSettings* Settings)
+	{
+		TArray<UStaticMesh*> Meshes;
+		for (UObject* Object : Selected)
+		{
+			if (UStaticMesh* Mesh = Cast<UStaticMesh>(Object))
+			{
+				Meshes.Add(Mesh);
+			}
+		}
+
+		if (Meshes.Num() == 0)
+		{
+			// 메쉬를 안 골랐으면 인스턴스를 만드는 데까지가 끝이다
+			return;
+		}
+
+		if (Created.Num() == 0)
+		{
+			UE_LOG(LogMITool, Warning, TEXT("메쉬를 골랐지만 만들어진 인스턴스가 없어 입힐 것이 없다"));
+			return;
+		}
+
+		for (UStaticMesh* Mesh : Meshes)
+		{
+			UMaterialInstanceConstant* Chosen = nullptr;
+
+			if (Created.Num() == 1)
+			{
+				// 하나뿐이면 고를 것이 없다. 메쉬 이름이 달라도 그것을 입힌다
+				Chosen = Created[0].Instance;
+			}
+			else
+			{
+				// 여럿이면 이름으로 짝을 찾는다. SM_Concrete_Wall ← Concrete
+				// 긴 쪽이 이긴다. Concrete 와 Concrete_Wet 이 함께 있으면 후자가 더 구체적인 짝이다
+				int32 BestLength = 0;
+				for (const FCreatedInstance& Candidate : Created)
+				{
+					if (Mesh->GetName().Contains(Candidate.BaseName) && Candidate.BaseName.Len() > BestLength)
+					{
+						BestLength = Candidate.BaseName.Len();
+						Chosen = Candidate.Instance;
+					}
+				}
+			}
+
+			if (!Chosen)
+			{
+				UE_LOG(LogMITool, Warning, TEXT("%s: 이름이 맞는 인스턴스를 못 찾아 건너뛴다"), *Mesh->GetName());
+				continue;
+			}
+
+			const int32 SlotCount = Mesh->GetStaticMaterials().Num();
+			if (SlotCount == 0)
+			{
+				UE_LOG(LogMITool, Warning, TEXT("%s: 머티리얼 슬롯이 없다"), *Mesh->GetName());
+				continue;
+			}
+
+			const int32 LastSlot = Settings->bAssignToAllSlots ? SlotCount - 1 : 0;
+			for (int32 i = 0; i <= LastSlot; ++i)
+			{
+				// 트랜잭션, PreEditChange, 슬롯 이름 보정까지 엔진이 안에서 처리한다.
+				// 배열을 직접 쓰면 그중 몇 가지가 빠지고, 특히 되돌리기가 안 먹는다
+				Mesh->SetMaterial(i, Chosen);
+			}
+
+			UE_LOG(LogMITool, Log, TEXT("입힘: %s <- %s (슬롯 %d개)"), *Mesh->GetName(), *Chosen->GetName(), LastSlot + 1);
+		}
+	}
+}
+
+// ── 공개 진입점 ──
+
+void CreateMaterialInstances(const TArray<UObject*>& Selected)
+{
+	// 기본 규칙으로 갈 때만 쓴다. 트랜지언트 객체를 이 함수가 끝날 때까지 살려두는 역할이다
+	TStrongObjectPtr<UMaterialInstanceToolSettings> FallbackSettings;
+
+	UMaterialInstanceToolSettings* Settings = FindSettings(Selected);
+	if (!Settings)
+	{
+		// DA 는 선택적 덮어쓰기다. 안 골랐으면 기본 규칙으로 간다
+		FallbackSettings.Reset(MakeDefaultSettings());
+		Settings = FallbackSettings.Get();
+
+		UE_LOG(LogMITool, Log, TEXT("설정 에셋을 고르지 않아 기본 규칙으로 간다 (접미사 %d 개)"),
+			Settings->SuffixToParameter.Num());
+	}
+	else if (!Settings->IsUsable())
+	{
+		// 골랐는데 규칙이 비어 있는 경우다. 여기서 기본값으로 덮어버리면 그 에셋을 고른 뜻이 사라지고,
+		// 규칙을 적다 만 것을 모른 채 지나가게 된다. 그래서 조용히 넘기지 않는다
+		UE_LOG(LogMITool, Error, TEXT("%s 의 접미사 규칙이 비어 있다. 채우거나, 아예 고르지 말고 기본 규칙에 맡길 것"),
+			*Settings->GetName());
+		return;
+	}
+
+	UMaterialInterface* Master = FindMaster(Selected, Settings);
+	if (!Master)
+	{
+		UE_LOG(LogMITool, Error, TEXT("부모 머티리얼이 없다. 같이 선택할 것 (설정 에셋을 쓴다면 DefaultMaster 로도 된다)"));
+		return;
+	}
+
+	TArray<FTextureSet> Sets;
+	GroupTextures(Selected, Settings, Sets);
+
+	TSet<FName> ValidParameters;
+	CollectTextureParameterNames(Master, ValidParameters);
+
+	UE_LOG(LogMITool, Log, TEXT("부모: %s / 묶음 %d 개"), *Master->GetName(), Sets.Num());
+
+	TArray<FCreatedInstance> Created;
+
+	for (const FTextureSet& Set : Sets)
+	{
+		// OutputFolder 가 비어 있으면 텍스처가 있던 자리에 만든다
+		FString PackagePath = Settings->OutputFolder.Path;
+		if (PackagePath.IsEmpty())
+		{
+			const UTexture* AnyTexture = Set.ParameterToTexture.CreateConstIterator().Value();
+			PackagePath = FPackageName::GetLongPackagePath(AnyTexture->GetOutermost()->GetName());
+		}
+
+		if (UMaterialInstanceConstant* Instance = CreateInstance(Set, Master, Settings, ValidParameters, PackagePath))
+		{
+			Created.Add(FCreatedInstance{ Set.BaseName, Instance });
+		}
+	}
+
+	UE_LOG(LogMITool, Log, TEXT("%d 개 생성. 저장은 아직 안 됐다 — Ctrl+Shift+S"), Created.Num());
+
+	// 메쉬를 같이 골랐으면 입히는 데까지, 아니면 여기서 끝난다
+	AssignToMeshes(Selected, Created, Settings);
+}
+
+} // namespace MaterialInstanceTool

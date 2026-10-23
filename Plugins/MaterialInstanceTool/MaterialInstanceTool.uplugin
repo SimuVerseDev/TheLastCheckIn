@@ -1,0 +1,20 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "Material Instance Tool",
+	"Description": "텍스처 이름 규칙에서 머티리얼 인스턴스를 만들고, 메쉬를 함께 고르면 입힌다. 규칙은 MaterialInstanceToolSettings 데이터 에셋에 둔다.",
+	"Category": "Editor",
+	"CreatedBy": "SH",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "MaterialInstanceTool",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit"
+		}
+	]
+}
