@@ -51,6 +51,13 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Debug")
 	bool bShowDebugPrompt = true;
 	
+	/*
+	임시 카트모드 전환용
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Debug")
+	bool bDebugTrashMode = false;
+
+	
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
