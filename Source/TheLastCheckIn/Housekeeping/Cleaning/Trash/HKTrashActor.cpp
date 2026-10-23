@@ -36,7 +36,7 @@ void AHKTrashActor::Tick(float DeltaTime)
 
 	AbsorbElapsed += DeltaTime;
 	const float Alpha = FMath::Clamp(AbsorbElapsed / AbsorbDuration, 0.0f, 1.0f);
-	const float Ease = FMath::InterpEaseIn(0.0f, 1.0f, Alpha, 2.0f);
+	const float Ease = FMath::InterpEaseIn(0.0f, 1.0f, Alpha, 3.0f);
 	
 	const USceneComponent* Target = AbsorbTarget.Get();
 	const FVector End = Target ? Target->GetComponentLocation() : AbsorbStartLocation;
