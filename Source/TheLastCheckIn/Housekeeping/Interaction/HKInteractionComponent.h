@@ -8,7 +8,10 @@ class UEnhancedInputComponent;
 class UHKCarryComponent;
 class AHKPhysicsPickupActor;
 class AHKBlanketActor;
+class AHKTrashActor;
+class USceneComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnTrashAbsorbed, AHKTrashActor*, Trash);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHKOnFocusChanged, AActor*, NewFocus, const FText&, Prompt);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnHoldProgress, float, Alpha);
 UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
@@ -28,6 +31,24 @@ public:
 	{
 		return FocusedActor.Get();
 	}
+	
+	/*
+	Cart
+	*/
+	UFUNCTION(BlueprintCallable, Category="Housekeeping|Trash")
+	void SetTrashAbsorbTarget(USceneComponent* Target)
+	{
+		TrashAbsorbTarget = Target;
+	}
+	
+	UFUNCTION(BlueprintPure, Category="Housekeeping|Trash")
+	bool CanAbsorbTrash() const
+	{
+		return TrashAbsorbTarget.IsValid() || bDebugTrashMode;
+	}
+	
+	UPROPERTY(BlueprintAssignable, Category="Housekeeping|Trash")
+	FHKOnTrashAbsorbed OnTrashAbsorbed;
 	
 protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Interaction",  meta=(ClampMin=0, Units="cm"))
@@ -67,6 +88,7 @@ private:
 	AHKPhysicsPickupActor* GetFocusedPickup() const;
 	AHKBlanketActor* GetFocusedBlanket() const;
 	AHKBlanketActor* FindBlanketOnRay(const FVector& Start, const FVector& End) const;
+	USceneComponent* GetTrashAbsorbTarget() const;
 
 	static bool IsInteractable(AActor* Actor);
 
@@ -88,4 +110,5 @@ private:
 	TWeakObjectPtr<AActor> HoldTarget;
 	float HoldElapsed = 0.0f;
 	float HoldDuration = 0.0f;
+	TWeakObjectPtr<USceneComponent> TrashAbsorbTarget;
 };
