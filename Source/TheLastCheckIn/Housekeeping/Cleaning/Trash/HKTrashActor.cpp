@@ -1,5 +1,6 @@
 ﻿#include "Housekeeping/Cleaning/Trash/HKTrashActor.h"
 #include "Housekeeping/Cleaning/Trash/HKTrashDirtComponent.h"
+#include "Housekeeping/Cleaning/Trash/System/HKTrashPoolSubsystem.h"
 #include "Components/StaticMeshComponent.h"
 
 AHKTrashActor::AHKTrashActor()
@@ -46,7 +47,17 @@ void AHKTrashActor::Tick(float DeltaTime)
 	if (Alpha >= 1.0f)
 	{
 		BP_OnAbsorbed();
-		EnterPool();
+		/*
+		null인데 returnPool호출 시 크래시 방지용
+		*/
+		if (UHKTrashPoolSubsystem* Pool = GetWorld()->GetSubsystem<UHKTrashPoolSubsystem>())
+		{
+			Pool->ReturnToPool(this);
+		}
+		else
+		{
+			EnterPool();
+		}
 	}
 }
 
