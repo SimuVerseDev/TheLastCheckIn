@@ -1,11 +1,12 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Housekeeping/Interaction/HKInteractable.h"
 #include "HKBlanketActor.generated.h"
 class UProceduralMeshComponent;
 class UMaterialInterface;
 UCLASS()
-class AHKBlanketActor : public AActor
+class AHKBlanketActor : public AActor, public IHKInteractable
 {
 	GENERATED_BODY()
 public:
@@ -35,7 +36,15 @@ public:
 		return Positions;
 	}
 	void Scramble(FRandomStream& Random, const FVector& Center, float MaxOffset);
-	
+
+	/*
+	IHKInteractable : LMB로 잡기
+	*/
+	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
+	virtual bool CanUse_Implementation(AActor* Interactor) const override;
+	virtual FText GetUsePrompt_Implementation(AActor* Interactor) const override;
+	virtual bool Use_Implementation(AActor* Interactor) override;
+
 protected:
 	/*
 	유연한 오브젝트를 프로시저럴(절차적)로 생성하고 물리 시뮬레이션(스프링-댐퍼 방식의 천 시뮬레이션)과 상호작용하기 위한 설정 값들을 정의

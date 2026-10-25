@@ -56,7 +56,16 @@ public:
 	{
 		return AbsorbPrompt;
 	}
-	
+
+	/*
+	HKInteractable
+	*/
+	virtual bool CanUse_Implementation(AActor* Interactor) const override;
+	virtual FText GetUsePrompt_Implementation(AActor* Interactor) const override;
+	virtual bool Use_Implementation(AActor* Interactor) override;
+	virtual void OnInteractFocusBegin_Implementation(AActor* Interactor) override;
+	virtual void OnInteractFocusEnd_Implementation(AActor* Interactor) override;
+
 protected:
 	virtual void BeginPlay() override;
 	

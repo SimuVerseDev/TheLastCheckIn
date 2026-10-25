@@ -1,11 +1,12 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Housekeeping/Interaction/HKInteractable.h"
 #include "HKPhysicsPickupActor.generated.h"
 
 class UStaticMeshComponent;
 UCLASS()
-class AHKPhysicsPickupActor : public AActor
+class AHKPhysicsPickupActor : public AActor, public IHKInteractable
 {
 	GENERATED_BODY()
 
@@ -34,10 +35,18 @@ public:
 	virtual void NotifyPickedUp(AActor* InCarrier);
 	virtual void NotifyReleased(bool bThrown);
 
+	/*
+	HKInteractable
+	*/
+	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
+	virtual bool CanUse_Implementation(AActor* Interactor) const override;
+	virtual FText GetUsePrompt_Implementation(AActor* Interactor) const override;
+	virtual bool Use_Implementation(AActor* Interactor) override;
+
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-	TObjectPtr<UStaticMeshComponent> Mesh; // 물리 시뮬레이션 본체
+	TObjectPtr<UStaticMeshComponent> Mesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Pickup")
 	FText PickupPrompt;

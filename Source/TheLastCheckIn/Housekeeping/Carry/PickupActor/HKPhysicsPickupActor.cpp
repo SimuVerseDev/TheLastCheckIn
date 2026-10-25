@@ -1,4 +1,5 @@
 ﻿#include "Housekeeping/Carry/PickupActor/HKPhysicsPickupActor.h"
+#include "Housekeeping/Carry/HKCarryComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "UObject/ConstructorHelpers.h"
@@ -38,4 +39,29 @@ void AHKPhysicsPickupActor::NotifyReleased(bool bThrown)
 bool AHKPhysicsPickupActor::CanBePickedUp() const
 {
 	return bCanBePickedUp && !IsCarried() && Mesh->IsSimulatingPhysics();
+}
+
+/*
+HKInteractable
+*/
+bool AHKPhysicsPickupActor::CanInteract_Implementation(AActor* Interactor) const
+{
+	return false;
+}
+
+bool AHKPhysicsPickupActor::CanUse_Implementation(AActor* Interactor) const
+{
+	const UHKCarryComponent* Carry = Interactor ? Interactor->FindComponentByClass<UHKCarryComponent>() : nullptr;
+	return Carry && !Carry->IsCarrying() && CanBePickedUp();
+}
+
+FText AHKPhysicsPickupActor::GetUsePrompt_Implementation(AActor* Interactor) const
+{
+	return PickupPrompt;
+}
+
+bool AHKPhysicsPickupActor::Use_Implementation(AActor* Interactor)
+{
+	UHKCarryComponent* Carry = Interactor ? Interactor->FindComponentByClass<UHKCarryComponent>() : nullptr;
+	return Carry && CanBePickedUp() && Carry->TryPickup(Mesh);
 }

@@ -19,6 +19,21 @@ void IHKInteractable::Interact_Implementation(AActor* Interactor)
 {
 }
 
+bool IHKInteractable::CanUse_Implementation(AActor* Interactor) const
+{
+	return false;
+}
+
+FText IHKInteractable::GetUsePrompt_Implementation(AActor* Interactor) const
+{
+	return NSLOCTEXT("Housekeeping", "DefaultUsePrompt", "사용");
+}
+
+bool IHKInteractable::Use_Implementation(AActor* Interactor)
+{
+	return false;
+}
+
 void IHKInteractable::OnInteractFocusBegin_Implementation(AActor* Interactor)
 {
 }

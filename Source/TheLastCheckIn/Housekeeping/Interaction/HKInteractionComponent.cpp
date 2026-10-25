@@ -1,7 +1,6 @@
 ﻿#include "Housekeeping/Interaction/HKInteractionComponent.h"
 #include "Housekeeping/Interaction/HKInteractable.h"
 #include "Housekeeping/Carry/HKCarryComponent.h"
-#include "Housekeeping/Carry/PickupActor/HKPhysicsPickupActor.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
@@ -11,7 +10,6 @@
 #include "GameFramework/PlayerController.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Housekeeping/Carry/PickupActor/Blanket/HKBlanketActor.h"
-#include "Housekeeping/Cleaning/Trash/HKTrashActor.h"
 #include "EngineUtils.h"
 
 UHKInteractionComponent::UHKInteractionComponent()
@@ -74,19 +72,9 @@ UHKCarryComponent* UHKInteractionComponent::GetCarryComponent() const
 	return GetOwner()->FindComponentByClass<UHKCarryComponent>();
 }
 
-AHKPhysicsPickupActor* UHKInteractionComponent::GetFocusedPickup() const
-{
-	return Cast<AHKPhysicsPickupActor>(FocusedActor.Get());
-}
-
 /*
 Blanket
 */
-AHKBlanketActor* UHKInteractionComponent::GetFocusedBlanket() const
-{
-	return Cast<AHKBlanketActor>(FocusedActor.Get());
-}
-
 AHKBlanketActor* UHKInteractionComponent::FindBlanketOnRay(const FVector& Start, const FVector& End) const
 {
 	for (TActorIterator<AHKBlanketActor> It(GetWorld()); It; ++It)
@@ -114,6 +102,16 @@ USceneComponent* UHKInteractionComponent::GetTrashAbsorbTarget() const
 bool UHKInteractionComponent::IsInteractable(AActor* Actor)
 {
 	return Actor && Actor->Implements<UHKInteractable>();
+}
+
+bool UHKInteractionComponent::CanFocus(AActor* Actor) const
+{
+	if (!IsInteractable(Actor))
+	{
+		return false;
+	}
+	AActor* Pawn = GetOwner();
+	return IHKInteractable::Execute_CanUse(Actor, Pawn) || IHKInteractable::Execute_CanInteract(Actor, Pawn);
 }
 
 void UHKInteractionComponent::EnsureInputSetup(APlayerController* PC)
@@ -167,21 +165,11 @@ void UHKInteractionComponent::UpdateFocus(APlayerController* PC)
 	FHitResult Hit;
 	const bool bHit = GetWorld()->SweepSingleByChannel(Hit, ViewLocation, TraceEnd, FQuat::Identity, TraceChannel, FCollisionShape::MakeSphere(TraceRadius), Params);
 	AActor* HitActor = bHit ? Hit.GetActor() : nullptr;
-	const AHKPhysicsPickupActor* Pickup = Cast<AHKPhysicsPickupActor>(HitActor);
-	if (IsInteractable(HitActor) && IHKInteractable::Execute_CanInteract(HitActor, Pawn))
+	if (CanFocus(HitActor))
 	{
 		SetFocus(HitActor);
 	}
-	else if (const AHKTrashActor* Trash = Cast<AHKTrashActor>(HitActor); Trash && !Trash->IsAbsorbed() && CanAbsorbTrash())
-	{
-		SetFocus(HitActor);
-	}
-	// 일반 물건과 이불을 분기
-	else if (Pickup && Pickup->CanBePickedUp())
-	{
-		SetFocus(HitActor);
-	}
-	else if (AHKBlanketActor* Blanket = FindBlanketOnRay(ViewLocation, bHit ? Hit.Location : TraceEnd))
+	else if (AHKBlanketActor* Blanket = FindBlanketOnRay(ViewLocation, bHit ? Hit.Location : TraceEnd); CanFocus(Blanket))
 	{
 		SetFocus(Blanket);
 	}
@@ -199,37 +187,20 @@ void UHKInteractionComponent::SetFocus(AActor* NewFocus)
 		return;
 	}
 	AActor* Pawn = GetOwner();
-	if (AHKTrashActor* OldTrash = Cast<AHKTrashActor>(OldFocus))
-	{
-		OldTrash->SetHighlighted(false);
-	}
 	if (IsInteractable(OldFocus))
 	{
 		IHKInteractable::Execute_OnInteractFocusEnd(OldFocus, Pawn);
 	}
 	FocusedActor = NewFocus;
 	CancelHold();
-	if (AHKTrashActor* NewTrash = Cast<AHKTrashActor>(NewFocus))
-	{
-		NewTrash->SetHighlighted(true);
-	}
 	FText Prompt;
 	if (IsInteractable(NewFocus))
 	{
 		IHKInteractable::Execute_OnInteractFocusBegin(NewFocus, Pawn);
-		Prompt = IHKInteractable::Execute_GetInteractPrompt(NewFocus, Pawn);
-	}
-	else if (const AHKTrashActor* Trash = Cast<AHKTrashActor>(NewFocus))
-	{
-		Prompt = Trash->GetAbsorbPrompt();
-	}
-	else if (const AHKPhysicsPickupActor* Pickup = Cast<AHKPhysicsPickupActor>(NewFocus))
-	{
-		Prompt = Pickup->GetPickupPrompt();
-	}
-	else if (const AHKBlanketActor* Blanket = Cast<AHKBlanketActor>(NewFocus))
-	{
-		Prompt = Blanket->GetGrabPrompt();
+
+		Prompt = IHKInteractable::Execute_CanUse(NewFocus, Pawn)
+			? IHKInteractable::Execute_GetUsePrompt(NewFocus, Pawn)
+			: IHKInteractable::Execute_GetInteractPrompt(NewFocus, Pawn);
 	}
 	OnFocusChanged.Broadcast(NewFocus, Prompt);
 }
@@ -280,21 +251,21 @@ void UHKInteractionComponent::ShowDebugPrompt() const
 	{
 		Message = TEXT("[LMB 떼기] 놓기");
 	}
-	else if (const AHKTrashActor* Trash = Cast<AHKTrashActor>(FocusedActor.Get()))
-	{
-		Message = FString::Printf(TEXT("[LMB] %s"), *Trash->GetAbsorbPrompt().ToString());
-	}
-	else if (const AHKPhysicsPickupActor* Pickup = GetFocusedPickup())
-	{
-		Message = FString::Printf(TEXT("[LMB] %s"), *Pickup->GetPickupPrompt().ToString());
-	}
 	else if (AActor* Target = FocusedActor.Get(); IsInteractable(Target))
 	{
-		Message = FString::Printf(TEXT("[E] %s"), *IHKInteractable::Execute_GetInteractPrompt(Target, GetOwner()).ToString());
-	}
-	else if (const AHKBlanketActor* Blanket = GetFocusedBlanket())
-	{
-		Message = FString::Printf(TEXT("[LMB] 이불 %s"), *Blanket->GetGrabPrompt().ToString());
+		AActor* Pawn = GetOwner();
+		if (IHKInteractable::Execute_CanUse(Target, Pawn))
+		{
+			Message = FString::Printf(TEXT("[LMB] %s"), *IHKInteractable::Execute_GetUsePrompt(Target, Pawn).ToString());
+		}
+		if (IHKInteractable::Execute_CanInteract(Target, Pawn))
+		{
+			if (!Message.IsEmpty())
+			{
+				Message += TEXT("\n");
+			}
+			Message += FString::Printf(TEXT("[E] %s"), *IHKInteractable::Execute_GetInteractPrompt(Target, Pawn).ToString());
+		}
 	}
 	if (!Message.IsEmpty())
 	{
@@ -326,28 +297,16 @@ void UHKInteractionComponent::HandleInteractStarted()
 
 void UHKInteractionComponent::HandleUseStarted()
 {
-	if (AHKTrashActor* Trash = Cast<AHKTrashActor>(FocusedActor.Get()))
-	{
-		if (Trash->Absorb(GetTrashAbsorbTarget()))
-		{
-			OnTrashAbsorbed.Broadcast(Trash);
-			SetFocus(nullptr);
-		}
-		return;
-	}
-
-	UHKCarryComponent* Carry = GetCarryComponent();
-	if (!Carry)
+	AActor* Pawn = GetOwner();
+	AActor* Target = FocusedActor.Get();
+	if (!IsInteractable(Target) || !IHKInteractable::Execute_CanUse(Target, Pawn))
 	{
 		return;
 	}
-	if (AHKPhysicsPickupActor* Pickup = GetFocusedPickup(); Pickup && Pickup->CanBePickedUp())
+	if (IHKInteractable::Execute_Use(Target, Pawn))
 	{
-		Carry->TryPickup(Pickup->GetMesh());
-	}
-	else if (AHKBlanketActor* Blanket = GetFocusedBlanket())
-	{
-		Carry->TryPickup(Cast<UPrimitiveComponent>(Blanket->GetRootComponent()));
+		OnUsed.Broadcast(Target);
+		SetFocus(nullptr);
 	}
 }
 

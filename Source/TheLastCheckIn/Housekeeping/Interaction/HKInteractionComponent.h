@@ -6,12 +6,10 @@
 class UInputAction;
 class UEnhancedInputComponent;
 class UHKCarryComponent;
-class AHKPhysicsPickupActor;
 class AHKBlanketActor;
-class AHKTrashActor;
 class USceneComponent;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnTrashAbsorbed, AHKTrashActor*, Trash);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnUsed, AActor*, Target);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHKOnFocusChanged, AActor*, NewFocus, const FText&, Prompt);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnHoldProgress, float, Alpha);
 UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
@@ -26,6 +24,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Housekeeping|Interaction")
 	FHKOnHoldProgress OnHoldProgress;
 	
+	UPROPERTY(BlueprintAssignable, Category="Housekeeping|Interaction")
+	FHKOnUsed OnUsed;
+
 	UFUNCTION(BlueprintPure, Category="Housekeeping|Interaction")
 	AActor* GetFocusedActor() const
 	{
@@ -46,10 +47,10 @@ public:
 	{
 		return TrashAbsorbTarget.IsValid() || bDebugTrashMode;
 	}
-	
-	UPROPERTY(BlueprintAssignable, Category="Housekeeping|Trash")
-	FHKOnTrashAbsorbed OnTrashAbsorbed;
-	
+
+	UFUNCTION(BlueprintPure, Category="Housekeeping|Trash")
+	USceneComponent* GetTrashAbsorbTarget() const;
+
 protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Interaction",  meta=(ClampMin=0, Units="cm"))
 	float InteractRange = 250.0f;
@@ -85,12 +86,10 @@ protected:
 private:
 	APlayerController* GetOwningPlayerController() const;
 	UHKCarryComponent* GetCarryComponent() const;
-	AHKPhysicsPickupActor* GetFocusedPickup() const;
-	AHKBlanketActor* GetFocusedBlanket() const;
 	AHKBlanketActor* FindBlanketOnRay(const FVector& Start, const FVector& End) const;
-	USceneComponent* GetTrashAbsorbTarget() const;
 
 	static bool IsInteractable(AActor* Actor);
+	bool CanFocus(AActor* Actor) const;
 
 	void EnsureInputSetup(APlayerController* PC);
 	void UpdateFocus(APlayerController* PC);

@@ -1,4 +1,5 @@
 ﻿#include "HKBlanketActor.h"
+#include "Housekeeping/Carry/HKCarryComponent.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/PrimitiveComponent.h"
 
@@ -282,6 +283,31 @@ void AHKBlanketActor::Release(const FVector& Velocity)
 		PrevPositions[GrabbedIndex] = Positions[GrabbedIndex] - (ClampedVel * 0.016f);
 	}
 	GrabbedIndex = INDEX_NONE;
+}
+
+/*
+IHKInteractable
+*/
+bool AHKBlanketActor::CanInteract_Implementation(AActor* Interactor) const
+{
+	return false;
+}
+
+bool AHKBlanketActor::CanUse_Implementation(AActor* Interactor) const
+{
+	const UHKCarryComponent* Carry = Interactor ? Interactor->FindComponentByClass<UHKCarryComponent>() : nullptr;
+	return Carry && !Carry->IsCarrying() && !IsGrabbed();
+}
+
+FText AHKBlanketActor::GetUsePrompt_Implementation(AActor* Interactor) const
+{
+	return GrabPrompt;
+}
+
+bool AHKBlanketActor::Use_Implementation(AActor* Interactor)
+{
+	UHKCarryComponent* Carry = Interactor ? Interactor->FindComponentByClass<UHKCarryComponent>() : nullptr;
+	return Carry && !IsGrabbed() && Carry->TryPickup(Mesh);
 }
 
 void AHKBlanketActor::ComputeParticleNormals()

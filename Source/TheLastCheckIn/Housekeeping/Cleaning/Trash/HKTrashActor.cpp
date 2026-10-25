@@ -1,19 +1,20 @@
 ﻿#include "Housekeeping/Cleaning/Trash/HKTrashActor.h"
 #include "Housekeeping/Cleaning/Trash/HKTrashDirtComponent.h"
 #include "Housekeeping/Cleaning/Trash/System/HKTrashPoolSubsystem.h"
+#include "Housekeeping/Interaction/HKInteractionComponent.h"
 #include "Components/StaticMeshComponent.h"
 
 AHKTrashActor::AHKTrashActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.bStartWithTickEnabled = false; // 흡수 연출 중에만 Tick
+	PrimaryActorTick.bStartWithTickEnabled = false;
 
 	Dirt = CreateDefaultSubobject<UHKTrashDirtComponent>(TEXT("TrashDirt"));
-	Mesh->SetRelativeScale3D(FVector::OneVector); // 부모의 테스트 큐브용 0.3 대신 원본 크기
+	Mesh->SetRelativeScale3D(FVector::OneVector);
 
 	PickupPrompt = NSLOCTEXT("Housekeeping", "TrashPickupPrompt", "줍기");
 	AbsorbPrompt = NSLOCTEXT("Housekeeping", "TrashAbsorbPrompt", "카트에 넣기");
-	bCanBePickedUp = false; // 쓰레기는 들지 않고 흡수만
+	bCanBePickedUp = false;
 }
 
 /*
@@ -114,4 +115,34 @@ void AHKTrashActor::ExitPool(const FTransform& SpawnTransform)
 void AHKTrashActor::SetHighlighted(bool bHighlighted)
 {
 	Mesh->SetOverlayMaterial(bHighlighted ? HighlightMaterial.Get() : nullptr);
+}
+
+/*
+IHKInteractable
+*/
+bool AHKTrashActor::CanUse_Implementation(AActor* Interactor) const
+{
+	const UHKInteractionComponent* Interaction = Interactor ? Interactor->FindComponentByClass<UHKInteractionComponent>() : nullptr;
+	return State == EHKTrashState::Active && Interaction && Interaction->CanAbsorbTrash();
+}
+
+FText AHKTrashActor::GetUsePrompt_Implementation(AActor* Interactor) const
+{
+	return AbsorbPrompt;
+}
+
+bool AHKTrashActor::Use_Implementation(AActor* Interactor)
+{
+	const UHKInteractionComponent* Interaction = Interactor ? Interactor->FindComponentByClass<UHKInteractionComponent>() : nullptr;
+	return Interaction && Absorb(Interaction->GetTrashAbsorbTarget());
+}
+
+void AHKTrashActor::OnInteractFocusBegin_Implementation(AActor* Interactor)
+{
+	SetHighlighted(true);
+}
+
+void AHKTrashActor::OnInteractFocusEnd_Implementation(AActor* Interactor)
+{
+	SetHighlighted(false);
 }
