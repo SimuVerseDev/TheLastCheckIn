@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
-#include "Housekeeping/Cleaning/HKDirtComponent.h"
+#include "Housekeeping/Core/Dirt/HKDirtComponent.h"
 #include "HKPlacementDirtComponent.generated.h"
 
 /*

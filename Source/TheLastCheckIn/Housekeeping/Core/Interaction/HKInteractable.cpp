@@ -1,4 +1,4 @@
-#include "Housekeeping/Interaction/HKInteractable.h"
+#include "Housekeeping/Core/Interaction/HKInteractable.h"
 
 bool IHKInteractable::CanInteract_Implementation(AActor* Interactor) const
 {

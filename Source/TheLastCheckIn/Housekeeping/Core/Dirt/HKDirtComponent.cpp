@@ -1,4 +1,4 @@
-﻿#include "Housekeeping/Cleaning/HKDirtComponent.h"
+﻿#include "Housekeeping/Core/Dirt/HKDirtComponent.h"
 #include "GameFramework/Actor.h"
 
 UHKDirtComponent::UHKDirtComponent()

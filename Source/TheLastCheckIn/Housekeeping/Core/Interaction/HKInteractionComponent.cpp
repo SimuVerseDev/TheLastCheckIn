@@ -1,6 +1,6 @@
-﻿#include "Housekeeping/Interaction/HKInteractionComponent.h"
-#include "Housekeeping/Interaction/HKInteractable.h"
-#include "Housekeeping/Carry/HKCarryComponent.h"
+﻿#include "Housekeeping/Core/Interaction/HKInteractionComponent.h"
+#include "Housekeeping/Core/Interaction/HKInteractable.h"
+#include "Housekeeping/Core/Carry/HKCarryComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
@@ -9,7 +9,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "UObject/ConstructorHelpers.h"
-#include "Housekeeping/Carry/PickupActor/Blanket/HKBlanketActor.h"
+#include "Housekeeping/Objects/Blanket/HKBlanketActor.h"
 #include "EngineUtils.h"
 
 UHKInteractionComponent::UHKInteractionComponent()

@@ -1,5 +1,5 @@
-﻿#include "Housekeeping/Cleaning/Trash/HKTrashDirtComponent.h"
-#include "Housekeeping/Cleaning/Trash/HKTrashActor.h"
+﻿#include "Housekeeping/Objects/Trash/HKTrashDirtComponent.h"
+#include "Housekeeping/Objects/Trash/HKTrashActor.h"
 #include "Components/BoxComponent.h"
 
 UHKTrashDirtComponent::UHKTrashDirtComponent()

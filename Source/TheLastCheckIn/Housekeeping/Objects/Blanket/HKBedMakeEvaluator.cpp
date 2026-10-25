@@ -1,5 +1,5 @@
-﻿#include "Housekeeping/Cleaning/Blanket/HKBedMakeEvaluator.h"
-#include "Housekeeping/Carry/PickupActor/Blanket/HKBlanketActor.h"
+﻿#include "Housekeeping/Objects/Blanket/HKBedMakeEvaluator.h"
+#include "Housekeeping/Objects/Blanket/HKBlanketActor.h"
 #include "Components/BoxComponent.h"
 #include "EngineUtils.h"
 

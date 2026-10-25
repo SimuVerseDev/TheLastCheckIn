@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Housekeeping/Interaction/HKInteractable.h"
+#include "Housekeeping/Core/Interaction/HKInteractable.h"
 #include "HKPhysicsPickupActor.generated.h"
 
 class UStaticMeshComponent;

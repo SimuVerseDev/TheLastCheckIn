@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
-#include "Housekeeping/Carry/PickupActor/HKPhysicsPickupActor.h"
+#include "Housekeeping/Core/Carry/HKPhysicsPickupActor.h"
 #include "HKTrashActor.generated.h"
 class UHKTrashDirtComponent;
 class UMaterialInterface;

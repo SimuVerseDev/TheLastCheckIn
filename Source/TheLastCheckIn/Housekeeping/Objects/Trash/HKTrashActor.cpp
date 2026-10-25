@@ -1,7 +1,7 @@
-﻿#include "Housekeeping/Cleaning/Trash/HKTrashActor.h"
-#include "Housekeeping/Cleaning/Trash/HKTrashDirtComponent.h"
-#include "Housekeeping/Cleaning/Trash/System/HKTrashPoolSubsystem.h"
-#include "Housekeeping/Interaction/HKInteractionComponent.h"
+﻿#include "Housekeeping/Objects/Trash/HKTrashActor.h"
+#include "Housekeeping/Objects/Trash/HKTrashDirtComponent.h"
+#include "Housekeeping/Objects/Trash/HKTrashPoolSubsystem.h"
+#include "Housekeeping/Core/Interaction/HKInteractionComponent.h"
 #include "Components/StaticMeshComponent.h"
 
 AHKTrashActor::AHKTrashActor()

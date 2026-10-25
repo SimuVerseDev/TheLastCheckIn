@@ -1,5 +1,5 @@
-﻿#include "Housekeeping/Cleaning/Trash/System/HKTrashPoolSubsystem.h"
-#include "Housekeeping/Cleaning/Trash/HKTrashActor.h"
+﻿#include "Housekeeping/Objects/Trash/HKTrashPoolSubsystem.h"
+#include "Housekeeping/Objects/Trash/HKTrashActor.h"
 #include "Engine/World.h"
 
 AHKTrashActor* UHKTrashPoolSubsystem::GetTrash(TSubclassOf<AHKTrashActor> TrashClass, const FTransform& SpawnTransform)

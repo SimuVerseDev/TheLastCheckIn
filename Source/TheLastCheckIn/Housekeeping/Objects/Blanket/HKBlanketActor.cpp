@@ -1,5 +1,5 @@
-﻿#include "HKBlanketActor.h"
-#include "Housekeeping/Carry/HKCarryComponent.h"
+﻿#include "Housekeeping/Objects/Blanket/HKBlanketActor.h"
+#include "Housekeeping/Core/Carry/HKCarryComponent.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/PrimitiveComponent.h"
 
@@ -100,18 +100,18 @@ void AHKBlanketActor::BuildConstraints()
 		{
 			const int32 Idx = ToIndex(X, Y);
 
-			// 1. Stretch (바로 옆 점)
+			// Stretch (바로 옆 점)
 			if (X + 1 < CountX) AddConstraint(Idx, ToIndex(X + 1, Y), StretchStiffness);
 			if (Y + 1 < CountY) AddConstraint(Idx, ToIndex(X, Y + 1), StretchStiffness);
 
-			// 2. Shear (대각선 점)
+			// Shear (대각선 점)
 			if (X + 1 < CountX && Y + 1 < CountY)
 			{
 				AddConstraint(Idx, ToIndex(X + 1, Y + 1), ShearStiffness);
 				AddConstraint(ToIndex(X + 1, Y), ToIndex(X, Y + 1), ShearStiffness);
 			}
 
-			// 3. Bend (두 칸 건너 점 - 접힘 방지)
+			// Bend (두 칸 건너 점 - 접힘 방지)
 			if (X + 2 < CountX) AddConstraint(Idx, ToIndex(X + 2, Y), BendStiffness);
 			if (Y + 2 < CountY) AddConstraint(Idx, ToIndex(X, Y + 2), BendStiffness);
 		}

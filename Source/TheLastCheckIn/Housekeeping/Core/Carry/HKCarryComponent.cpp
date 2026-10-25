@@ -1,10 +1,10 @@
-﻿#include "Housekeeping/Carry/HKCarryComponent.h"
+﻿#include "Housekeeping/Core/Carry/HKCarryComponent.h"
 #include "Components/PrimitiveComponent.h"
-#include "Housekeeping/Carry/PickupActor/HKPhysicsPickupActor.h"
+#include "Housekeeping/Core/Carry/HKPhysicsPickupActor.h"
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/Controller.h"
-#include "Housekeeping/Carry/PickupActor/Blanket/HKBlanketActor.h"
+#include "Housekeeping/Objects/Blanket/HKBlanketActor.h"
 
 UHKCarryComponent::UHKCarryComponent()
 {
