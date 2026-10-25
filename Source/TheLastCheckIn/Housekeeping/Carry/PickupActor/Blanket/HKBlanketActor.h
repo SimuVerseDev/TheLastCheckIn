@@ -38,7 +38,7 @@ public:
 	void Scramble(FRandomStream& Random, const FVector& Center, float MaxOffset);
 
 	/*
-	IHKInteractable : LMB로 잡기
+	IHKInteractable
 	*/
 	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
 	virtual bool CanUse_Implementation(AActor* Interactor) const override;
