@@ -1,4 +1,4 @@
-﻿#include "Housekeeping/Objects/Furniture/HKPlacementDirtComponent.h"
+﻿#include "Housekeeping/Core/Dirt/HKPlacementDirtComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "GameFramework/Actor.h"
 
