@@ -55,7 +55,10 @@ protected:
 	float CoverWeight = 0.7f;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|Bed", meta=(ClampMin=1, Units="cm"))
-	float MaxHeightDeviation = 10.0f;
+	float MaxHeightDeviation = 6.0f;
+	
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|Bed", meta=(ClampMin=1))
+	int32 MinParticlesPerCell = 3;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|Scatter", meta=(ClampMin=0, Units="cm"))
 	float ScatterOffset = 50.0f;
@@ -69,9 +72,15 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|MakeBed", meta=(ClampMin=0.05, Units="s"))
 	float MakeBedDuration = 0.4f;
 	
+	UPROPERTY(EditAnywhere, Category="HouseKeeping|Dirt|MakeBed", meta=(ClampMin=0.05, Units="s"))
+	float MadeCheckInterval = 0.25f;
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UBoxComponent> BedArea;
+	
+	void CheckBedMade();
+	FTimerHandle MadeCheckTimer;
 	
 	// DEBUG
 	mutable float LastCoverRatio = 0.0f;

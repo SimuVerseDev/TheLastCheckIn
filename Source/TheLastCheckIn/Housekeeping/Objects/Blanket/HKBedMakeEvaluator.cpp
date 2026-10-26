@@ -7,7 +7,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogHKBedMake, Log, All);
 
 UHKBedMakeEvaluator::UHKBedMakeEvaluator()
 {
-	Tolerance = 0.2f;
+	Tolerance = 0.08f;
 }
 
 void UHKBedMakeEvaluator::BeginPlay()
@@ -55,8 +55,8 @@ float UHKBedMakeEvaluator::EvaluateDirt() const
 	const FVector Extent = BedArea->GetUnscaledBoxExtent();
 	const int32 NumCells = CoverGridX * CoverGridY;
 
-	TArray<bool> Covered;
-	Covered.Init(false, NumCells);
+	TArray<int32> CellCounts;
+	CellCounts.Init(0, NumCells);
 	int32 NumInside = 0;
 	float SumZ = 0.0f;
 	float SumZSq = 0.0f;
@@ -64,24 +64,27 @@ float UHKBedMakeEvaluator::EvaluateDirt() const
 	for (const FVector& P : Blanket->GetParticlePositions())
 	{
 		const FVector L = BoxTransform.InverseTransformPosition(P);
-		if (FMath::Abs(L.X) > Extent.X || FMath::Abs(L.Y) > Extent.Y || FMath::Abs(L.Z) > Extent.Z)
+		if (FMath::Abs(L.X) > Extent.X || FMath::Abs(L.Y) > Extent.Y)
 		{
 			continue;
 		}
 
-		const int32 CX = FMath::Clamp(FMath::FloorToInt((L.X + Extent.X) / (2.0f * Extent.X) * CoverGridX), 0, CoverGridX - 1);
-		const int32 CY = FMath::Clamp(FMath::FloorToInt((L.Y + Extent.Y) / (2.0f * Extent.Y) * CoverGridY), 0, CoverGridY - 1);
-		Covered[CY * CoverGridX + CX] = true;
-
 		++NumInside;
 		SumZ += L.Z;
 		SumZSq += L.Z * L.Z;
+
+		if (FMath::Abs(L.Z) <= Extent.Z)
+		{
+			const int32 CX = FMath::Clamp(FMath::FloorToInt((L.X + Extent.X) / (2.0f * Extent.X) * CoverGridX), 0, CoverGridX - 1);
+			const int32 CY = FMath::Clamp(FMath::FloorToInt((L.Y + Extent.Y) / (2.0f * Extent.Y) * CoverGridY), 0, CoverGridY - 1);
+			++CellCounts[CY * CoverGridX + CX];
+		}
 	}
 
 	int32 NumCovered = 0;
-	for (const bool bCell : Covered)
+	for (const int32 Count : CellCounts)
 	{
-		NumCovered += bCell ? 1 : 0;
+		NumCovered += Count >= MinParticlesPerCell ? 1 : 0;
 	}
 	LastCoverRatio = static_cast<float>(NumCovered) / NumCells;
 
@@ -107,18 +110,33 @@ void UHKBedMakeEvaluator::ApplyDirt(FRandomStream& Random)
 	
 	const FVector Top = BedArea->GetComponentLocation() + BedArea->GetUpVector() * (BedArea->GetScaledBoxExtent().Z + 20.0f);
 	Blanket->Scramble(Random, Top, ScatterOffset);
+	GetWorld()->GetTimerManager().SetTimer(MadeCheckTimer, this, &UHKBedMakeEvaluator::CheckBedMade, MadeCheckInterval, true);
 }
 
 void UHKBedMakeEvaluator::ClearDirt()
 {
-	const bool bWasDirty = IsDirtActive();
 	Super::ClearDirt();
+	if (const UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(MadeCheckTimer);
+	}
+}
 
-	if (!bWasDirty || !bAutoMakeBed || !Blanket || !BedArea)
+void UHKBedMakeEvaluator::CheckBedMade()
+{
+	if (!IsDirtActive() || !Blanket || Blanket->IsGrabbed())
 	{
 		return;
 	}
-
+	if (GetRawDirt() > Tolerance)
+	{
+		return;
+	}
+	ClearDirt();
+	if (!bAutoMakeBed || !BedArea)
+	{
+		return;
+	}
 	const FVector Location = BedArea->GetComponentLocation() + BedArea->GetUpVector() * BedArea->GetScaledBoxExtent().Z;
 	const FQuat Rotation = BedArea->GetComponentQuat() * FQuat(FVector::UpVector, FMath::DegreesToRadians(MadeBlanketYaw));
 	Blanket->MakeBed(FTransform(Rotation, Location), MakeBedDuration);
