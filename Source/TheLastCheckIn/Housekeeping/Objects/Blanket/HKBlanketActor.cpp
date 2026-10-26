@@ -46,12 +46,18 @@ void AHKBlanketActor::Tick(float DeltaTime)
 	}
 
 	const float Stretch = ComputeMaxStretch();
-	if (IsGrabbed() && Stretch > MaxGrabStretch)
+
+	GrabStretchElapsed = (IsGrabbed() && Stretch > MaxGrabStretch) ? GrabStretchElapsed + DeltaTime : 0.0f;
+	if (GrabStretchElapsed > GrabStretchTime)
 	{
+		GrabStretchElapsed = 0.0f;
 		Release(FVector::ZeroVector);
 	}
-	if (Stretch > ResetStretch)
+
+	ResetStretchElapsed = (!IsGrabbed() && Stretch > ResetStretch) ? ResetStretchElapsed + DeltaTime : 0.0f;
+	if (ResetStretchElapsed > ResetStretchTime)
 	{
+		ResetStretchElapsed = 0.0f;
 		ResetFlat();
 	}
 
