@@ -142,7 +142,8 @@ void AHKBlanketActor::Step(float Dt)
 		PrevPositions[GrabbedIndex] = Positions[GrabbedIndex];
 		Positions[GrabbedIndex] += (GrabTarget - Positions[GrabbedIndex]).GetClampedToMaxSize(MaxGrabSpeed * Dt);
 	}
-	
+
+	PredictedPositions = Positions;
 	for (int32 Iter = 0; Iter < SolverIterations; ++Iter)
 	{
 		SolveConstraints();
@@ -230,7 +231,7 @@ void AHKBlanketActor::SolveCollisions()
 		{
 			NewPos += Normal * (SurfaceOffset - Height);
 		}
-		const FVector Slide = FVector::VectorPlaneProject(NewPos - Start, Normal);
+		const FVector Slide = FVector::VectorPlaneProject(PredictedPositions[I] - Start, Normal);
 		if (Normal.Z >= FloorNormalZ)
 		{
 			if (Slide.Size() < StaticFrictionDistance)

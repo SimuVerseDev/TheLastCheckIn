@@ -143,6 +143,7 @@ private:
 	void ComputeParticleNormals();
 	TArray<FVector> Positions;
 	TArray<FVector> PrevPositions;
+	TArray<FVector> PredictedPositions;
 	TArray<FVector> ParticleNormals;
 	TArray<FVector> SmoothedNormals;
 	TArray<FDistanceConstraint> Constraints;
