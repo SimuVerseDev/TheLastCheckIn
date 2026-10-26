@@ -13,7 +13,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Guests/GuestCharacter.h"
 #include "Rooms/RoomActor.h"
-#include "Housekeeping/Carry/HKCarryComponent.h"
+#include "Housekeeping/Core/Carry/HKCarryComponent.h"
 
 // Sets default values for this component's properties
 UCheckInInteractionComponent::UCheckInInteractionComponent()
