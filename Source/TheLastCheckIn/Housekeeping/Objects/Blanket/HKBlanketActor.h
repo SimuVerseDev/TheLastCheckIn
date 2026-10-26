@@ -105,7 +105,13 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm/s"))
 	float MaxReleaseSpeed = 1500.0f;
-	
+
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=100, Units="cm/s"))
+	float MaxParticleSpeed = 2000.0f;
+
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=100, Units="cm/s"))
+	float MaxGrabSpeed = 1200.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Blanket")
 	FText GrabPrompt;
 	

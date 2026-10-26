@@ -122,7 +122,8 @@ void AHKBlanketActor::Step(float Dt)
 {
 	const int32 Total = Positions.Num();
 	const FVector Gravity(0.0f, 0.0f, -980.05f);
-	
+	const float MaxStep = MaxParticleSpeed * Dt;
+
 	for (int32 I = 0; I < Total; ++I)
 	{
 		if (I == GrabbedIndex)
@@ -131,15 +132,15 @@ void AHKBlanketActor::Step(float Dt)
 		}
 
 		const FVector Temp = Positions[I];
-		const FVector Velocity = (Positions[I] - PrevPositions[I]) * (1.0f - Damping);
+		const FVector Velocity = ((Positions[I] - PrevPositions[I]) * (1.0f - Damping)).GetClampedToMaxSize(MaxStep);
 		Positions[I] += Velocity + Gravity * (Dt * Dt);
 		PrevPositions[I] = Temp;
 	}
-	
+
 	if (GrabbedIndex != INDEX_NONE && Positions.IsValidIndex(GrabbedIndex))
 	{
 		PrevPositions[GrabbedIndex] = Positions[GrabbedIndex];
-		Positions[GrabbedIndex] = GrabTarget;
+		Positions[GrabbedIndex] += (GrabTarget - Positions[GrabbedIndex]).GetClampedToMaxSize(MaxGrabSpeed * Dt);
 	}
 	
 	for (int32 Iter = 0; Iter < SolverIterations; ++Iter)
