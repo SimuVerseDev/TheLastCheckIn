@@ -229,9 +229,16 @@ void AHKBlanketActor::SolveCollisions()
 			NewPos += Normal * (SurfaceOffset - Height);
 		}
 		const FVector Slide = FVector::VectorPlaneProject(NewPos - Start, Normal);
-		if (Slide.Size() < StaticFrictionDistance)
+		if (Normal.Z >= FloorNormalZ)
 		{
-			NewPos -= Slide;
+			if (Slide.Size() < StaticFrictionDistance)
+			{
+				NewPos -= Slide;
+			}
+			else
+			{
+				NewPos -= Slide * Friction;
+			}
 		}
 		else
 		{
