@@ -173,7 +173,6 @@ bool AHKRoomVolume::FindTrashSpawnTransform(FRandomStream& Random, FTransform& O
 
 bool AHKRoomVolume::IsCountedHere(const UHKDirtComponent* Dirt) const
 {
-	// 풀에서 재사용된 쓰레기가 다른 객실에 배정됐으면 이 객실 계산에서 제외
 	if (const UHKTrashDirtComponent* TrashDirt = Cast<UHKTrashDirtComponent>(Dirt))
 	{
 		return TrashDirt->GetRoomBounds() == Bounds;

@@ -87,9 +87,6 @@ AHKBlanketActor* UHKInteractionComponent::FindBlanketOnRay(const FVector& Start,
 	return nullptr;
 }
 
-/*
-Trash
-*/
 USceneComponent* UHKInteractionComponent::GetTrashAbsorbTarget() const
 {
 	if (USceneComponent* Target = TrashAbsorbTarget.Get())
