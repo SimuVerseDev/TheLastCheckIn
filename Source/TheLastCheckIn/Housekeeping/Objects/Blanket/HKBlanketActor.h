@@ -109,6 +109,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=100, Units="cm/s"))
 	float MaxParticleSpeed = 2000.0f;
 
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
+	float CompressionStiffness = 0.1f;
+
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=100, Units="cm/s"))
 	float MaxGrabSpeed = 1200.0f;
 

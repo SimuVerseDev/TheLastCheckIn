@@ -165,7 +165,8 @@ void AHKBlanketActor::SolveConstraints()
 		if (Dist < KINDA_SMALL_NUMBER) continue;
 
 		const float Diff = (Dist - C.RestLength) / Dist;
-		const FVector Correction = Delta * (Diff * 0.5f * C.Stiffness);
+		const float Stiffness = Diff < 0.0f ? C.Stiffness * CompressionStiffness : C.Stiffness; // 천은 눌리면 버티지 않고 구겨짐
+		const FVector Correction = Delta * (Diff * 0.5f * Stiffness);
 
 		if (C.A != GrabbedIndex) PosA += Correction;
 		if (C.B != GrabbedIndex) PosB -= Correction;
