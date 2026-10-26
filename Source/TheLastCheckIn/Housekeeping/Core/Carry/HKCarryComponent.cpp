@@ -53,11 +53,6 @@ void UHKCarryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 	*/
 	if (AHKBlanketActor* Blanket = CarriedBlanket.Get())
 	{
-		if (!Blanket->IsGrabbed())
-		{
-			Release(false);
-			return;
-		}
 		Blanket->SetGrabTarget(HoldLocation);
 		return;
 	}

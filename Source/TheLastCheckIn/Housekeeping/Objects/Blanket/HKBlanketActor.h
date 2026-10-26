@@ -105,19 +105,7 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm/s"))
 	float MaxReleaseSpeed = 1500.0f;
-
-	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=1.1))
-	float MaxGrabStretch = 2.5f;
-
-	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="s"))
-	float GrabStretchTime = 0.4f;
-
-	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=1.5))
-	float ResetStretch = 6.0f;
-
-	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="s"))
-	float ResetStretchTime = 1.5f;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Blanket")
 	FText GrabPrompt;
 	
@@ -144,10 +132,6 @@ private:
 	void BuildTriangles();
 	void BuildMesh(bool bCreate);
 	void ComputeParticleNormals();
-	float ComputeMaxStretch() const;
-	void ResetFlat();
-	float GrabStretchElapsed = 0.0f;
-	float ResetStretchElapsed = 0.0f;
 	TArray<FVector> Positions;
 	TArray<FVector> PrevPositions;
 	TArray<FVector> ParticleNormals;

@@ -45,22 +45,6 @@ void AHKBlanketActor::Tick(float DeltaTime)
 		Step(SubStep);
 	}
 
-	const float Stretch = ComputeMaxStretch();
-
-	GrabStretchElapsed = (IsGrabbed() && Stretch > MaxGrabStretch) ? GrabStretchElapsed + DeltaTime : 0.0f;
-	if (GrabStretchElapsed > GrabStretchTime)
-	{
-		GrabStretchElapsed = 0.0f;
-		Release(FVector::ZeroVector);
-	}
-
-	ResetStretchElapsed = (!IsGrabbed() && Stretch > ResetStretch) ? ResetStretchElapsed + DeltaTime : 0.0f;
-	if (ResetStretchElapsed > ResetStretchTime)
-	{
-		ResetStretchElapsed = 0.0f;
-		ResetFlat();
-	}
-
 	ComputeParticleNormals();
 	BuildMesh(false);
 }
@@ -302,34 +286,6 @@ void AHKBlanketActor::Release(const FVector& Velocity)
 		PrevPositions[GrabbedIndex] = Positions[GrabbedIndex] - (ClampedVel * 0.016f);
 	}
 	GrabbedIndex = INDEX_NONE;
-}
-
-float AHKBlanketActor::ComputeMaxStretch() const
-{
-	float MaxRatio = 1.0f;
-	for (const FDistanceConstraint& C : Constraints)
-	{
-		if (C.RestLength > KINDA_SMALL_NUMBER)
-		{
-			MaxRatio = FMath::Max(MaxRatio, FVector::Dist(Positions[C.A], Positions[C.B]) / C.RestLength);
-		}
-	}
-	return MaxRatio;
-}
-
-void AHKBlanketActor::ResetFlat()
-{
-	FVector Center = FVector::ZeroVector;
-	for (const FVector& P : Positions)
-	{
-		Center += P;
-	}
-	Center /= FMath::Max(Positions.Num(), 1);
-
-	GrabbedIndex = INDEX_NONE;
-	SetActorLocationAndRotation(Center + FVector(0.0f, 0.0f, 50.0f), FRotator(0.0f, GetActorRotation().Yaw, 0.0f));
-	InitParticles();
-	SmoothedNormals.Reset();
 }
 
 /*
