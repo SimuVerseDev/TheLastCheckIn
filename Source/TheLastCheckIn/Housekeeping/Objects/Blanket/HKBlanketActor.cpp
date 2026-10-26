@@ -37,7 +37,25 @@ void AHKBlanketActor::Tick(float DeltaTime)
 	{
 		return;
 	}
-	
+
+	if (bMakingBed)
+	{
+		MakeElapsed += DeltaTime;
+		const float Alpha = FMath::SmoothStep(0.0f, 1.0f, FMath::Clamp(MakeElapsed / MakeDuration, 0.0f, 1.0f));
+		for (int32 I = 0; I < Positions.Num(); ++I)
+		{
+			Positions[I] = FMath::Lerp(MakeStartPositions[I], MakeTargetPositions[I], Alpha);
+			PrevPositions[I] = Positions[I];
+		}
+		if (Alpha >= 1.0f)
+		{
+			bMakingBed = false;
+		}
+		ComputeParticleNormals();
+		BuildMesh(false);
+		return;
+	}
+
 	const int32 NumSteps = FMath::Clamp(FMath::CeilToInt(DeltaTime / 0.016f), 1, 4);
 	const float SubStep = DeltaTime / NumSteps;
 	for (int32 S = 0; S < NumSteps; ++S)
@@ -320,7 +338,7 @@ int32 AHKBlanketActor::FindParticleNearRay(const FVector& RayStart, const FVecto
 
 void AHKBlanketActor::Grab(int32 ParticleIndex)
 {
-	if (Positions.IsValidIndex(ParticleIndex))
+	if (!bMakingBed && Positions.IsValidIndex(ParticleIndex))
 	{
 		GrabbedIndex = ParticleIndex;
 		GrabTarget = Positions[ParticleIndex];
@@ -354,7 +372,7 @@ bool AHKBlanketActor::CanInteract_Implementation(AActor* Interactor) const
 bool AHKBlanketActor::CanUse_Implementation(AActor* Interactor) const
 {
 	const UHKCarryComponent* Carry = Interactor ? Interactor->FindComponentByClass<UHKCarryComponent>() : nullptr;
-	return Carry && !Carry->IsCarrying() && !IsGrabbed();
+	return Carry && !Carry->IsCarrying() && !IsGrabbed() && !bMakingBed;
 }
 
 FText AHKBlanketActor::GetUsePrompt_Implementation(AActor* Interactor) const
@@ -500,9 +518,35 @@ void AHKBlanketActor::BuildMesh(bool bCreate)
 	}
 }
 
+void AHKBlanketActor::MakeBed(const FTransform& Target, float Duration)
+{
+	GrabbedIndex = INDEX_NONE;
+
+	const int32 CountX = SegmentsX + 1;
+	const int32 CountY = SegmentsY + 1;
+	const float DX = Size.X / SegmentsX;
+	const float DY = Size.Y / SegmentsY;
+	const FVector Origin(-Size.X * 0.5f, -Size.Y * 0.5f, 0.0f);
+
+	MakeStartPositions = Positions;
+	MakeTargetPositions.SetNum(Positions.Num());
+	for (int32 Y = 0; Y < CountY; ++Y)
+	{
+		for (int32 X = 0; X < CountX; ++X)
+		{
+			MakeTargetPositions[ToIndex(X, Y)] = Target.TransformPosition(Origin + FVector(X * DX, Y * DY, 0.0f));
+		}
+	}
+
+	MakeElapsed = 0.0f;
+	MakeDuration = FMath::Max(Duration, KINDA_SMALL_NUMBER);
+	bMakingBed = true;
+}
+
 void AHKBlanketActor::Scramble(FRandomStream& Random, const FVector& Center, float MaxOffset)
 {
 	GrabbedIndex = INDEX_NONE;
+	bMakingBed = false;
 
 	const int32 LayersX = Random.RandRange(1, 3);
 	const int32 LayersY = Random.RandRange(1, 2);

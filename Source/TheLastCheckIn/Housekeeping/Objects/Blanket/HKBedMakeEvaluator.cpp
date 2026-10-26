@@ -108,3 +108,18 @@ void UHKBedMakeEvaluator::ApplyDirt(FRandomStream& Random)
 	const FVector Top = BedArea->GetComponentLocation() + BedArea->GetUpVector() * (BedArea->GetScaledBoxExtent().Z + 20.0f);
 	Blanket->Scramble(Random, Top, ScatterOffset);
 }
+
+void UHKBedMakeEvaluator::ClearDirt()
+{
+	const bool bWasDirty = IsDirtActive();
+	Super::ClearDirt();
+
+	if (!bWasDirty || !bAutoMakeBed || !Blanket || !BedArea)
+	{
+		return;
+	}
+
+	const FVector Location = BedArea->GetComponentLocation() + BedArea->GetUpVector() * BedArea->GetScaledBoxExtent().Z;
+	const FQuat Rotation = BedArea->GetComponentQuat() * FQuat(FVector::UpVector, FMath::DegreesToRadians(MadeBlanketYaw));
+	Blanket->MakeBed(FTransform(Rotation, Location), MakeBedDuration);
+}

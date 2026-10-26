@@ -38,6 +38,13 @@ public:
 		return Positions;
 	}
 	void Scramble(FRandomStream& Random, const FVector& Center, float MaxOffset);
+	
+	void MakeBed(const FTransform& Target, float Duration);
+	
+	bool IsMakingBed() const
+	{
+		return bMakingBed;
+	}
 
 	/*
 	IHKInteractable
@@ -48,9 +55,7 @@ public:
 	virtual bool Use_Implementation(AActor* Interactor) override;
 
 protected:
-	/*
-	유연한 오브젝트를 프로시저럴(절차적)로 생성하고 물리 시뮬레이션(스프링-댐퍼 방식의 천 시뮬레이션)과 상호작용하기 위한 설정 값들을 정의
-	*/
+
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
 	
@@ -116,16 +121,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=100, Units="cm/s"))
 	float MaxGrabSpeed = 1200.0f;
-
-	/*
-	잡은 점 기준 원래 거리의 몇 배까지 멀어질 수 있는지 (테더)
-	*/
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=1))
 	float TetherSlack = 1.05f;
 
-	/*
-	바닥·가구에 닿지 않은 점의 수평 속도 감쇠 (공기 저항)
-	*/
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
 	float AirDrag = 0.1f;
 
@@ -152,13 +151,8 @@ private:
 	void Step(float Dt);
 	void SolveConstraints();
 	void SolveCollisions();
-	/*
-	잡은 점에서 원래 거리 이상 멀어진 점을 당겨옴 (늘어남 방지)
-	*/
 	void SolveTether();
-	/*
-	표면에서 밀어낼 때 경로에 다른 면이 있으면 두 면 사이 가운데에 둠 (좁은 틈 관통 방지)
-	*/
+	
 	FVector ResolvePush(const FVector& SurfacePoint, const FVector& Normal, const FVector& Target,
 		const FCollisionObjectQueryParams& ObjectParams, const FCollisionQueryParams& Params) const;
 	void BuildTriangles();
@@ -166,10 +160,18 @@ private:
 	void ComputeParticleNormals();
 	TArray<FVector> Positions;
 	TArray<FVector> PrevPositions;
-	/*
-	점별 바닥·가구 접촉 여부 (공기 저항 적용 판단)
-	*/
+
 	TArray<uint8> Contacts;
+	
+	TArray<FVector> MakeStartPositions;
+
+	TArray<FVector> MakeTargetPositions;
+
+	float MakeElapsed = 0.0f;
+
+	float MakeDuration = 0.4f;
+
+	bool bMakingBed = false;
 	TArray<FVector> ParticleNormals;
 	TArray<FVector> SmoothedNormals;
 	TArray<FDistanceConstraint> Constraints;

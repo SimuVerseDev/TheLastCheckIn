@@ -5,9 +5,6 @@
 class AHKBlanketActor;
 class UBoxComponent;
 
-/*
-흐트러진 이불 : 침대 윗면을 덮은 비율 및 평평함으로 오염도 계산
-*/
 UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
 class UHKBedMakeEvaluator : public UHKDirtComponent
 {
@@ -17,6 +14,8 @@ public:
 	UHKBedMakeEvaluator();
 
 	virtual void ApplyDirt(FRandomStream& Random) override;
+	
+	virtual void ClearDirt() override;
 
 	/*
 	평가요소
@@ -60,6 +59,15 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|Scatter", meta=(ClampMin=0, Units="cm"))
 	float ScatterOffset = 50.0f;
+	
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|MakeBed")
+	bool bAutoMakeBed = true;
+	
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|MakeBed", meta=(Units="deg"))
+	float MadeBlanketYaw = 90.0f;
+	
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|MakeBed", meta=(ClampMin=0.05, Units="s"))
+	float MakeBedDuration = 0.4f;
 	
 private:
 	UPROPERTY(Transient)
