@@ -511,8 +511,7 @@ bool UCheckInInteractionComponent::TryAssignRoomNumber(int32 RoomNumber)
 
     if (bSuccess)
     {
-        bAssignedThisSession = true;
-        CurrentGuest.Reset();
+        CloseCheckIn();
     }
     else
     {
