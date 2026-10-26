@@ -5,6 +5,8 @@
 #include "HKBlanketActor.generated.h"
 class UProceduralMeshComponent;
 class UMaterialInterface;
+struct FCollisionObjectQueryParams;
+struct FCollisionQueryParams;
 UCLASS()
 class AHKBlanketActor : public AActor, public IHKInteractable
 {
@@ -104,7 +106,7 @@ protected:
 	float ContactTolerance = 1.0f;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm/s"))
-	float MaxReleaseSpeed = 1500.0f;
+	float MaxReleaseSpeed = 300.0f;
 
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=100, Units="cm/s"))
 	float MaxParticleSpeed = 2000.0f;
@@ -114,6 +116,18 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=100, Units="cm/s"))
 	float MaxGrabSpeed = 1200.0f;
+
+	/*
+	잡은 점 기준 원래 거리의 몇 배까지 멀어질 수 있는지 (테더)
+	*/
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=1))
+	float TetherSlack = 1.05f;
+
+	/*
+	바닥·가구에 닿지 않은 점의 수평 속도 감쇠 (공기 저항)
+	*/
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
+	float AirDrag = 0.1f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Blanket")
 	FText GrabPrompt;
@@ -138,12 +152,24 @@ private:
 	void Step(float Dt);
 	void SolveConstraints();
 	void SolveCollisions();
+	/*
+	잡은 점에서 원래 거리 이상 멀어진 점을 당겨옴 (늘어남 방지)
+	*/
+	void SolveTether();
+	/*
+	표면에서 밀어낼 때 경로에 다른 면이 있으면 두 면 사이 가운데에 둠 (좁은 틈 관통 방지)
+	*/
+	FVector ResolvePush(const FVector& SurfacePoint, const FVector& Normal, const FVector& Target,
+		const FCollisionObjectQueryParams& ObjectParams, const FCollisionQueryParams& Params) const;
 	void BuildTriangles();
 	void BuildMesh(bool bCreate);
 	void ComputeParticleNormals();
 	TArray<FVector> Positions;
 	TArray<FVector> PrevPositions;
-	TArray<FVector> PredictedPositions;
+	/*
+	점별 바닥·가구 접촉 여부 (공기 저항 적용 판단)
+	*/
+	TArray<uint8> Contacts;
 	TArray<FVector> ParticleNormals;
 	TArray<FVector> SmoothedNormals;
 	TArray<FDistanceConstraint> Constraints;

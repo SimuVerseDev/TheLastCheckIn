@@ -58,6 +58,7 @@ void AHKBlanketActor::InitParticles()
 	Positions.SetNum(Total);
 	PrevPositions.SetNum(Total);
 	ParticleNormals.SetNumUninitialized(Total);
+	Contacts.Init(0, Total);
 
 	const float DX = Size.X / SegmentsX;
 	const float DY = Size.Y / SegmentsY;
@@ -132,7 +133,13 @@ void AHKBlanketActor::Step(float Dt)
 		}
 
 		const FVector Temp = Positions[I];
-		const FVector Velocity = ((Positions[I] - PrevPositions[I]) * (1.0f - Damping)).GetClampedToMaxSize(MaxStep);
+		FVector Velocity = (Positions[I] - PrevPositions[I]) * (1.0f - Damping);
+		if (!Contacts[I])
+		{
+			Velocity.X *= 1.0f - AirDrag;
+			Velocity.Y *= 1.0f - AirDrag;
+		}
+		Velocity = Velocity.GetClampedToMaxSize(MaxStep);
 		Positions[I] += Velocity + Gravity * (Dt * Dt);
 		PrevPositions[I] = Temp;
 	}
@@ -143,12 +150,12 @@ void AHKBlanketActor::Step(float Dt)
 		Positions[GrabbedIndex] += (GrabTarget - Positions[GrabbedIndex]).GetClampedToMaxSize(MaxGrabSpeed * Dt);
 	}
 
-	PredictedPositions = Positions;
 	for (int32 Iter = 0; Iter < SolverIterations; ++Iter)
 	{
 		SolveConstraints();
-		
+
 	}
+	SolveTether();
 	SolveCollisions();
 }
 
@@ -171,6 +178,38 @@ void AHKBlanketActor::SolveConstraints()
 
 		if (C.A != GrabbedIndex) PosA += Correction;
 		if (C.B != GrabbedIndex) PosB -= Correction;
+	}
+}
+
+void AHKBlanketActor::SolveTether()
+{
+	if (GrabbedIndex == INDEX_NONE || !Positions.IsValidIndex(GrabbedIndex))
+	{
+		return;
+	}
+
+	const int32 CountX = SegmentsX + 1;
+	const int32 GrabX = GrabbedIndex % CountX;
+	const int32 GrabY = GrabbedIndex / CountX;
+	const float DX = Size.X / SegmentsX;
+	const float DY = Size.Y / SegmentsY;
+	const FVector Anchor = Positions[GrabbedIndex];
+
+	for (int32 I = 0; I < Positions.Num(); ++I)
+	{
+		if (I == GrabbedIndex)
+		{
+			continue;
+		}
+
+		const float RestDist = FVector2D((I % CountX - GrabX) * DX, (I / CountX - GrabY) * DY).Size();
+		const float MaxDist = RestDist * TetherSlack;
+		const FVector ToParticle = Positions[I] - Anchor;
+		const float Dist = ToParticle.Size();
+		if (Dist > MaxDist && Dist > KINDA_SMALL_NUMBER)
+		{
+			Positions[I] = Anchor + ToParticle * (MaxDist / Dist);
+		}
 	}
 }
 
@@ -220,6 +259,7 @@ void AHKBlanketActor::SolveCollisions()
 			const FVector ProbeEnd = Pos - FVector::UpVector * (SurfaceOffset + ContactTolerance);
 			bContact = World->LineTraceSingleByObjectType(Hit, Pos, ProbeEnd, ObjectParams, Params);
 		}
+		Contacts[I] = bContact ? 1 : 0;
 		if (!bContact)
 		{
 			continue;
@@ -229,9 +269,9 @@ void AHKBlanketActor::SolveCollisions()
 		const float Height = FVector::DotProduct(Pos - Hit.ImpactPoint, Normal);
 		if (Height < SurfaceOffset)
 		{
-			NewPos += Normal * (SurfaceOffset - Height);
+			NewPos = ResolvePush(Hit.ImpactPoint, Normal, Pos + Normal * (SurfaceOffset - Height), ObjectParams, Params);
 		}
-		const FVector Slide = FVector::VectorPlaneProject(PredictedPositions[I] - Start, Normal);
+		const FVector Slide = FVector::VectorPlaneProject(NewPos - Start, Normal);
 		if (Normal.Z >= FloorNormalZ)
 		{
 			if (Slide.Size() < StaticFrictionDistance)
@@ -246,6 +286,18 @@ void AHKBlanketActor::SolveCollisions()
 		Pos = NewPos;
 		PrevPositions[I] = NewPos - FVector::VectorPlaneProject(NewPos - Start, Normal);
 	}
+}
+
+FVector AHKBlanketActor::ResolvePush(const FVector& SurfacePoint, const FVector& Normal, const FVector& Target,
+	const FCollisionObjectQueryParams& ObjectParams, const FCollisionQueryParams& Params) const
+{
+	FHitResult Block;
+	const FVector From = SurfacePoint + Normal * 0.1f;
+	if (GetWorld()->LineTraceSingleByObjectType(Block, From, Target, ObjectParams, Params))
+	{
+		return (SurfacePoint + Block.ImpactPoint) * 0.5f;
+	}
+	return Target;
 }
 
 int32 AHKBlanketActor::FindParticleNearRay(const FVector& RayStart, const FVector& RayEnd, float Radius) const
