@@ -240,10 +240,6 @@ void AHKBlanketActor::SolveCollisions()
 				NewPos -= Slide * Friction;
 			}
 		}
-		else
-		{
-			NewPos -= Slide * Friction;
-		}
 		Pos = NewPos;
 		PrevPositions[I] = NewPos - FVector::VectorPlaneProject(NewPos - Start, Normal);
 	}
