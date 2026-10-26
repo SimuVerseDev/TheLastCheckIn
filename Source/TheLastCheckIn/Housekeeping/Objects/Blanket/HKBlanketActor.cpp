@@ -338,9 +338,28 @@ void AHKBlanketActor::ComputeParticleNormals()
 		}
 	}
 
+	const bool bFirst = SmoothedNormals.Num() != ParticleNormals.Num();
+	if (bFirst)
+	{
+		SmoothedNormals.Init(FVector::UpVector, ParticleNormals.Num());
+	}
+
 	for (int32 I = 0; I < ParticleNormals.Num(); ++I)
 	{
-		ParticleNormals[I] = ParticleNormals[I].GetSafeNormal();
+		const FVector Prev = SmoothedNormals[I];
+		FVector N = ParticleNormals[I].GetSafeNormal();
+
+		if (N.IsNearlyZero())
+		{
+			N = Prev;
+		}
+		else if (FVector::DotProduct(N, Prev) < 0.0f)
+		{
+			N = -N;
+		}
+
+		SmoothedNormals[I] = bFirst ? N : FMath::Lerp(Prev, N, NormalSmoothing).GetSafeNormal(SMALL_NUMBER, N);
+		ParticleNormals[I] = SmoothedNormals[I];
 	}
 }
 

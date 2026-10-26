@@ -94,6 +94,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
 	float FloorNormalZ = 0.7f;
 	
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0.01, ClampMax=1))
+	float NormalSmoothing = 0.35f;
+	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm"))
 	float StaticFrictionDistance = 0.5f;
     
@@ -132,6 +135,7 @@ private:
 	TArray<FVector> Positions;
 	TArray<FVector> PrevPositions;
 	TArray<FVector> ParticleNormals;
+	TArray<FVector> SmoothedNormals;
 	TArray<FDistanceConstraint> Constraints;
 	TArray<FVector> MeshVertices;
 	TArray<FVector> MeshNormals;
