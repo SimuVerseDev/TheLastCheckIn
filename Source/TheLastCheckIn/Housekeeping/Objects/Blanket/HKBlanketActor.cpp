@@ -317,7 +317,7 @@ void AHKBlanketActor::ComputeParticleNormals()
 {
 	const int32 CountX = SegmentsX + 1;
 	const int32 CountY = SegmentsY + 1;
-	ParticleNormals.Init(FVector::UpVector, Positions.Num());
+	ParticleNormals.Init(FVector::ZeroVector, Positions.Num()); // 위쪽 초기값이 있으면 뒤집힌 면에서 상쇄되어 튐
 
 	for (int32 Y = 0; Y < SegmentsY; ++Y)
 	{
@@ -326,15 +326,14 @@ void AHKBlanketActor::ComputeParticleNormals()
 			const int32 I00 = ToIndex(X, Y);
 			const int32 I10 = ToIndex(X + 1, Y);
 			const int32 I01 = ToIndex(X, Y + 1);
+			const int32 I11 = ToIndex(X + 1, Y + 1);
 
-			const FVector& P00 = Positions[I00];
-			const FVector& P10 = Positions[I10];
-			const FVector& P01 = Positions[I01];
-
-			const FVector FaceNormal = (P10 - P00).Cross(P01 - P00).GetSafeNormal();
-			ParticleNormals[I00] += FaceNormal;
-			ParticleNormals[I10] += FaceNormal;
-			ParticleNormals[I01] += FaceNormal;
+			// 대각선 외적 : 사각형 면적 가중 법선, 네 꼭짓점 모두 반영
+			const FVector QuadNormal = (Positions[I11] - Positions[I00]).Cross(Positions[I01] - Positions[I10]);
+			ParticleNormals[I00] += QuadNormal;
+			ParticleNormals[I10] += QuadNormal;
+			ParticleNormals[I01] += QuadNormal;
+			ParticleNormals[I11] += QuadNormal;
 		}
 	}
 
@@ -347,18 +346,20 @@ void AHKBlanketActor::ComputeParticleNormals()
 	for (int32 I = 0; I < ParticleNormals.Num(); ++I)
 	{
 		const FVector Prev = SmoothedNormals[I];
-		FVector N = ParticleNormals[I].GetSafeNormal();
+		const FVector N = ParticleNormals[I].GetSafeNormal();
 
 		if (N.IsNearlyZero())
 		{
-			N = Prev;
+			SmoothedNormals[I] = Prev; // 접힌 꼭짓점처럼 법선이 상쇄되면 이전 값 유지
 		}
-		else if (FVector::DotProduct(N, Prev) < 0.0f)
+		else if (bFirst || FVector::DotProduct(N, Prev) <= 0.0f)
 		{
-			N = -N;
+			SmoothedNormals[I] = N; // 실제로 뒤집힌 경우 보간 없이 바로 따라감 (0을 지나는 보간 방지)
 		}
-
-		SmoothedNormals[I] = bFirst ? N : FMath::Lerp(Prev, N, NormalSmoothing).GetSafeNormal(SMALL_NUMBER, N);
+		else
+		{
+			SmoothedNormals[I] = FMath::Lerp(Prev, N, NormalSmoothing).GetSafeNormal(SMALL_NUMBER, N);
+		}
 		ParticleNormals[I] = SmoothedNormals[I];
 	}
 }
