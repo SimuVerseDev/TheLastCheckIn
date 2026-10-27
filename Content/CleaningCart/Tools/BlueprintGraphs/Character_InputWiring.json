@@ -1,0 +1,123 @@
+{
+  "e": {
+    "output_pins": [
+      {
+        "value": "",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_20"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Output",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_InputKey_1"
+          }
+        },
+        "type_id": "Exec",
+        "name": "Pressed"
+      },
+      {
+        "value": "",
+        "connected_pins": [],
+        "pin_id": {
+          "direction": "EGPD_Output",
+          "index_id": 1,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_InputKey_1"
+          }
+        },
+        "type_id": "Exec",
+        "name": "Released"
+      },
+      {
+        "value": "None",
+        "connected_pins": [],
+        "pin_id": {
+          "direction": "EGPD_Output",
+          "index_id": 2,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_InputKey_1"
+          }
+        },
+        "type_id": "Key Structure",
+        "name": "Key"
+      }
+    ],
+    "input_pins": [],
+    "position": {
+      "x": 16,
+      "y": 672
+    },
+    "node": {
+      "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_InputKey_1"
+    },
+    "type_id": "Input|KeyboardEvents|E"
+  },
+  "interact": {
+    "output_pins": [
+      {
+        "value": "",
+        "connected_pins": [],
+        "pin_id": {
+          "direction": "EGPD_Output",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_20"
+          }
+        },
+        "type_id": "Exec",
+        "name": "then"
+      }
+    ],
+    "input_pins": [
+      {
+        "value": "",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_InputKey_1"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Input",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_20"
+          }
+        },
+        "type_id": "Exec",
+        "name": "execute"
+      },
+      {
+        "value": "",
+        "connected_pins": [],
+        "pin_id": {
+          "direction": "EGPD_Input",
+          "index_id": 1,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_20"
+          }
+        },
+        "type_id": "Self Object Reference",
+        "name": "self"
+      }
+    ],
+    "position": {
+      "x": 320,
+      "y": 656
+    },
+    "node": {
+      "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_20"
+    },
+    "type_id": "|CartInteract"
+  }
+}
