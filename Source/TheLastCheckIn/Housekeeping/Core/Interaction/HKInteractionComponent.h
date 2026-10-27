@@ -5,9 +5,7 @@
 
 class UInputAction;
 class UEnhancedInputComponent;
-class UHKCarryComponent;
-class AHKBlanketActor;
-class USceneComponent;
+class IInteractionExtension;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnUsed, AActor*, Target);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHKOnFocusChanged, AActor*, NewFocus, const FText&, Prompt);
@@ -32,24 +30,6 @@ public:
 	{
 		return FocusedActor.Get();
 	}
-	
-	/*
-	Cart
-	*/
-	UFUNCTION(BlueprintCallable, Category="Housekeeping|Trash")
-	void SetTrashAbsorbTarget(USceneComponent* Target)
-	{
-		TrashAbsorbTarget = Target;
-	}
-	
-	UFUNCTION(BlueprintPure, Category="Housekeeping|Trash")
-	bool CanAbsorbTrash() const
-	{
-		return TrashAbsorbTarget.IsValid() || bDebugTrashMode;
-	}
-
-	UFUNCTION(BlueprintPure, Category="Housekeeping|Trash")
-	USceneComponent* GetTrashAbsorbTarget() const;
 
 protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Interaction",  meta=(ClampMin=0, Units="cm"))
@@ -57,9 +37,6 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Interaction",  meta=(ClampMin=0, Units="cm"))
 	float TraceRadius = 8.0f;
-	
-	UPROPERTY(EditAnywhere, Category="Housekeeping|Interaction", meta=(ClampMin=0, Units="cm"))
-	float BlanketGrabRadius = 30.0f;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Interaction")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
@@ -73,21 +50,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Debug")
 	bool bShowDebugPrompt = true;
 	
-	/*
-	임시 카트모드 전환용
-	*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Debug")
-	bool bDebugTrashMode = false;
-
-	
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
 private:
 	APlayerController* GetOwningPlayerController() const;
-	UHKCarryComponent* GetCarryComponent() const;
-	AHKBlanketActor* FindBlanketOnRay(const FVector& Start, const FVector& End) const;
-
+	
 	static bool IsInteractable(AActor* Actor);
 	bool CanFocus(AActor* Actor) const;
 
@@ -102,6 +70,8 @@ private:
 	void HandleUseCompleted();
 
 	bool IsActionKeyDown(const UInputAction* Action) const;
+	TArray<IInteractionExtension*> GetExtensions() const;
+	
 	UPROPERTY(Transient)
 	TObjectPtr<UEnhancedInputComponent> InteractionInput;
 	TWeakObjectPtr<APlayerController> InputOwner;
@@ -109,5 +79,4 @@ private:
 	TWeakObjectPtr<AActor> HoldTarget;
 	float HoldElapsed = 0.0f;
 	float HoldDuration = 0.0f;
-	TWeakObjectPtr<USceneComponent> TrashAbsorbTarget;
 };
