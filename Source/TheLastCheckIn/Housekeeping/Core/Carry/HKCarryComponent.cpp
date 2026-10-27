@@ -5,6 +5,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/Controller.h"
 #include "Housekeeping/Objects/Blanket/HKBlanketActor.h"
+#include "EngineUtils.h"
 
 UHKCarryComponent::UHKCarryComponent()
 {
@@ -140,6 +141,31 @@ void UHKCarryComponent::Drop()
 	{
 		Release(true);
 	}
+}
+
+USceneComponent* UHKCarryComponent::GetTrashAbsorbTarget() const
+{
+	if (USceneComponent* Target = TrashAbsorbTarget.Get())
+	{
+		return Target;
+	}
+	return bDebugTrashMode ? GetOwner()->GetRootComponent() : nullptr;
+}
+AActor* UHKCarryComponent::FindInteractionTarget(const FVector& Start, const FVector& End) const
+{
+	for (TActorIterator<AHKBlanketActor> It(GetWorld()); It; ++It)
+	{
+		if (!It->IsGrabbed() && It->FindParticleNearRay(Start, End, BlanketGrabRadius) != INDEX_NONE)
+		{
+			return *It;
+		}
+	}
+	return nullptr;
+}
+
+FText UHKCarryComponent::GetBlockingPrompt() const
+{
+	return NSLOCTEXT("Housekeeping", "CarryReleasePrompt", "[LMB 떼기] 놓기");
 }
 
 bool UHKCarryComponent::GetViewTransform(FVector& OutHoldLocation, FRotator& OutViewRotation) const

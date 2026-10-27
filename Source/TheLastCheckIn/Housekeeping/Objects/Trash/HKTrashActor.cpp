@@ -1,7 +1,7 @@
 ﻿#include "Housekeeping/Objects/Trash/HKTrashActor.h"
 #include "Housekeeping/Objects/Trash/HKTrashDirtComponent.h"
 #include "Housekeeping/Objects/Trash/HKTrashPoolSubsystem.h"
-#include "Housekeeping/Core/Interaction/HKInteractionComponent.h"
+#include "Housekeeping/Core/Carry/HKCarryComponent.h"
 #include "Components/StaticMeshComponent.h"
 
 AHKTrashActor::AHKTrashActor()
@@ -118,12 +118,12 @@ void AHKTrashActor::SetHighlighted(bool bHighlighted)
 }
 
 /*
-IHKInteractable
+IInteractable
 */
 bool AHKTrashActor::CanUse_Implementation(AActor* Interactor) const
 {
-	const UHKInteractionComponent* Interaction = Interactor ? Interactor->FindComponentByClass<UHKInteractionComponent>() : nullptr;
-	return State == EHKTrashState::Active && Interaction && Interaction->CanAbsorbTrash();
+	const UHKCarryComponent* Carry = Interactor ? Interactor->FindComponentByClass<UHKCarryComponent>() : nullptr;
+	return State == EHKTrashState::Active && Carry && Carry->CanAbsorbTrash();
 }
 
 FText AHKTrashActor::GetUsePrompt_Implementation(AActor* Interactor) const
@@ -133,8 +133,8 @@ FText AHKTrashActor::GetUsePrompt_Implementation(AActor* Interactor) const
 
 bool AHKTrashActor::Use_Implementation(AActor* Interactor)
 {
-	const UHKInteractionComponent* Interaction = Interactor ? Interactor->FindComponentByClass<UHKInteractionComponent>() : nullptr;
-	return Interaction && Absorb(Interaction->GetTrashAbsorbTarget());
+	const UHKCarryComponent* Carry = Interactor ? Interactor->FindComponentByClass<UHKCarryComponent>() : nullptr;
+	return Carry && Absorb(Carry->GetTrashAbsorbTarget());
 }
 
 void AHKTrashActor::OnInteractFocusBegin_Implementation(AActor* Interactor)

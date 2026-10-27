@@ -58,7 +58,7 @@ public:
 	}
 
 	/*
-	HKInteractable
+	Interactable
 	*/
 	virtual bool CanUse_Implementation(AActor* Interactor) const override;
 	virtual FText GetUsePrompt_Implementation(AActor* Interactor) const override;

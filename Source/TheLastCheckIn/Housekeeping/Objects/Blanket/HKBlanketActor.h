@@ -1,14 +1,14 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Housekeeping/Core/Interaction/HKInteractable.h"
+#include "Core/Interaction/Interactable.h"
 #include "HKBlanketActor.generated.h"
 class UProceduralMeshComponent;
 class UMaterialInterface;
 struct FCollisionObjectQueryParams;
 struct FCollisionQueryParams;
 UCLASS()
-class AHKBlanketActor : public AActor, public IHKInteractable
+class AHKBlanketActor : public AActor, public IInteractable
 {
 	GENERATED_BODY()
 public:
@@ -47,7 +47,7 @@ public:
 	}
 
 	/*
-	IHKInteractable
+	IInteractable
 	*/
 	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
 	virtual bool CanUse_Implementation(AActor* Interactor) const override;

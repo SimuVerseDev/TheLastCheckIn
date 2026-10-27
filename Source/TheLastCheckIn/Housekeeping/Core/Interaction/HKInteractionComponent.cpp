@@ -1,6 +1,6 @@
 ﻿#include "Housekeeping/Core/Interaction/HKInteractionComponent.h"
-#include "Housekeeping/Core/Interaction/HKInteractable.h"
-#include "Housekeeping/Core/Carry/HKCarryComponent.h"
+#include "Core/Interaction/InteractionExtension.h"
+#include "Core/Interaction/Interactable.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
@@ -9,8 +9,6 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "UObject/ConstructorHelpers.h"
-#include "Housekeeping/Objects/Blanket/HKBlanketActor.h"
-#include "EngineUtils.h"
 
 UHKInteractionComponent::UHKInteractionComponent()
 {
@@ -67,38 +65,9 @@ APlayerController* UHKInteractionComponent::GetOwningPlayerController() const
 	return Pawn ? Pawn->GetController<APlayerController>() : nullptr;
 }
 
-UHKCarryComponent* UHKInteractionComponent::GetCarryComponent() const
-{
-	return GetOwner()->FindComponentByClass<UHKCarryComponent>();
-}
-
-/*
-Blanket
-*/
-AHKBlanketActor* UHKInteractionComponent::FindBlanketOnRay(const FVector& Start, const FVector& End) const
-{
-	for (TActorIterator<AHKBlanketActor> It(GetWorld()); It; ++It)
-	{
-		if (!It->IsGrabbed() && It->FindParticleNearRay(Start, End, BlanketGrabRadius) != INDEX_NONE)
-		{
-			return *It;
-		}
-	}
-	return nullptr;
-}
-
-USceneComponent* UHKInteractionComponent::GetTrashAbsorbTarget() const
-{
-	if (USceneComponent* Target = TrashAbsorbTarget.Get())
-	{
-		return Target;
-	}
-	return bDebugTrashMode ? GetOwner()->GetRootComponent() : nullptr;
-}
-
 bool UHKInteractionComponent::IsInteractable(AActor* Actor)
 {
-	return Actor && Actor->Implements<UHKInteractable>();
+	return Actor && Actor->Implements<UInteractable>();
 }
 
 bool UHKInteractionComponent::CanFocus(AActor* Actor) const
@@ -108,7 +77,7 @@ bool UHKInteractionComponent::CanFocus(AActor* Actor) const
 		return false;
 	}
 	AActor* Pawn = GetOwner();
-	return IHKInteractable::Execute_CanUse(Actor, Pawn) || IHKInteractable::Execute_CanInteract(Actor, Pawn);
+	return IInteractable::Execute_CanUse(Actor, Pawn) || IInteractable::Execute_CanInteract(Actor, Pawn);
 }
 
 void UHKInteractionComponent::EnsureInputSetup(APlayerController* PC)
@@ -141,18 +110,21 @@ void UHKInteractionComponent::EnsureInputSetup(APlayerController* PC)
 
 void UHKInteractionComponent::UpdateFocus(APlayerController* PC)
 {
-	const UHKCarryComponent* Carry = GetCarryComponent();
-	if (Carry && Carry->IsCarrying())
+	const TArray<IInteractionExtension*> Extensions = GetExtensions();
+	for (const IInteractionExtension* Extension : Extensions)
 	{
-		SetFocus(nullptr);
-		return;
+		if (Extension->BlocksFocus())
+		{
+			SetFocus(nullptr);
+			return;
+		}
 	}
-	
+
 	APawn* Pawn = Cast<APawn>(GetOwner());
 	FVector ViewLocation;
 	FRotator ViewRotation;
 	PC->GetPlayerViewPoint(ViewLocation, ViewRotation);
-	
+
 	/*
 	3인칭이면 카메라가 폰 뒤에 있으니 그만큼 거리를 증가
 	*/
@@ -165,15 +137,20 @@ void UHKInteractionComponent::UpdateFocus(APlayerController* PC)
 	if (CanFocus(HitActor))
 	{
 		SetFocus(HitActor);
+		return;
 	}
-	else if (AHKBlanketActor* Blanket = FindBlanketOnRay(ViewLocation, bHit ? Hit.Location : TraceEnd); CanFocus(Blanket))
+
+	const FVector RayEnd = bHit ? Hit.Location : TraceEnd;
+	for (const IInteractionExtension* Extension : Extensions)
 	{
-		SetFocus(Blanket);
+		AActor* Found = Extension->FindInteractionTarget(ViewLocation, RayEnd);
+		if (CanFocus(Found))
+		{
+			SetFocus(Found);
+			return;
+		}
 	}
-	else
-	{
-		SetFocus(nullptr);
-	}
+	SetFocus(nullptr);
 }
 
 void UHKInteractionComponent::SetFocus(AActor* NewFocus)
@@ -186,18 +163,18 @@ void UHKInteractionComponent::SetFocus(AActor* NewFocus)
 	AActor* Pawn = GetOwner();
 	if (IsInteractable(OldFocus))
 	{
-		IHKInteractable::Execute_OnInteractFocusEnd(OldFocus, Pawn);
+		IInteractable::Execute_OnInteractFocusEnd(OldFocus, Pawn);
 	}
 	FocusedActor = NewFocus;
 	CancelHold();
 	FText Prompt;
 	if (IsInteractable(NewFocus))
 	{
-		IHKInteractable::Execute_OnInteractFocusBegin(NewFocus, Pawn);
+		IInteractable::Execute_OnInteractFocusBegin(NewFocus, Pawn);
 
-		Prompt = IHKInteractable::Execute_CanUse(NewFocus, Pawn)
-			? IHKInteractable::Execute_GetUsePrompt(NewFocus, Pawn)
-			: IHKInteractable::Execute_GetInteractPrompt(NewFocus, Pawn);
+		Prompt = IInteractable::Execute_CanUse(NewFocus, Pawn)
+			? IInteractable::Execute_GetUsePrompt(NewFocus, Pawn)
+			: IInteractable::Execute_GetInteractPrompt(NewFocus, Pawn);
 	}
 	OnFocusChanged.Broadcast(NewFocus, Prompt);
 }
@@ -219,7 +196,7 @@ void UHKInteractionComponent::UpdateHold(float DeltaTime)
 	if (HoldElapsed >= HoldDuration)
 	{
 		HoldTarget.Reset();
-		IHKInteractable::Execute_Interact(Target, GetOwner());
+		IInteractable::Execute_Interact(Target, GetOwner());
 	}
 }
 
@@ -243,25 +220,28 @@ void UHKInteractionComponent::ShowDebugPrompt() const
 		return;
 	}
 	FString Message;
-	const UHKCarryComponent* Carry = GetCarryComponent();
-	if (Carry && Carry->IsCarrying())
+	for (const IInteractionExtension* Extension : GetExtensions())
 	{
-		Message = TEXT("[LMB 떼기] 놓기");
+		if (Extension->BlocksFocus())
+		{
+			Message = Extension->GetBlockingPrompt().ToString();
+			break;
+		}
 	}
-	else if (AActor* Target = FocusedActor.Get(); IsInteractable(Target))
+	if (AActor* Target = FocusedActor.Get(); Message.IsEmpty() && IsInteractable(Target))
 	{
 		AActor* Pawn = GetOwner();
-		if (IHKInteractable::Execute_CanUse(Target, Pawn))
+		if (IInteractable::Execute_CanUse(Target, Pawn))
 		{
-			Message = FString::Printf(TEXT("[LMB] %s"), *IHKInteractable::Execute_GetUsePrompt(Target, Pawn).ToString());
+			Message = FString::Printf(TEXT("[LMB] %s"), *IInteractable::Execute_GetUsePrompt(Target, Pawn).ToString());
 		}
-		if (IHKInteractable::Execute_CanInteract(Target, Pawn))
+		if (IInteractable::Execute_CanInteract(Target, Pawn))
 		{
 			if (!Message.IsEmpty())
 			{
 				Message += TEXT("\n");
 			}
-			Message += FString::Printf(TEXT("[E] %s"), *IHKInteractable::Execute_GetInteractPrompt(Target, Pawn).ToString());
+			Message += FString::Printf(TEXT("[E] %s"), *IInteractable::Execute_GetInteractPrompt(Target, Pawn).ToString());
 		}
 	}
 	if (!Message.IsEmpty())
@@ -275,14 +255,14 @@ void UHKInteractionComponent::HandleInteractStarted()
 {
 	AActor* Pawn = GetOwner();
 	AActor* Target = FocusedActor.Get();
-	if (!IsInteractable(Target) || !IHKInteractable::Execute_CanInteract(Target, Pawn))
+	if (!IsInteractable(Target) || !IInteractable::Execute_CanInteract(Target, Pawn))
 	{
 		return;
 	}
-	const float Duration = IHKInteractable::Execute_GetInteractHoldDuration(Target, Pawn);
+	const float Duration = IInteractable::Execute_GetInteractHoldDuration(Target, Pawn);
 	if (Duration <= 0.0f)
 	{
-		IHKInteractable::Execute_Interact(Target, Pawn);
+		IInteractable::Execute_Interact(Target, Pawn);
 	}
 	else
 	{
@@ -296,11 +276,11 @@ void UHKInteractionComponent::HandleUseStarted()
 {
 	AActor* Pawn = GetOwner();
 	AActor* Target = FocusedActor.Get();
-	if (!IsInteractable(Target) || !IHKInteractable::Execute_CanUse(Target, Pawn))
+	if (!IsInteractable(Target) || !IInteractable::Execute_CanUse(Target, Pawn))
 	{
 		return;
 	}
-	if (IHKInteractable::Execute_Use(Target, Pawn))
+	if (IInteractable::Execute_Use(Target, Pawn))
 	{
 		OnUsed.Broadcast(Target);
 		SetFocus(nullptr);
@@ -309,9 +289,9 @@ void UHKInteractionComponent::HandleUseStarted()
 
 void UHKInteractionComponent::HandleUseCompleted()
 {
-	if (UHKCarryComponent* Carry = GetCarryComponent())
+	for (IInteractionExtension* Extension : GetExtensions())
 	{
-		Carry->Drop();
+		Extension->OnUseReleased();
 	}
 }
 
@@ -334,4 +314,17 @@ bool UHKInteractionComponent::IsActionKeyDown(const UInputAction* Action) const
 		}
 	}
 	return false;
+}
+
+TArray<IInteractionExtension*> UHKInteractionComponent::GetExtensions() const
+{
+	TArray<IInteractionExtension*> Extensions;
+	for (UActorComponent* Component : GetOwner()->GetComponents())
+	{
+		if (IInteractionExtension* Extension = Cast<IInteractionExtension>(Component))
+		{
+			Extensions.Add(Extension);
+		}
+	}
+	return Extensions;
 }

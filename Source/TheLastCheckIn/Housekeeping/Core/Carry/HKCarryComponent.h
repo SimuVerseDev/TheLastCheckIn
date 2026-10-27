@@ -1,15 +1,18 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Core/Interaction/InteractionExtension.h"
 #include "HKCarryComponent.generated.h"
 
 class AHKBlanketActor;
 class UPhysicsHandleComponent;
+class USceneComponent;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnPickedUp, UPrimitiveComponent*, Component);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHKOnReleased, UPrimitiveComponent*, Component, bool, bThrown);
 
 UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
-class UHKCarryComponent : public UActorComponent
+class UHKCarryComponent : public UActorComponent, public IInteractionExtension
 {
 	GENERATED_BODY()
 
@@ -37,7 +40,39 @@ public:
 	FHKOnPickedUp OnPickedUp;
 	UPROPERTY(BlueprintAssignable, Category="Housekeeping|Carry")
 	FHKOnReleased OnReleased;
-
+	
+	/*
+	카트 장착 시 투입구 컴포넌트 지정, 해제 시 nullptr
+	*/
+	UFUNCTION(BlueprintPure, Category="Housekeeping|Trash")
+	USceneComponent* GetTrashAbsorbTarget() const;
+	
+	UFUNCTION(BlueprintCallable, Category="Housekeeping|Trash")
+	void SetTrashAbsorbTarget(USceneComponent* Target)
+	{
+		TrashAbsorbTarget = Target;
+	}
+	
+	UFUNCTION(BlueprintPure, Category="Housekeeping|Trash")
+	bool CanAbsorbTrash() const
+	{
+		return TrashAbsorbTarget.IsValid() || bDebugTrashMode;
+	}
+	
+	/*
+	IInteractionExtension
+	*/
+	virtual AActor* FindInteractionTarget(const FVector& Start, const FVector& End) const override;
+	virtual bool BlocksFocus() const override
+	{
+		return IsCarrying();
+	}
+	virtual FText GetBlockingPrompt() const override;
+	virtual void OnUseReleased() override
+	{
+		Drop();
+	}
+	
 protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Carry", meta=(ClampMin=0, Units="cm"))
 	float HoldDistance = 150.0f;
@@ -61,6 +96,18 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
+	/*
+	이불을 시선으로 잡을 수 있는 반경
+	*/
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Carry", meta=(ClampMin=0, Units="cm"))
+	float BlanketGrabRadius = 30.0f;
+
+	/*
+	임시 카트모드
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Debug")
+	bool bDebugTrashMode = false;
+
 private:
 	bool GetViewTransform(FVector& OutHoldLocation, FRotator& OutViewRotation) const;
 	void Release(bool bInheritHandVelocity);
@@ -72,10 +119,9 @@ private:
 	TObjectPtr<UPhysicsHandleComponent> PhysicsHandle;
 	UPROPERTY(Transient)
 	TObjectPtr<UPrimitiveComponent> CarriedComponent;
-	/*
-	blanket
-	*/
+
 	TWeakObjectPtr<AHKBlanketActor> CarriedBlanket;
+	TWeakObjectPtr<USceneComponent> TrashAbsorbTarget;
 	
 	FQuat RotationOffset = FQuat::Identity; // 몸을 돌리면 물체 방향도 같이 따라올 수 있도록 내 시선 기준으로 물체가 어떻게 돌아가는지 저장
 	TEnumAsByte<ECollisionResponse> SavedPawnResponse = ECR_Block;

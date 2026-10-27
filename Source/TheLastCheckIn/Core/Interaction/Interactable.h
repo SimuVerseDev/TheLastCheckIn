@@ -2,15 +2,15 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "HKInteractable.generated.h"
+#include "Interactable.generated.h"
 
 UINTERFACE(MinimalAPI, BlueprintType)
-class UHKInteractable : public UInterface
+class UInteractable : public UInterface
 {
 	GENERATED_BODY()
 };
 
-class IHKInteractable
+class IInteractable
 {
 	GENERATED_BODY()
 
