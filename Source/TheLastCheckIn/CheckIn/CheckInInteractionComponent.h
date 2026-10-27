@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Core/Interaction/InteractionExtension.h"
 #include "CheckInInteractionComponent.generated.h"
 
 class AGuestCharacter;
@@ -14,12 +15,15 @@ class UUserWidget;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCheckInRoomListChanged);
 
 UCLASS(ClassGroup=(CheckIn), meta=(BlueprintSpawnableComponent))
-class THELASTCHECKIN_API UCheckInInteractionComponent : public UActorComponent
+class THELASTCHECKIN_API UCheckInInteractionComponent : public UActorComponent, public IInteractionExtension
 {
 	GENERATED_BODY()
 
 public:
 	UCheckInInteractionComponent();
+
+
+	virtual AActor* FindInteractionTarget(const FVector& Start, const FVector& End) const override;
 	
 	UFUNCTION(BlueprintCallable, Category ="CheckIn")
 	void BeginCounterInteraction(AActor* InCounterTarget);

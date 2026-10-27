@@ -1,4 +1,5 @@
 ﻿#include "CheckInInteractionComponent.h"
+#include "CheckInCounter.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/PrimitiveComponent.h"
@@ -115,6 +116,24 @@ void UCheckInInteractionComponent::EndCounterInteraction()
 
     CounterTarget.Reset();
     CurrentGuest.Reset();
+}
+
+AActor* UCheckInInteractionComponent::FindInteractionTarget(const FVector& Start, const FVector& End) const
+{
+    const AActor* Owner = GetOwner();
+    if (!bInsideCounter || !IsValid(Owner) || !GetWorld())
+    {
+        return nullptr;
+    }
+
+    for (TActorIterator<ACheckInCounter> It(GetWorld()); It; ++It)
+    {
+        if (Owner->IsOverlappingActor(*It))
+        {
+            return *It;
+        }
+    }
+    return nullptr;
 }
 
 bool UCheckInInteractionComponent::IsCarryingObject() const
