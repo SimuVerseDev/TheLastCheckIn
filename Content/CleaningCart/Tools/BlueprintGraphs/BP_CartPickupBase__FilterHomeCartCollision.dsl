@@ -1,0 +1,13 @@
+(fn FilterHomeCartCollision ()
+  (bind _homecartcollisionfilter (Variables|Default|GetHomeCartCollisionFilter))
+  (Utilities|IsValid (Variables|Default|GetHomeCart)
+    (:"Is Valid"
+      (Physics|Components|PhysicsConstraint|SetLinearXLimit _homecartcollisionfilter)
+      (Physics|Components|PhysicsConstraint|SetLinearYLimit _homecartcollisionfilter)
+      (Physics|Components|PhysicsConstraint|SetLinearZLimit _homecartcollisionfilter)
+      (Physics|Components|PhysicsConstraint|SetAngularSwing1Limit _homecartcollisionfilter)
+      (Physics|Components|PhysicsConstraint|SetAngularSwing2Limit _homecartcollisionfilter)
+      (Physics|Components|PhysicsConstraint|SetAngularTwistLimit _homecartcollisionfilter)
+      (Physics|Components|PhysicsConstraint|SetDisableCollision _homecartcollisionfilter true)
+      (bind _body (CallFunction|GetPickupBodyComponent (Variables|Default|GetHomeCart)))
+      (Physics|Components|PhysicsConstraint|SetConstrainedComponents _homecartcollisionfilter (Variables|Default|GetPickupBody) "None" _body))))
