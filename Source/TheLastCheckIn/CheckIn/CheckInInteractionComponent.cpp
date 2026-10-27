@@ -1,6 +1,7 @@
 ﻿#include "CheckInInteractionComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Components/PrimitiveComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
@@ -11,6 +12,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "UObject/ConstructorHelpers.h"
+#include "UObject/UnrealType.h"
 #include "Guests/GuestCharacter.h"
 #include "Rooms/RoomActor.h"
 #include "Housekeeping/Core/Carry/HKCarryComponent.h"
@@ -29,6 +31,59 @@ UCheckInInteractionComponent::UCheckInInteractionComponent()
 	{
 		InteractAction = InteractFinder.Object;
 	}
+}
+
+void UCheckInInteractionComponent::BeginPlay()
+{
+    Super::BeginPlay();
+
+    // Blueprint components and their initial overlaps must finish initializing first.
+    InitialCounterCheckTimer = GetWorld()->GetTimerManager().SetTimerForNextTick(
+        this, &UCheckInInteractionComponent::CheckInitialCounterOverlap);
+}
+
+void UCheckInInteractionComponent::CheckInitialCounterOverlap()
+{
+    AActor* Owner = GetOwner();
+    if (bInsideCounter || !IsValid(Owner))
+    {
+        return;
+    }
+
+    TArray<AActor*> OverlappingActors;
+    Owner->GetOverlappingActors(OverlappingActors);
+
+    for (AActor* Counter : OverlappingActors)
+    {
+        if (!IsValid(Counter))
+        {
+            continue;
+        }
+
+        // BP_CheckInCounter currently owns these members in Blueprint, not C++.
+        // Only its player interaction volume should enable check-in.
+        TInlineComponentArray<UPrimitiveComponent*> Primitives(Counter);
+        for (UPrimitiveComponent* Primitive : Primitives)
+        {
+            if (Primitive->GetFName() != TEXT("PlayerInteractionBox")
+                || !Primitive->IsOverlappingActor(Owner))
+            {
+                continue;
+            }
+
+            const FObjectPropertyBase* TargetProperty =
+                FindFProperty<FObjectPropertyBase>(Counter->GetClass(), TEXT("CounterTarget"));
+            AActor* Target = TargetProperty
+                ? Cast<AActor>(TargetProperty->GetObjectPropertyValue_InContainer(Counter))
+                : nullptr;
+
+            if (IsValid(Target))
+            {
+                BeginCounterInteraction(Target);
+                return;
+            }
+        }
+    }
 }
 
 void UCheckInInteractionComponent::BeginCounterInteraction(
@@ -529,6 +584,11 @@ bool UCheckInInteractionComponent::TryAssignRoomNumber(int32 RoomNumber)
 
 void UCheckInInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+    if (GetWorld())
+    {
+        GetWorld()->GetTimerManager().ClearTimer(InitialCounterCheckTimer);
+    }
+
     EndCounterInteraction();
 
     if (IsValid(CheckInInput))
