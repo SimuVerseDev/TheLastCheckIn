@@ -1,0 +1,2091 @@
+{
+  "beforeEvent": "(event EventBeginPlay\n  (bind _cartpickupprompt (Variables|Default|GetCartPickupPrompt))\n  (|Parent:BeginPlay)\n  (bind _returnvalue (UserInterface|CreateWidget \"/Game/CleaningCart/Test/UI/WBP_HK_Crosshair.WBP_HK_Crosshair_C\"))\n  (UserInterface|Viewport|AddToViewport _returnvalue)\n  (Development|PrintString \"Crosshair OK\")\n  (bind _returnvalue_1 (UserInterface|CreateWidget \"/Game/CleaningCart/Test/UI/WBP_CartPickupPrompt.WBP_CartPickupPrompt_C\" (Game|GetPlayerController 0)))\n  (Variables|Default|SetCartPickupPrompt _returnvalue_1)\n  (Widget|SetVisibility _cartpickupprompt \"Collapsed\")\n  (UserInterface|Viewport|AddToViewport _cartpickupprompt))\n\n(event E (Key))\n\n(event EventTick (DeltaSeconds)\n  (CallFunction|CartUpdateCarry))\n",
+  "beforeUpdate": "(fn UpdateCartPickupPrompt ()\n  (bind _cartpickupprompt (Variables|Default|GetCartPickupPrompt))\n  (Utilities|IsValid _cartpickupprompt\n    (:\"Is Valid\"\n      (Widget|SetVisibility _cartpickupprompt \"Collapsed\")\n      (Utilities|IsValid (Variables|Default|GetHeldCartObject)\n        (:\"Is Not Valid\"\n          (bind _target (CallFunction|FindCartInteraction))\n          (bind _asbp_cart_cube (Utilities|Casting|CastToBP_CartCube _target))\n          (bind _result (Class|BPCartPickupBase|CanPickUp _asbp_cart_cube))\n          (if _result\n            _))))))\n",
+  "eventNodes": [
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_Event_0"
+            }
+          },
+          "type_id": "Delegate",
+          "name": "OutputDelegate"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallParentFunction_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_Event_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        }
+      ],
+      "input_pins": [],
+      "position": {
+        "x": -560,
+        "y": 16
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_Event_0"
+      },
+      "type_id": "AddEvent|EventBeginPlay"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_0"
+            }
+          },
+          "type_id": "WBP HK Crosshair Object Reference",
+          "name": "ReturnValue"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallParentFunction_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "/Game/CleaningCart/Test/UI/WBP_HK_Crosshair.WBP_HK_Crosshair_C",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_0"
+            }
+          },
+          "type_id": "User Widget Class Reference",
+          "name": "Class"
+        },
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 2,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_0"
+            }
+          },
+          "type_id": "Player Controller Object Reference",
+          "name": "OwningPlayer"
+        }
+      ],
+      "position": {
+        "x": 16,
+        "y": 0
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_0"
+      },
+      "type_id": "UserInterface|CreateWidget"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_1"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_0"
+            }
+          },
+          "type_id": "User Widget Object Reference",
+          "name": "self"
+        },
+        {
+          "value": "0",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 2,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_0"
+            }
+          },
+          "type_id": "Integer",
+          "name": "ZOrder"
+        }
+      ],
+      "position": {
+        "x": 416,
+        "y": -16
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_0"
+      },
+      "type_id": "UserInterface|Viewport|AddToViewport"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallParentFunction_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_Event_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallParentFunction_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        }
+      ],
+      "position": {
+        "x": -240,
+        "y": 16
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallParentFunction_0"
+      },
+      "type_id": "|Parent:BeginPlay"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_3"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_1"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_1"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "Crosshair OK",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_1"
+            }
+          },
+          "type_id": "String",
+          "name": "InString"
+        },
+        {
+          "value": "true",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 2,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_1"
+            }
+          },
+          "type_id": "Boolean",
+          "name": "bPrintToScreen"
+        },
+        {
+          "value": "true",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 3,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_1"
+            }
+          },
+          "type_id": "Boolean",
+          "name": "bPrintToLog"
+        },
+        {
+          "value": "(R=0.000000,G=0.660000,B=1.000000,A=1.000000)",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 4,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_1"
+            }
+          },
+          "type_id": "Linear Color Structure",
+          "name": "TextColor"
+        },
+        {
+          "value": "2.000000",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 5,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_1"
+            }
+          },
+          "type_id": "Float (single-precision)",
+          "name": "Duration"
+        },
+        {
+          "value": "None",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 6,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_1"
+            }
+          },
+          "type_id": "Name",
+          "name": "Key"
+        }
+      ],
+      "position": {
+        "x": 656,
+        "y": -48
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_1"
+      },
+      "type_id": "Development|PrintString"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_20"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_InputKey_1"
+            }
+          },
+          "type_id": "Exec",
+          "name": "Pressed"
+        },
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_InputKey_1"
+            }
+          },
+          "type_id": "Exec",
+          "name": "Released"
+        },
+        {
+          "value": "None",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 2,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_InputKey_1"
+            }
+          },
+          "type_id": "Key Structure",
+          "name": "Key"
+        }
+      ],
+      "input_pins": [],
+      "position": {
+        "x": 16,
+        "y": 672
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_InputKey_1"
+      },
+      "type_id": "Input|KeyboardEvents|E"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_20"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_InputKey_1"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_20"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_20"
+            }
+          },
+          "type_id": "Self Object Reference",
+          "name": "self"
+        }
+      ],
+      "position": {
+        "x": 320,
+        "y": 656
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_20"
+      },
+      "type_id": "|CartInteract"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_Event_2"
+            }
+          },
+          "type_id": "Delegate",
+          "name": "OutputDelegate"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_21"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_Event_2"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        },
+        {
+          "value": "0.0",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 2,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_Event_2"
+            }
+          },
+          "type_id": "Float (single-precision)",
+          "name": "DeltaSeconds"
+        }
+      ],
+      "input_pins": [],
+      "position": {
+        "x": 16,
+        "y": 856
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_Event_2"
+      },
+      "type_id": "AddEvent|EventTick"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_21"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_Event_2"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_21"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_21"
+            }
+          },
+          "type_id": "Self Object Reference",
+          "name": "self"
+        }
+      ],
+      "position": {
+        "x": 316,
+        "y": 856
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_21"
+      },
+      "type_id": "|CartUpdateCarry"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_VariableSet_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_3"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_VariableSet_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_3"
+            }
+          },
+          "type_id": "WBP Cart Pickup Prompt Object Reference",
+          "name": "ReturnValue"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_1"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_3"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "/Game/CleaningCart/Test/UI/WBP_CartPickupPrompt.WBP_CartPickupPrompt_C",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_3"
+            }
+          },
+          "type_id": "User Widget Class Reference",
+          "name": "Class"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_25"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 2,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_3"
+            }
+          },
+          "type_id": "Player Controller Object Reference",
+          "name": "OwningPlayer"
+        }
+      ],
+      "position": {
+        "x": 0,
+        "y": 240
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_3"
+      },
+      "type_id": "UserInterface|CreateWidget"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 2,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_3"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_25"
+            }
+          },
+          "type_id": "Player Controller Object Reference",
+          "name": "ReturnValue"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "0",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_25"
+            }
+          },
+          "type_id": "Integer",
+          "name": "PlayerIndex"
+        }
+      ],
+      "position": {
+        "x": -480,
+        "y": 288
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_25"
+      },
+      "type_id": "Game|GetPlayerController"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_26"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_VariableSet_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        },
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_VariableSet_0"
+            }
+          },
+          "type_id": "WBP Cart Pickup Prompt Object Reference",
+          "name": "Output_Get"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_3"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_VariableSet_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CreateWidget_3"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_VariableSet_0"
+            }
+          },
+          "type_id": "WBP Cart Pickup Prompt Object Reference",
+          "name": "CartPickupPrompt"
+        }
+      ],
+      "position": {
+        "x": 400,
+        "y": 240
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_VariableSet_0"
+      },
+      "type_id": "|SetCartPickupPrompt"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_26"
+              }
+            },
+            {
+              "direction": "EGPD_Input",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_27"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_VariableGet_0"
+            }
+          },
+          "type_id": "WBP Cart Pickup Prompt Object Reference",
+          "name": "CartPickupPrompt"
+        }
+      ],
+      "input_pins": [],
+      "position": {
+        "x": 544,
+        "y": 432
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_VariableGet_0"
+      },
+      "type_id": "|GetCartPickupPrompt"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_27"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_26"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_VariableSet_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_26"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_VariableGet_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_26"
+            }
+          },
+          "type_id": "Widget Object Reference",
+          "name": "self"
+        },
+        {
+          "value": "Collapsed",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 2,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_26"
+            }
+          },
+          "type_id": "ESlateVisibility Enum",
+          "name": "InVisibility"
+        }
+      ],
+      "position": {
+        "x": 768,
+        "y": 208
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_26"
+      },
+      "type_id": "Widget|SetVisibility"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_27"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_26"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_27"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_VariableGet_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_27"
+            }
+          },
+          "type_id": "User Widget Object Reference",
+          "name": "self"
+        },
+        {
+          "value": "0",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 2,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_27"
+            }
+          },
+          "type_id": "Integer",
+          "name": "ZOrder"
+        }
+      ],
+      "position": {
+        "x": 1104,
+        "y": 400
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:EventGraph.K2Node_CallFunction_27"
+      },
+      "type_id": "UserInterface|Viewport|AddToViewport"
+    }
+  ],
+  "updateNodes": [
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_FunctionEntry_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        }
+      ],
+      "input_pins": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_FunctionEntry_0"
+      },
+      "type_id": "|UpdateCartPickupPrompt"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_0"
+              }
+            },
+            {
+              "direction": "EGPD_Input",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_VariableGet_0"
+            }
+          },
+          "type_id": "WBP Cart Pickup Prompt Object Reference",
+          "name": "CartPickupPrompt"
+        }
+      ],
+      "input_pins": [],
+      "position": {
+        "x": 96,
+        "y": 160
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_VariableGet_0"
+      },
+      "type_id": "|GetCartPickupPrompt"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "Is Valid"
+        },
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "Is Not Valid"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_FunctionEntry_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "exec"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_VariableGet_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_0"
+            }
+          },
+          "type_id": "Object Reference",
+          "name": "InputObject"
+        }
+      ],
+      "position": {
+        "x": 336,
+        "y": 32
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_0"
+      },
+      "type_id": "Utilities|IsValid"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_1"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_VariableGet_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_0"
+            }
+          },
+          "type_id": "Widget Object Reference",
+          "name": "self"
+        },
+        {
+          "value": "Collapsed",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 2,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_0"
+            }
+          },
+          "type_id": "ESlateVisibility Enum",
+          "name": "InVisibility"
+        }
+      ],
+      "position": {
+        "x": 576,
+        "y": 176
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_0"
+      },
+      "type_id": "Widget|SetVisibility"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_1"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_VariableGet_1"
+            }
+          },
+          "type_id": "BP Cart Pickup Base Object Reference",
+          "name": "HeldCartObject"
+        }
+      ],
+      "input_pins": [],
+      "position": {
+        "x": 800,
+        "y": 368
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_VariableGet_1"
+      },
+      "type_id": "|GetHeldCartObject"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_1"
+            }
+          },
+          "type_id": "Exec",
+          "name": "Is Valid"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_1"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_1"
+            }
+          },
+          "type_id": "Exec",
+          "name": "Is Not Valid"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_1"
+            }
+          },
+          "type_id": "Exec",
+          "name": "exec"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_VariableGet_1"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_1"
+            }
+          },
+          "type_id": "Object Reference",
+          "name": "InputObject"
+        }
+      ],
+      "position": {
+        "x": 976,
+        "y": 240
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_1"
+      },
+      "type_id": "Utilities|IsValid"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_DynamicCast_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_1"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_DynamicCast_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_1"
+            }
+          },
+          "type_id": "BP Cart Pickup Base Object Reference",
+          "name": "Target"
+        },
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 2,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_1"
+            }
+          },
+          "type_id": "Primitive Component Object Reference",
+          "name": "HitComponent"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_MacroInstance_1"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_1"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_1"
+            }
+          },
+          "type_id": "Self Object Reference",
+          "name": "self"
+        }
+      ],
+      "position": {
+        "x": 1296,
+        "y": 240
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_1"
+      },
+      "type_id": "|FindCartInteraction"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_2"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_DynamicCast_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        },
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_DynamicCast_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "CastFailed"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_2"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 2,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_DynamicCast_0"
+            }
+          },
+          "type_id": "BP Cart Cube Object Reference",
+          "name": "AsBP Cart Cube"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_1"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_DynamicCast_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_1"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_DynamicCast_0"
+            }
+          },
+          "type_id": "Object Reference",
+          "name": "Object"
+        }
+      ],
+      "position": {
+        "x": 1600,
+        "y": 304
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_DynamicCast_0"
+      },
+      "type_id": "Utilities|Casting|CastToBP_CartCube"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_IfThenElse_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_2"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        },
+        {
+          "value": "false",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_IfThenElse_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_2"
+            }
+          },
+          "type_id": "Boolean",
+          "name": "Result"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_DynamicCast_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_2"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 2,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_DynamicCast_0"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_2"
+            }
+          },
+          "type_id": "BP Cart Pickup Base Object Reference",
+          "name": "self"
+        }
+      ],
+      "position": {
+        "x": 1952,
+        "y": 320
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_2"
+      },
+      "type_id": "|CanPickUp"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_IfThenElse_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        },
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_IfThenElse_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "else"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_2"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_IfThenElse_0"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "true",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_2"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_IfThenElse_0"
+            }
+          },
+          "type_id": "Boolean",
+          "name": "Condition"
+        }
+      ],
+      "position": {
+        "x": 2288,
+        "y": 320
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_IfThenElse_0"
+      },
+      "type_id": "Utilities|FlowControl|Branch"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Input",
+              "index_id": 1,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_3"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_VariableGet_2"
+            }
+          },
+          "type_id": "WBP Cart Pickup Prompt Object Reference",
+          "name": "CartPickupPrompt"
+        }
+      ],
+      "input_pins": [],
+      "position": {
+        "x": 2288,
+        "y": 576
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_VariableGet_2"
+      },
+      "type_id": "|GetCartPickupPrompt"
+    },
+    {
+      "output_pins": [
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_3"
+            }
+          },
+          "type_id": "Exec",
+          "name": "then"
+        }
+      ],
+      "input_pins": [
+        {
+          "value": "",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_3"
+            }
+          },
+          "type_id": "Exec",
+          "name": "execute"
+        },
+        {
+          "value": "",
+          "connected_pins": [
+            {
+              "direction": "EGPD_Output",
+              "index_id": 0,
+              "node": {
+                "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_VariableGet_2"
+              }
+            }
+          ],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 1,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_3"
+            }
+          },
+          "type_id": "Widget Object Reference",
+          "name": "self"
+        },
+        {
+          "value": "Visible",
+          "connected_pins": [],
+          "pin_id": {
+            "direction": "EGPD_Input",
+            "index_id": 2,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_3"
+            }
+          },
+          "type_id": "ESlateVisibility Enum",
+          "name": "InVisibility"
+        }
+      ],
+      "position": {
+        "x": 2496,
+        "y": 512
+      },
+      "node": {
+        "refPath": "/Game/CleaningCart/Test/Character/BP_Cart_TestCharacter.BP_Cart_TestCharacter:UpdateCartPickupPrompt.K2Node_CallFunction_3"
+      },
+      "type_id": "Widget|SetVisibility"
+    }
+  ],
+  "widgetDescription": {
+    "description": "[0] CanvasPanel CanvasPanel_18\n  [1] TextBlock TextBlock_749  Text:NSLOCTEXT(\"[A7C40FF382F634A50EFAB356923B99D5]\", \"651AB13D440DD4E922B1B198937B8B53\", \"E 집기\")  Font:(Size=22.000000)  Justification:Center  Slot:/Script/UMG.CanvasPanelSlot'/Game/CleaningCart/Test/UI/WBP_CartPickupPrompt.WBP_CartPickupPrompt:WidgetTree.CanvasPanel_18.CanvasPanelSlot_0'  slot:(LayoutData:(Offsets=(Top=40.000000,Right=200.000000,Bottom=40.000000),Alignment=(X=0.500000,Y=0.500000)))\n",
+    "widgets": [
+      {
+        "widget": {
+          "refPath": "/Game/CleaningCart/Test/UI/WBP_CartPickupPrompt.WBP_CartPickupPrompt:WidgetTree.CanvasPanel_18"
+        },
+        "parent": "None",
+        "slot": "None",
+        "namedSlotHost": "None",
+        "widgetClassPath": {
+          "refPath": "/Script/UMG.CanvasPanel"
+        },
+        "widgetName": "CanvasPanel_18",
+        "bIsVariable": false,
+        "bInherited": false,
+        "uIComponents": []
+      },
+      {
+        "widget": {
+          "refPath": "/Game/CleaningCart/Test/UI/WBP_CartPickupPrompt.WBP_CartPickupPrompt:WidgetTree.TextBlock_749"
+        },
+        "parent": {
+          "refPath": "/Game/CleaningCart/Test/UI/WBP_CartPickupPrompt.WBP_CartPickupPrompt:WidgetTree.CanvasPanel_18"
+        },
+        "slot": {
+          "refPath": "/Game/CleaningCart/Test/UI/WBP_CartPickupPrompt.WBP_CartPickupPrompt:WidgetTree.CanvasPanel_18.CanvasPanelSlot_0"
+        },
+        "namedSlotHost": "None",
+        "widgetClassPath": {
+          "refPath": "/Script/UMG.TextBlock"
+        },
+        "widgetName": "TextBlock_749",
+        "bIsVariable": false,
+        "bInherited": false,
+        "uIComponents": []
+      }
+    ]
+  },
+  "oldLayout": {
+    "layoutData": {
+      "offsets": {
+        "left": 0,
+        "top": 40,
+        "right": 200,
+        "bottom": 40
+      },
+      "anchors": {
+        "minimum": {
+          "x": 0,
+          "y": 0
+        },
+        "maximum": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "alignment": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    }
+  },
+  "oldText": {
+    "text": "E 집기",
+    "visibility": "Visible",
+    "renderOpacity": 1
+  }
+}

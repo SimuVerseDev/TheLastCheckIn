@@ -1,17 +1,13 @@
 ﻿#include "CheckInInteractionComponent.h"
+#include "CheckInCounter.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/PrimitiveComponent.h"
-#include "EnhancedInputComponent.h"
-#include "EnhancedInputSubsystems.h"
-#include "InputAction.h"
 #include "InputCoreTypes.h"
-#include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
-#include "UObject/ConstructorHelpers.h"
 #include "UObject/UnrealType.h"
 #include "Guests/GuestCharacter.h"
 #include "Rooms/RoomActor.h"
@@ -22,15 +18,6 @@ UCheckInInteractionComponent::UCheckInInteractionComponent()
 {
 
 	PrimaryComponentTick.bCanEverTick = false;
-	
-	static ConstructorHelpers::FObjectFinder<UInputAction>
-		InteractFinder(
-			TEXT("/Game/Input/Actions/IA_Interact.IA_Interact"));
-
-	if (InteractFinder.Succeeded())
-	{
-		InteractAction = InteractFinder.Object;
-	}
 }
 
 void UCheckInInteractionComponent::BeginPlay()
@@ -103,7 +90,6 @@ void UCheckInInteractionComponent::BeginCounterInteraction(
 
     CounterTarget = InCounterTarget;
     bInsideCounter = true;
-    bWaitForKeyRelease = true;
 
     GetWorld()->GetTimerManager().SetTimer(
         CounterCheckTimer,
@@ -125,97 +111,29 @@ void UCheckInInteractionComponent::EndCounterInteraction()
     }
 
     CloseCheckIn();
-    SetInputRegistered(false);
 
     bInsideCounter = false;
-    bWaitForKeyRelease = true;
 
     CounterTarget.Reset();
     CurrentGuest.Reset();
 }
 
-void UCheckInInteractionComponent::CreateCheckInInput()
+AActor* UCheckInInteractionComponent::FindInteractionTarget(const FVector& Start, const FVector& End) const
 {
-    if (CheckInInput || !InteractAction)
+    const AActor* Owner = GetOwner();
+    if (!bInsideCounter || !IsValid(Owner) || !GetWorld())
     {
-        return;
+        return nullptr;
     }
 
-    CheckInInput = NewObject<UEnhancedInputComponent>(
-        GetOwner(), TEXT("CheckInInput"));
-
-    CheckInInput->RegisterComponent();
-
-    // 현재 HK 입력보다 높은 우선순위
-    CheckInInput->Priority = 100;
-
-    CheckInInput->bBlockInput = false;
-
-    auto& Binding = CheckInInput->BindAction(
-        InteractAction,
-        ETriggerEvent::Started,
-        this,
-        &UCheckInInteractionComponent::HandleCheckInPressed);
-    
-    Binding.SetShouldConsume(true);
-}
-
-void UCheckInInteractionComponent::SetInputRegistered(bool bRegister)
-{
-    if (!IsValid(LocalController) || !CheckInInput)
+    for (TActorIterator<ACheckInCounter> It(GetWorld()); It; ++It)
     {
-        bInputRegistered = false;
-        return;
-    }
-
-    if (bRegister == bInputRegistered)
-    {
-        return;
-    }
-
-    if (bRegister)
-    {
-        LocalController->PushInputComponent(CheckInInput);
-    }
-    else
-    {
-        LocalController->PopInputComponent(CheckInInput);
-    }
-
-    bInputRegistered = bRegister;
-}
-
-bool UCheckInInteractionComponent::IsInteractionKeyDown() const
-{
-    if (!IsValid(LocalController) || !InteractAction)
-    {
-        return false;
-    }
-
-    const ULocalPlayer* LocalPlayer =
-        LocalController->GetLocalPlayer();
-
-    const UEnhancedInputLocalPlayerSubsystem* Subsystem =
-        LocalPlayer
-        ? LocalPlayer->GetSubsystem<
-            UEnhancedInputLocalPlayerSubsystem>()
-        : nullptr;
-
-    if (!Subsystem)
-    {
-        return false;
-    }
-
-    for (const FKey& Key :
-        Subsystem->QueryKeysMappedToAction(InteractAction))
-    {
-        if (LocalController->IsInputKeyDown(Key))
+        if (Owner->IsOverlappingActor(*It))
         {
-            return true;
+            return *It;
         }
     }
-
-    return false;
+    return nullptr;
 }
 
 bool UCheckInInteractionComponent::IsCarryingObject() const
@@ -329,20 +247,15 @@ void UCheckInInteractionComponent::CheckCounterState()
     if (LocalController.Get() != NewController)
     {
         CloseCheckIn();
-        SetInputRegistered(false);
 
         CheckInWidget = nullptr;
         LocalController = NewController;
-
-        bWaitForKeyRelease = true;
     }
 
     if (!IsValid(LocalController))
     {
         return;
     }
-
-    CreateCheckInInput();
 
     if (bCheckInOpen)
     {
@@ -353,51 +266,21 @@ void UCheckInInteractionComponent::CheckCounterState()
         }
 
         OnRoomListChanged.Broadcast();
-        return;
-    }
-
-
-    if (bWaitForKeyRelease)
-    {
-        if (IsInteractionKeyDown()
-            || LocalController->IsInputKeyDown(EKeys::LeftMouseButton))
-        {
-            return;
-        }
-
-        bWaitForKeyRelease = false;
-    }
-
-    if (!CanOpenCheckIn())
-    {
-        SetInputRegistered(false);
-        return;
-    }
-
-    if (!bInputRegistered)
-    {
-        if (IsInteractionKeyDown()
-            || LocalController->IsInputKeyDown(EKeys::LeftMouseButton))
-        {
-            return;
-        }
-
-        SetInputRegistered(true);
     }
 }
 
-void UCheckInInteractionComponent::HandleCheckInPressed()
+bool UCheckInInteractionComponent::OpenCheckIn()
 {
-    if (bWaitForKeyRelease || !CanOpenCheckIn())
+    if (!CanOpenCheckIn())
     {
-        return;
+        return false;
     }
 
     AGuestCharacter* Guest = FindWaitingGuest();
 
     if (!IsValid(Guest))
     {
-        return;
+        return false;
     }
 
     if (!IsValid(CheckInWidget))
@@ -414,7 +297,7 @@ void UCheckInInteractionComponent::HandleCheckInPressed()
             Warning,
             TEXT("CheckIn: Failed to create the sidebar widget."));
 
-        return;
+        return false;
     }
 
     CurrentGuest = Guest;
@@ -439,6 +322,7 @@ void UCheckInInteractionComponent::HandleCheckInPressed()
     CheckInWidget->SetUserFocus(LocalController.Get());
 
     OnRoomListChanged.Broadcast();
+    return true;
 }
 
 void UCheckInInteractionComponent::CloseCheckIn()
@@ -470,8 +354,6 @@ void UCheckInInteractionComponent::CloseCheckIn()
             LocalController.Get(),
             true);
     }
-
-    bWaitForKeyRelease = true;
 }
 
 ARoomActor* UCheckInInteractionComponent::FindUniqueRoom(int32 RoomNumber) const
@@ -590,12 +472,6 @@ void UCheckInInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayRea
     }
 
     EndCounterInteraction();
-
-    if (IsValid(CheckInInput))
-    {
-        CheckInInput->DestroyComponent();
-        CheckInInput = nullptr;
-    }
 
     CheckInWidget = nullptr;
     LocalController = nullptr;
