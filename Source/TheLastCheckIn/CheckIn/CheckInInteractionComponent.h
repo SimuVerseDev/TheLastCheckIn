@@ -55,6 +55,7 @@ public:
 	FCheckInRoomListChanged OnRoomListChanged;
 	
 protected:
+	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	UPROPERTY(EditAnywhere, Category="CheckIn|UI")
@@ -73,6 +74,7 @@ protected:
 	float GuestRange =200.0f;
 	
 private:
+	void CheckInitialCounterOverlap();
 	void CheckCounterState();
 	void CreateCheckInInput();
 	void SetInputRegistered(bool bRegister);
@@ -97,6 +99,7 @@ private:
 	TWeakObjectPtr<AActor> CounterTarget;
 	TWeakObjectPtr<AGuestCharacter> CurrentGuest;
 
+	FTimerHandle InitialCounterCheckTimer;
 	FTimerHandle CounterCheckTimer;
 
 	bool bInsideCounter = false;
