@@ -1,0 +1,187 @@
+{
+  "date": "2026-10-27T01:55:45.646Z",
+  "method": "PIE helper called the E-key handler; physical keyboard injection not performed.",
+  "notes": [
+    "Failed attempts retained for transparency. pickup_dropped_item was fixed by explicitly blocking Visibility on carried items. pickup_slot2_after_collision_fix was retried successfully after allowing the camera offset to settle.",
+    "Temporary test actor and blueprint removed."
+  ],
+  "attempts": [
+    {
+      "name": "pickup_inside_cart_collision",
+      "passed": true,
+      "data": {
+        "HeldCartObject": {
+          "refPath": "/Game/CleaningCart/Test/Maps/UEDPIE_0_Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CartCube_C_0"
+        }
+      }
+    },
+    {
+      "name": "return_inside_cart_collision",
+      "passed": true,
+      "data": {
+        "returned": {
+          "IsStored": true,
+          "Carrier": "None"
+        },
+        "hand": {
+          "HeldCartObject": "None"
+        }
+      }
+    },
+    {
+      "name": "pickup_ItemPoint_3",
+      "passed": true,
+      "data": {
+        "HeldCartObject": {
+          "refPath": "/Game/CleaningCart/Test/Maps/UEDPIE_0_Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CartCube_C_2"
+        }
+      }
+    },
+    {
+      "name": "return_ItemPoint_3",
+      "passed": true,
+      "data": {
+        "state": {
+          "IsStored": true,
+          "Carrier": "None"
+        },
+        "hand": {
+          "HeldCartObject": "None"
+        },
+        "zoneCollision": "NoCollision"
+      }
+    },
+    {
+      "name": "pickup_ItemPoint_2",
+      "passed": true,
+      "data": {
+        "HeldCartObject": {
+          "refPath": "/Game/CleaningCart/Test/Maps/UEDPIE_0_Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CartCube_C_1"
+        }
+      }
+    },
+    {
+      "name": "return_ItemPoint_2",
+      "passed": true,
+      "data": {
+        "state": {
+          "IsStored": true,
+          "Carrier": "None"
+        },
+        "hand": {
+          "HeldCartObject": "None"
+        },
+        "zoneCollision": "NoCollision"
+      }
+    },
+    {
+      "name": "drop_on_ground",
+      "passed": true,
+      "data": {
+        "IsStored": false,
+        "Carrier": "None"
+      }
+    },
+    {
+      "name": "wrong_slot_keeps_held_item",
+      "passed": true,
+      "data": {
+        "HeldCartObject": {
+          "refPath": "/Game/CleaningCart/Test/Maps/UEDPIE_0_Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CartCube_C_2"
+        }
+      }
+    },
+    {
+      "name": "own_slot_after_wrong_slot",
+      "passed": true,
+      "data": {}
+    },
+    {
+      "name": "empty_slot_does_not_pick_cart",
+      "passed": true,
+      "data": {
+        "HeldCartObject": "None"
+      }
+    },
+    {
+      "name": "cart_pickup",
+      "passed": true,
+      "data": {
+        "HeldCartObject": {
+          "refPath": "/Game/CleaningCart/Test/Maps/UEDPIE_0_Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CleaningCart_C_0"
+        }
+      }
+    },
+    {
+      "name": "cart_moved",
+      "passed": true,
+      "data": {
+        "location": {
+          "x": 350.25010693279,
+          "y": -19.999861226704876,
+          "z": 68.00002668239038
+        },
+        "rotation": {
+          "pitch": 0.0009740808585003702,
+          "yaw": 89.46450322526124,
+          "roll": -0.000983227524898212
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      }
+    },
+    {
+      "name": "pickup_dropped_item",
+      "passed": false,
+      "data": {}
+    },
+    {
+      "name": "pickup_slot2_after_collision_fix",
+      "passed": false,
+      "data": {}
+    },
+    {
+      "name": "cart_pickup_repeat",
+      "passed": true,
+      "data": {}
+    },
+    {
+      "name": "pickup_dropped_item_after_fix",
+      "passed": true,
+      "data": {}
+    },
+    {
+      "name": "return_after_cart_moved",
+      "passed": true,
+      "data": {
+        "IsStored": true,
+        "Carrier": "None"
+      }
+    },
+    {
+      "name": "returned_item_snapped_and_not_simulating",
+      "passed": true,
+      "data": {
+        "relative": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "simulates": false
+      }
+    },
+    {
+      "name": "no_duplicate_items",
+      "passed": true,
+      "data": {}
+    },
+    {
+      "name": "E_pressed_connected_to_interact",
+      "passed": true,
+      "data": {}
+    }
+  ]
+}

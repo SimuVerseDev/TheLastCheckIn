@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-27T03:51:42.083Z",
+  "method": "PIE helper set camera rotation and called the existing E-key CartInteract handler. Widget visibility read from the live widget instance. No physical-key injection.",
+  "notes": [
+    "The first dropped-cube check ran while the cube was falling. Re-aiming at its settled location passed.",
+    "Temporary verification actor and blueprint removed; PIE stopped."
+  ],
+  "attempts": [
+    {
+      "name": "prompt_visible_on_cube",
+      "passed": true,
+      "data": {}
+    },
+    {
+      "name": "prompt_hidden_when_looking_away",
+      "passed": true,
+      "data": {}
+    },
+    {
+      "name": "pickup_and_prompt_hidden",
+      "passed": true,
+      "data": {
+        "HeldCartObject": {
+          "refPath": "/Game/CleaningCart/Test/Maps/UEDPIE_0_Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CartCube_C_1"
+        }
+      }
+    },
+    {
+      "name": "prompt_on_dropped_cube",
+      "passed": false,
+      "data": {}
+    },
+    {
+      "name": "prompt_on_dropped_cube_after_settling",
+      "passed": true,
+      "data": {}
+    },
+    {
+      "name": "prompt_hidden_on_cart",
+      "passed": true,
+      "data": {}
+    },
+    {
+      "name": "prompt_hidden_out_of_range",
+      "passed": true,
+      "data": {}
+    },
+    {
+      "name": "E_key_connection_preserved",
+      "passed": true,
+      "data": {}
+    }
+  ]
+}
