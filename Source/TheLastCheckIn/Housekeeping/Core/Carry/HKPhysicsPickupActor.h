@@ -1,12 +1,12 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Housekeeping/Core/Interaction/HKInteractable.h"
+#include "Core/Interaction/Interactable.h"
 #include "HKPhysicsPickupActor.generated.h"
 
 class UStaticMeshComponent;
 UCLASS()
-class AHKPhysicsPickupActor : public AActor, public IHKInteractable
+class AHKPhysicsPickupActor : public AActor, public IInteractable
 {
 	GENERATED_BODY()
 
@@ -36,7 +36,7 @@ public:
 	virtual void NotifyReleased(bool bThrown);
 
 	/*
-	HKInteractable
+	Interactable
 	*/
 	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
 	virtual bool CanUse_Implementation(AActor* Interactor) const override;

@@ -42,7 +42,7 @@ bool AHKPhysicsPickupActor::CanBePickedUp() const
 }
 
 /*
-HKInteractable
+Interactable
 */
 bool AHKPhysicsPickupActor::CanInteract_Implementation(AActor* Interactor) const
 {

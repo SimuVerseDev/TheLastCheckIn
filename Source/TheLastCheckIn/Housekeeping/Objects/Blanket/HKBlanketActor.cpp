@@ -362,7 +362,7 @@ void AHKBlanketActor::Release(const FVector& Velocity)
 }
 
 /*
-IHKInteractable
+IInteractable
 */
 bool AHKBlanketActor::CanInteract_Implementation(AActor* Interactor) const
 {

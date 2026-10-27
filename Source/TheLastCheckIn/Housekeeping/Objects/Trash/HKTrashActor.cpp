@@ -118,7 +118,7 @@ void AHKTrashActor::SetHighlighted(bool bHighlighted)
 }
 
 /*
-IHKInteractable
+IInteractable
 */
 bool AHKTrashActor::CanUse_Implementation(AActor* Interactor) const
 {

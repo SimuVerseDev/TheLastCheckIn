@@ -1,5 +1,5 @@
 ﻿#include "Housekeeping/Core/Interaction/HKInteractionComponent.h"
-#include "Housekeeping/Core/Interaction/HKInteractable.h"
+#include "Core/Interaction/Interactable.h"
 #include "Housekeeping/Core/Carry/HKCarryComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -98,7 +98,7 @@ USceneComponent* UHKInteractionComponent::GetTrashAbsorbTarget() const
 
 bool UHKInteractionComponent::IsInteractable(AActor* Actor)
 {
-	return Actor && Actor->Implements<UHKInteractable>();
+	return Actor && Actor->Implements<UInteractable>();
 }
 
 bool UHKInteractionComponent::CanFocus(AActor* Actor) const
@@ -108,7 +108,7 @@ bool UHKInteractionComponent::CanFocus(AActor* Actor) const
 		return false;
 	}
 	AActor* Pawn = GetOwner();
-	return IHKInteractable::Execute_CanUse(Actor, Pawn) || IHKInteractable::Execute_CanInteract(Actor, Pawn);
+	return IInteractable::Execute_CanUse(Actor, Pawn) || IInteractable::Execute_CanInteract(Actor, Pawn);
 }
 
 void UHKInteractionComponent::EnsureInputSetup(APlayerController* PC)
@@ -186,18 +186,18 @@ void UHKInteractionComponent::SetFocus(AActor* NewFocus)
 	AActor* Pawn = GetOwner();
 	if (IsInteractable(OldFocus))
 	{
-		IHKInteractable::Execute_OnInteractFocusEnd(OldFocus, Pawn);
+		IInteractable::Execute_OnInteractFocusEnd(OldFocus, Pawn);
 	}
 	FocusedActor = NewFocus;
 	CancelHold();
 	FText Prompt;
 	if (IsInteractable(NewFocus))
 	{
-		IHKInteractable::Execute_OnInteractFocusBegin(NewFocus, Pawn);
+		IInteractable::Execute_OnInteractFocusBegin(NewFocus, Pawn);
 
-		Prompt = IHKInteractable::Execute_CanUse(NewFocus, Pawn)
-			? IHKInteractable::Execute_GetUsePrompt(NewFocus, Pawn)
-			: IHKInteractable::Execute_GetInteractPrompt(NewFocus, Pawn);
+		Prompt = IInteractable::Execute_CanUse(NewFocus, Pawn)
+			? IInteractable::Execute_GetUsePrompt(NewFocus, Pawn)
+			: IInteractable::Execute_GetInteractPrompt(NewFocus, Pawn);
 	}
 	OnFocusChanged.Broadcast(NewFocus, Prompt);
 }
@@ -219,7 +219,7 @@ void UHKInteractionComponent::UpdateHold(float DeltaTime)
 	if (HoldElapsed >= HoldDuration)
 	{
 		HoldTarget.Reset();
-		IHKInteractable::Execute_Interact(Target, GetOwner());
+		IInteractable::Execute_Interact(Target, GetOwner());
 	}
 }
 
@@ -251,17 +251,17 @@ void UHKInteractionComponent::ShowDebugPrompt() const
 	else if (AActor* Target = FocusedActor.Get(); IsInteractable(Target))
 	{
 		AActor* Pawn = GetOwner();
-		if (IHKInteractable::Execute_CanUse(Target, Pawn))
+		if (IInteractable::Execute_CanUse(Target, Pawn))
 		{
-			Message = FString::Printf(TEXT("[LMB] %s"), *IHKInteractable::Execute_GetUsePrompt(Target, Pawn).ToString());
+			Message = FString::Printf(TEXT("[LMB] %s"), *IInteractable::Execute_GetUsePrompt(Target, Pawn).ToString());
 		}
-		if (IHKInteractable::Execute_CanInteract(Target, Pawn))
+		if (IInteractable::Execute_CanInteract(Target, Pawn))
 		{
 			if (!Message.IsEmpty())
 			{
 				Message += TEXT("\n");
 			}
-			Message += FString::Printf(TEXT("[E] %s"), *IHKInteractable::Execute_GetInteractPrompt(Target, Pawn).ToString());
+			Message += FString::Printf(TEXT("[E] %s"), *IInteractable::Execute_GetInteractPrompt(Target, Pawn).ToString());
 		}
 	}
 	if (!Message.IsEmpty())
@@ -275,14 +275,14 @@ void UHKInteractionComponent::HandleInteractStarted()
 {
 	AActor* Pawn = GetOwner();
 	AActor* Target = FocusedActor.Get();
-	if (!IsInteractable(Target) || !IHKInteractable::Execute_CanInteract(Target, Pawn))
+	if (!IsInteractable(Target) || !IInteractable::Execute_CanInteract(Target, Pawn))
 	{
 		return;
 	}
-	const float Duration = IHKInteractable::Execute_GetInteractHoldDuration(Target, Pawn);
+	const float Duration = IInteractable::Execute_GetInteractHoldDuration(Target, Pawn);
 	if (Duration <= 0.0f)
 	{
-		IHKInteractable::Execute_Interact(Target, Pawn);
+		IInteractable::Execute_Interact(Target, Pawn);
 	}
 	else
 	{
@@ -296,11 +296,11 @@ void UHKInteractionComponent::HandleUseStarted()
 {
 	AActor* Pawn = GetOwner();
 	AActor* Target = FocusedActor.Get();
-	if (!IsInteractable(Target) || !IHKInteractable::Execute_CanUse(Target, Pawn))
+	if (!IsInteractable(Target) || !IInteractable::Execute_CanUse(Target, Pawn))
 	{
 		return;
 	}
-	if (IHKInteractable::Execute_Use(Target, Pawn))
+	if (IInteractable::Execute_Use(Target, Pawn))
 	{
 		OnUsed.Broadcast(Target);
 		SetFocus(nullptr);
