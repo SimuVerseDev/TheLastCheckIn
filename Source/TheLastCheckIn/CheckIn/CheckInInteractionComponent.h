@@ -4,24 +4,26 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Core/Interaction/InteractionExtension.h"
 #include "CheckInInteractionComponent.generated.h"
 
 class AGuestCharacter;
 class ARoomActor;
 class APlayerController;
-class UEnhancedInputComponent;
-class UInputAction;
 class UUserWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCheckInRoomListChanged);
 
 UCLASS(ClassGroup=(CheckIn), meta=(BlueprintSpawnableComponent))
-class THELASTCHECKIN_API UCheckInInteractionComponent : public UActorComponent
+class THELASTCHECKIN_API UCheckInInteractionComponent : public UActorComponent, public IInteractionExtension
 {
 	GENERATED_BODY()
 
 public:
 	UCheckInInteractionComponent();
+
+
+	virtual AActor* FindInteractionTarget(const FVector& Start, const FVector& End) const override;
 	
 	UFUNCTION(BlueprintCallable, Category ="CheckIn")
 	void BeginCounterInteraction(AActor* InCounterTarget);
@@ -31,6 +33,9 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category="CheckIn")
 	bool CanOpenCheckIn() const;
+	
+	UFUNCTION(BlueprintCallable, Category="CheckIn")
+	bool OpenCheckIn();
 
 	UFUNCTION(BlueprintPure, Category="CheckIn")
 	bool IsCheckInOpen() const
@@ -61,9 +66,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category="CheckIn|UI")
 	TSubclassOf<UUserWidget> CheckInWidgetClass;
 	
-	UPROPERTY(EditAnywhere, Category="CheckIn|Input")
-	TObjectPtr<UInputAction> InteractAction;
-	
 	UPROPERTY(EditAnywhere, Category="CheckIn|Detection", 
 		meta=(ClampMin="0.05", Units="s"))
 	float CheckInterval =0.2f;
@@ -76,19 +78,12 @@ protected:
 private:
 	void CheckInitialCounterOverlap();
 	void CheckCounterState();
-	void CreateCheckInInput();
-	void SetInputRegistered(bool bRegister);
-	void HandleCheckInPressed();
 
 	bool IsCurrentGuestReady() const;
-	bool IsInteractionKeyDown() const;
 	bool IsCarryingObject() const;
 
 	AGuestCharacter* FindWaitingGuest() const;
 	ARoomActor* FindUniqueRoom(int32 RoomNumber) const;
-
-	UPROPERTY(Transient)
-	TObjectPtr<UEnhancedInputComponent> CheckInInput;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UUserWidget> CheckInWidget;
@@ -103,10 +98,8 @@ private:
 	FTimerHandle CounterCheckTimer;
 
 	bool bInsideCounter = false;
-	bool bInputRegistered = false;
 	bool bCheckInOpen = false;
 	bool bAssignedThisSession = false;
-	bool bWaitForKeyRelease = true;
 	bool bPreviousMouseCursor = false;
 	
 };
