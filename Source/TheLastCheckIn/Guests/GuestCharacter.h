@@ -99,6 +99,10 @@ public:
 	virtual FText GetInteractPrompt_Implementation(AActor* Interactor) const override;
 
 	virtual void Interact_Implementation(AActor* Interactor) override;
+	
+	// 객실 배정 없이 방문을 종료하고 출구로 이동
+	UFUNCTION(BlueprintCallable, Category="Guests|CheckIn")
+	bool TryLeaveWithoutCheckIn(AActor* ExitTarget);
 
 protected:
 	virtual void BeginPlay() override;

@@ -114,4 +114,12 @@ private:
     int32 AdmittedToday = 0;
 
     double NextArrivalSeconds = 0.0;
+    
+    // 미배정 손님의 접수 마감 처리
+    void ProcessCheckInDeadline(double CurrentSeconds);
+
+    // 현재 미배정 손님의 접수 마감 시각
+    // 날짜까지 포함한 누적 게임 초
+    double PendingCheckInDeadlineSeconds = 0.0;
+    
 };

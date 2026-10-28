@@ -452,6 +452,50 @@ void AGuestCharacter::Interact_Implementation(AActor* Interactor)
 	RequestCheckout(CheckoutLobbyTarget.Get());
 }
 
+bool AGuestCharacter::TryLeaveWithoutCheckIn(AActor* ExitTarget)
+{
+	// 이미 객실을 배정받은 손님은 처리하지 않음
+	if (AssignedRoom != nullptr || StayId.IsValid())
+	{
+		return false;
+	}
+
+	const bool bCanLeave =
+		GuestState == EGuestState::MovingToCounter
+		|| GuestState == EGuestState::WaitingForCheckIn
+		|| GuestState == EGuestState::ReadyToExit;
+
+	if (!bCanLeave || !IsValid(ExitTarget))
+	{
+		return false;
+	}
+
+	// 접수 종료 후에는 객실을 배정할 수 없도록 상태 변경
+	// 이동 시작에 실패하면 이 상태로 다음 시각 이벤트에서 재시도
+	GuestState = EGuestState::ReadyToExit;
+
+	AGuestAIController* GuestController =
+		Cast<AGuestAIController>(GetController());
+
+	if (!IsValid(GuestController))
+	{
+		return false;
+	}
+
+	CheckoutExitTarget = ExitTarget;
+	GuestState = EGuestState::MovingToExit;
+
+	// 기존 카운터 이동을 정리하고 출구를 향해 AI 재시작
+	if (!GuestController->StartGuestAI(ExitTarget))
+	{
+		CheckoutExitTarget = nullptr;
+		GuestState = EGuestState::ReadyToExit;
+		return false;
+	}
+
+	return true;
+}
+
 void AGuestCharacter::BeginPlay()
 {
 	Super::BeginPlay();

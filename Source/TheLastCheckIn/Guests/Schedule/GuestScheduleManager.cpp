@@ -71,6 +71,7 @@ void AGuestScheduleManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
     CheckoutSchedules.Reset();
     TrackedGuests.Reset();
     PendingCheckInGuest.Reset();
+    PendingCheckInDeadlineSeconds = 0.0;
 
     Super::EndPlay(EndPlayReason);
 }
@@ -79,6 +80,9 @@ void AGuestScheduleManager::HandleTimeAdvanced(
     double PreviousSeconds,
     double CurrentSeconds)
 {
+    // 미배정 손님은 접수 마감 시 귀가
+    ProcessCheckInDeadline(CurrentSeconds);
+    
     // 날짜가 바뀌어도 이전 날의 투숙, 퇴실 일정은 유지
     ProcessCheckouts(CurrentSeconds);
 
@@ -100,6 +104,32 @@ bool AGuestScheduleManager::HasAvailableRoom() const
     }
 
     return false;
+}
+
+void AGuestScheduleManager::ProcessCheckInDeadline(double CurrentSeconds)
+{
+    AGuestCharacter* Guest = PendingCheckInGuest.Get();
+
+    if (!IsValid(Guest))
+    {
+        PendingCheckInGuest.Reset();
+        PendingCheckInDeadlineSeconds = 0.0;
+        return;
+    }
+
+    if (CurrentSeconds < PendingCheckInDeadlineSeconds)
+    {
+        return;
+    }
+
+    if (Guest->TryLeaveWithoutCheckIn(ExitTarget.Get()))
+    {
+        // 출구 이동을 시작했으므로 접수 대기 목록에서 제거
+        PendingCheckInGuest.Reset();
+        PendingCheckInDeadlineSeconds = 0.0;
+    }
+
+    // 실패하면 참조를 유지하여 다음 시간 이벤트에서 재시도
 }
 
 void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
@@ -167,6 +197,10 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
 
     TrackedGuests.AddUnique(TWeakObjectPtr<AGuestCharacter>(Guest));
     PendingCheckInGuest = Guest;
+    
+    PendingCheckInDeadlineSeconds =
+    static_cast<double>(DayIndex) * 86400.0
+    + CheckInEndHour * 3600.0;
 
     ++AdmittedToday;
 
@@ -202,6 +236,7 @@ void AGuestScheduleManager::HandleRoomAssigned(AGuestCharacter* Guest)
     if (PendingCheckInGuest.Get() == Guest)
     {
         PendingCheckInGuest.Reset();
+        PendingCheckInDeadlineSeconds = 0.0;
     }
 
     // 같은 투숙에 이벤트가 다시 와도 퇴실 시각을 다시 뽑지 않음
