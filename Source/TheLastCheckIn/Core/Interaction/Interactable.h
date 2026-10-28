@@ -62,3 +62,4 @@ public:
 	virtual void OnInteractFocusBegin_Implementation(AActor* Interactor);
 	virtual void OnInteractFocusEnd_Implementation(AActor* Interactor);
 };
+

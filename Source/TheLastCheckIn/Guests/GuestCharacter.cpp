@@ -94,6 +94,9 @@ bool AGuestCharacter::TryAssignRoom(ARoomActor* NewRoom)
 		bWillStayBehind = false;
 		break;
 	}
+	
+	// 객실 배정과 퇴실 정책 결정까지 성공한 뒤 알림
+	OnGuestRoomAssigned.Broadcast(this);
 
 	return true;
 
@@ -217,19 +220,19 @@ bool AGuestCharacter::TryBeginCheckout(AActor* LobbyTarget)
 	
 	// 이동 요청 실패 시 돌아갈 상태
 	const EGuestState PreviousState = GuestState;
-	
+	AActor* PreviousLobbyTarget = CheckoutLobbyTarget.Get();
+
 	CheckoutLobbyTarget = LobbyTarget;
 	GuestState = EGuestState::MovingToLobby;
-	
-	//로비를 새 이동 목적지로 등록
+
+	// 로비를 새 이동 목적지로 등록
 	if (!GuestController->SetGuestMoveTarget(LobbyTarget))
 	{
-		CheckoutLobbyTarget = nullptr;
+		CheckoutLobbyTarget = PreviousLobbyTarget;
 		GuestState = PreviousState;
-		
 		return false;
 	}
-	
+
 	return true;
 }
 
@@ -279,6 +282,9 @@ bool AGuestCharacter::HandleCheckoutTime(AActor* LobbyTarget)
 	// 객실 배정 시 결정한 잔류 여부 사용
 	if (bWillStayBehind)
 	{
+		// 플레이어가 나중에 퇴실을 요청할 때 사용할 목적지
+		CheckoutLobbyTarget = LobbyTarget;
+		
 		GuestState = EGuestState::WaitingForCheckoutRequest;
 		return true;
 	}
@@ -419,6 +425,75 @@ bool AGuestCharacter::DeactivateToPool()
 void AGuestCharacter::SetPoolManager(AGuestPoolManager* InPoolManager)
 {
 	PoolManager = InPoolManager;
+}
+
+bool AGuestCharacter::CanInteract_Implementation(AActor* Interactor) const
+{
+	return IsValid(Interactor)
+	&& GuestState == EGuestState::WaitingForCheckoutRequest
+	&& IsValid(AssignedRoom.Get())
+	&& StayId.IsValid()
+	&& IsValid(CheckoutLobbyTarget.Get());
+}
+
+FText AGuestCharacter::GetInteractPrompt_Implementation(AActor* Interactor) const
+{
+	return NSLOCTEXT("GuestInteraction","RequestCheckout","퇴실 요청");
+}
+
+void AGuestCharacter::Interact_Implementation(AActor* Interactor)
+{
+	// 실행 순간에도 조건 재확인
+	if (!IInteractable::Execute_CanInteract(this, Interactor))
+	{
+		return;
+	}
+
+	RequestCheckout(CheckoutLobbyTarget.Get());
+}
+
+bool AGuestCharacter::TryLeaveWithoutCheckIn(AActor* ExitTarget)
+{
+	// 이미 객실을 배정받은 손님은 처리하지 않음
+	if (AssignedRoom != nullptr || StayId.IsValid())
+	{
+		return false;
+	}
+
+	const bool bCanLeave =
+		GuestState == EGuestState::MovingToCounter
+		|| GuestState == EGuestState::WaitingForCheckIn
+		|| GuestState == EGuestState::ReadyToExit;
+
+	if (!bCanLeave || !IsValid(ExitTarget))
+	{
+		return false;
+	}
+
+	// 접수 종료 후에는 객실을 배정할 수 없도록 상태 변경
+	// 이동 시작에 실패하면 이 상태로 다음 시각 이벤트에서 재시도
+	GuestState = EGuestState::ReadyToExit;
+
+	AGuestAIController* GuestController =
+		Cast<AGuestAIController>(GetController());
+
+	if (!IsValid(GuestController))
+	{
+		return false;
+	}
+
+	CheckoutExitTarget = ExitTarget;
+	GuestState = EGuestState::MovingToExit;
+
+	// 기존 카운터 이동을 정리하고 출구를 향해 AI 재시작
+	if (!GuestController->StartGuestAI(ExitTarget))
+	{
+		CheckoutExitTarget = nullptr;
+		GuestState = EGuestState::ReadyToExit;
+		return false;
+	}
+
+	return true;
 }
 
 void AGuestCharacter::BeginPlay()
