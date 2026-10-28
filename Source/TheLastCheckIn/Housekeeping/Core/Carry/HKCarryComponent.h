@@ -56,7 +56,7 @@ public:
 	UFUNCTION(BlueprintPure, Category="Housekeeping|Trash")
 	bool CanAbsorbTrash() const
 	{
-		return TrashAbsorbTarget.IsValid() || bDebugTrashMode;
+		return GetTrashAbsorbTarget() != nullptr;
 	}
 	
 	/*
@@ -72,6 +72,7 @@ public:
 	{
 		Drop();
 	}
+	virtual void GetIgnoredActors(TArray<AActor*>& IgnoredActors) const override; // InteractionExtension.h
 	
 protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Carry", meta=(ClampMin=0, Units="cm"))
@@ -103,10 +104,10 @@ protected:
 	float BlanketGrabRadius = 30.0f;
 
 	/*
-	임시 카트모드
+	손에 든 도구에서 이 태그가 붙은 컴포넌트를 흡수 투입구로 인식
 	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Debug")
-	bool bDebugTrashMode = false;
+	FName TrashAbsorbPointTag = FName("TrashAbsorbPoint");
 
 private:
 	bool GetViewTransform(FVector& OutHoldLocation, FRotator& OutViewRotation) const;

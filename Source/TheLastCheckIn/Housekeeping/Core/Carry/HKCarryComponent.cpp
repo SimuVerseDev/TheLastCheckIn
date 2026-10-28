@@ -149,8 +149,35 @@ USceneComponent* UHKCarryComponent::GetTrashAbsorbTarget() const
 	{
 		return Target;
 	}
-	return bDebugTrashMode ? GetOwner()->GetRootComponent() : nullptr;
+	TInlineComponentArray<UPhysicsHandleComponent*> Handles(GetOwner());
+	for (const UPhysicsHandleComponent* Handle : Handles)
+	{
+		const UPrimitiveComponent* Grabbed = Handle->GetGrabbedComponent();
+		AActor* HeldActor = Grabbed ? Grabbed->GetOwner() : nullptr;
+		if (!HeldActor)
+		{
+			continue;
+		}
+		TInlineComponentArray<USceneComponent*> Components(HeldActor);
+		for (USceneComponent* Component : Components)
+		{
+			if (Component->ComponentHasTag(TrashAbsorbPointTag))
+			{
+				return Component;
+			}
+		}
+	}
+	return nullptr;
 }
+
+void UHKCarryComponent::GetIgnoredActors(TArray<AActor*>& IgnoredActors) const
+{
+	if (const USceneComponent* Target = GetTrashAbsorbTarget())
+	{
+		IgnoredActors.Add(Target->GetOwner());
+	}
+}
+
 AActor* UHKCarryComponent::FindInteractionTarget(const FVector& Start, const FVector& End) const
 {
 	for (TActorIterator<AHKBlanketActor> It(GetWorld()); It; ++It)
