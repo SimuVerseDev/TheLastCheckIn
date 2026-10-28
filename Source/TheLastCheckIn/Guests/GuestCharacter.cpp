@@ -220,19 +220,19 @@ bool AGuestCharacter::TryBeginCheckout(AActor* LobbyTarget)
 	
 	// 이동 요청 실패 시 돌아갈 상태
 	const EGuestState PreviousState = GuestState;
-	
+	AActor* PreviousLobbyTarget = CheckoutLobbyTarget.Get();
+
 	CheckoutLobbyTarget = LobbyTarget;
 	GuestState = EGuestState::MovingToLobby;
-	
-	//로비를 새 이동 목적지로 등록
+
+	// 로비를 새 이동 목적지로 등록
 	if (!GuestController->SetGuestMoveTarget(LobbyTarget))
 	{
-		CheckoutLobbyTarget = nullptr;
+		CheckoutLobbyTarget = PreviousLobbyTarget;
 		GuestState = PreviousState;
-		
 		return false;
 	}
-	
+
 	return true;
 }
 
@@ -282,6 +282,9 @@ bool AGuestCharacter::HandleCheckoutTime(AActor* LobbyTarget)
 	// 객실 배정 시 결정한 잔류 여부 사용
 	if (bWillStayBehind)
 	{
+		// 플레이어가 나중에 퇴실을 요청할 때 사용할 목적지
+		CheckoutLobbyTarget = LobbyTarget;
+		
 		GuestState = EGuestState::WaitingForCheckoutRequest;
 		return true;
 	}
@@ -422,6 +425,31 @@ bool AGuestCharacter::DeactivateToPool()
 void AGuestCharacter::SetPoolManager(AGuestPoolManager* InPoolManager)
 {
 	PoolManager = InPoolManager;
+}
+
+bool AGuestCharacter::CanInteract_Implementation(AActor* Interactor) const
+{
+	return IsValid(Interactor)
+	&& GuestState == EGuestState::WaitingForCheckoutRequest
+	&& IsValid(AssignedRoom.Get())
+	&& StayId.IsValid()
+	&& IsValid(CheckoutLobbyTarget.Get());
+}
+
+FText AGuestCharacter::GetInteractPrompt_Implementation(AActor* Interactor) const
+{
+	return NSLOCTEXT("GuestInteraction","RequestCheckout","퇴실 요청");
+}
+
+void AGuestCharacter::Interact_Implementation(AActor* Interactor)
+{
+	// 실행 순간에도 조건 재확인
+	if (!IInteractable::Execute_CanInteract(this, Interactor))
+	{
+		return;
+	}
+
+	RequestCheckout(CheckoutLobbyTarget.Get());
 }
 
 void AGuestCharacter::BeginPlay()

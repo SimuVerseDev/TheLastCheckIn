@@ -7,6 +7,7 @@
 #include "Engine/DataTable.h"
 #include "Data/GuestDataTypes.h"
 #include "TimerManager.h"
+#include "Core/Interaction/Interactable.h"
 
 #include "GuestCharacter.generated.h"
 
@@ -18,7 +19,7 @@ class AGuestCharacter;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGuestRoomAssigned, AGuestCharacter*, Guest);
 
 UCLASS()
-class THELASTCHECKIN_API AGuestCharacter : public ACharacter
+class THELASTCHECKIN_API AGuestCharacter : public ACharacter, public IInteractable
 {
 	GENERATED_BODY()
 
@@ -91,6 +92,13 @@ public:
 	{
 		return StayId;
 	}
+	
+	// 잔류 손님 상호작용
+	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
+
+	virtual FText GetInteractPrompt_Implementation(AActor* Interactor) const override;
+
+	virtual void Interact_Implementation(AActor* Interactor) override;
 
 protected:
 	virtual void BeginPlay() override;
