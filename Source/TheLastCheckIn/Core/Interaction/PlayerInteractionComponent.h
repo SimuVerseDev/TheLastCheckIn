@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "HKInteractionComponent.generated.h"
+#include "PlayerInteractionComponent.generated.h"
 
 class UInputAction;
 class UEnhancedInputComponent;
@@ -10,44 +10,44 @@ class IInteractionExtension;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnUsed, AActor*, Target);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHKOnFocusChanged, AActor*, NewFocus, const FText&, Prompt);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnHoldProgress, float, Alpha);
-UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
-class UHKInteractionComponent : public UActorComponent
+UCLASS(ClassGroup=(Interaction), meta=(BlueprintSpawnableComponent))
+class THELASTCHECKIN_API UPlayerInteractionComponent : public UActorComponent
 {
 	GENERATED_BODY()
 public:
-	UHKInteractionComponent();
+	UPlayerInteractionComponent();
 	
-	UPROPERTY(BlueprintAssignable, Category="Housekeeping|Interaction")
+	UPROPERTY(BlueprintAssignable, Category="Interaction")
 	FHKOnFocusChanged OnFocusChanged;
-	UPROPERTY(BlueprintAssignable, Category="Housekeeping|Interaction")
+	UPROPERTY(BlueprintAssignable, Category="Interaction")
 	FHKOnHoldProgress OnHoldProgress;
 	
-	UPROPERTY(BlueprintAssignable, Category="Housekeeping|Interaction")
+	UPROPERTY(BlueprintAssignable, Category="Interaction")
 	FHKOnUsed OnUsed;
 
-	UFUNCTION(BlueprintPure, Category="Housekeeping|Interaction")
+	UFUNCTION(BlueprintPure, Category="Interaction")
 	AActor* GetFocusedActor() const
 	{
 		return FocusedActor.Get();
 	}
 
 protected:
-	UPROPERTY(EditAnywhere, Category="Housekeeping|Interaction",  meta=(ClampMin=0, Units="cm"))
+	UPROPERTY(EditAnywhere, Category="Interaction",  meta=(ClampMin=0, Units="cm"))
 	float InteractRange = 250.0f;
 	
-	UPROPERTY(EditAnywhere, Category="Housekeeping|Interaction",  meta=(ClampMin=0, Units="cm"))
+	UPROPERTY(EditAnywhere, Category="Interaction",  meta=(ClampMin=0, Units="cm"))
 	float TraceRadius = 8.0f;
 	
-	UPROPERTY(EditAnywhere, Category="Housekeeping|Interaction")
+	UPROPERTY(EditAnywhere, Category="Interaction")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
 	
-	UPROPERTY(EditAnywhere, Category="Housekeeping|Input")
+	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> InteractAction;
 
-	UPROPERTY(EditAnywhere, Category="Housekeeping|Input")
+	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> UseAction;
 	
-	UPROPERTY(EditAnywhere, Category="Housekeeping|Debug")
+	UPROPERTY(EditAnywhere, Category="Debug")
 	bool bShowDebugPrompt = true;
 	
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
