@@ -13,6 +13,9 @@
 class UBehaviorTree;
 class ARoomActor;
 class AGuestPoolManager;
+class AGuestCharacter;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGuestRoomAssigned, AGuestCharacter*, Guest);
 
 UCLASS()
 class THELASTCHECKIN_API AGuestCharacter : public ACharacter
@@ -80,6 +83,14 @@ public:
 	bool DeactivateToPool();
 	
 	void SetPoolManager(AGuestPoolManager* InPoolManager);
+	
+	UPROPERTY(BlueprintAssignable, Category ="Guests|Events")
+	FGuestRoomAssigned OnGuestRoomAssigned;
+	
+	FGuid GetStayId() const
+	{
+		return StayId;
+	}
 
 protected:
 	virtual void BeginPlay() override;

@@ -94,6 +94,9 @@ bool AGuestCharacter::TryAssignRoom(ARoomActor* NewRoom)
 		bWillStayBehind = false;
 		break;
 	}
+	
+	// 객실 배정과 퇴실 정책 결정까지 성공한 뒤 알림
+	OnGuestRoomAssigned.Broadcast(this);
 
 	return true;
 
