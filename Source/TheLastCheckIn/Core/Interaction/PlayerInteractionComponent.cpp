@@ -1,4 +1,4 @@
-﻿#include "Housekeeping/Core/Interaction/HKInteractionComponent.h"
+﻿#include "Core/Interaction/PlayerInteractionComponent.h"
 #include "Core/Interaction/InteractionExtension.h"
 #include "Core/Interaction/Interactable.h"
 #include "EnhancedInputComponent.h"
@@ -10,7 +10,7 @@
 #include "GameFramework/PlayerController.h"
 #include "UObject/ConstructorHelpers.h"
 
-UHKInteractionComponent::UHKInteractionComponent()
+UPlayerInteractionComponent::UPlayerInteractionComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	static ConstructorHelpers::FObjectFinder<UInputAction> InteractFinder(TEXT("/Game/Input/Actions/IA_Interact.IA_Interact"));
@@ -28,7 +28,7 @@ UHKInteractionComponent::UHKInteractionComponent()
 /*
 Virtual 
 */
-void UHKInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void UPlayerInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	SetFocus(nullptr);
 	if (APlayerController* PC = InputOwner.Get())
@@ -38,7 +38,7 @@ void UHKInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void UHKInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickType,
+void UPlayerInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -59,18 +59,18 @@ void UHKInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickType
 /*
 private
 */
-APlayerController* UHKInteractionComponent::GetOwningPlayerController() const
+APlayerController* UPlayerInteractionComponent::GetOwningPlayerController() const
 {
 	const APawn* Pawn = Cast<APawn>(GetOwner());
 	return Pawn ? Pawn->GetController<APlayerController>() : nullptr;
 }
 
-bool UHKInteractionComponent::IsInteractable(AActor* Actor)
+bool UPlayerInteractionComponent::IsInteractable(AActor* Actor)
 {
 	return Actor && Actor->Implements<UInteractable>();
 }
 
-bool UHKInteractionComponent::CanFocus(AActor* Actor) const
+bool UPlayerInteractionComponent::CanFocus(AActor* Actor) const
 {
 	if (!IsInteractable(Actor))
 	{
@@ -80,7 +80,7 @@ bool UHKInteractionComponent::CanFocus(AActor* Actor) const
 	return IInteractable::Execute_CanUse(Actor, Pawn) || IInteractable::Execute_CanInteract(Actor, Pawn);
 }
 
-void UHKInteractionComponent::EnsureInputSetup(APlayerController* PC)
+void UPlayerInteractionComponent::EnsureInputSetup(APlayerController* PC)
 {
 	if (InputOwner.Get() == PC)
 	{
@@ -96,19 +96,19 @@ void UHKInteractionComponent::EnsureInputSetup(APlayerController* PC)
 		InteractionInput->RegisterComponent();
 		if (InteractAction)
 		{
-			InteractionInput->BindAction(InteractAction, ETriggerEvent::Started, this, &UHKInteractionComponent::HandleInteractStarted);
+			InteractionInput->BindAction(InteractAction, ETriggerEvent::Started, this, &UPlayerInteractionComponent::HandleInteractStarted);
 		}
 		if (UseAction)
 		{
-			InteractionInput->BindAction(UseAction, ETriggerEvent::Started, this, &UHKInteractionComponent::HandleUseStarted);
-			InteractionInput->BindAction(UseAction, ETriggerEvent::Completed, this, &UHKInteractionComponent::HandleUseCompleted);
+			InteractionInput->BindAction(UseAction, ETriggerEvent::Started, this, &UPlayerInteractionComponent::HandleUseStarted);
+			InteractionInput->BindAction(UseAction, ETriggerEvent::Completed, this, &UPlayerInteractionComponent::HandleUseCompleted);
 		}
 	}
 	PC->PushInputComponent(InteractionInput);
 	InputOwner = PC;
 }
 
-void UHKInteractionComponent::UpdateFocus(APlayerController* PC)
+void UPlayerInteractionComponent::UpdateFocus(APlayerController* PC)
 {
 	const TArray<IInteractionExtension*> Extensions = GetExtensions();
 	for (const IInteractionExtension* Extension : Extensions)
@@ -161,7 +161,7 @@ void UHKInteractionComponent::UpdateFocus(APlayerController* PC)
 	SetFocus(nullptr);
 }
 
-void UHKInteractionComponent::SetFocus(AActor* NewFocus)
+void UPlayerInteractionComponent::SetFocus(AActor* NewFocus)
 {
 	AActor* OldFocus = FocusedActor.Get();
 	if (OldFocus == NewFocus)
@@ -187,7 +187,7 @@ void UHKInteractionComponent::SetFocus(AActor* NewFocus)
 	OnFocusChanged.Broadcast(NewFocus, Prompt);
 }
 
-void UHKInteractionComponent::UpdateHold(float DeltaTime)
+void UPlayerInteractionComponent::UpdateHold(float DeltaTime)
 {
 	AActor* Target = HoldTarget.Get();
 	if (!Target)
@@ -208,7 +208,7 @@ void UHKInteractionComponent::UpdateHold(float DeltaTime)
 	}
 }
 
-void UHKInteractionComponent::CancelHold()
+void UPlayerInteractionComponent::CancelHold()
 {
 	if (HoldTarget.IsValid())
 	{
@@ -221,7 +221,7 @@ void UHKInteractionComponent::CancelHold()
 /*
 DEBUG
 */
-void UHKInteractionComponent::ShowDebugPrompt() const
+void UPlayerInteractionComponent::ShowDebugPrompt() const
 {
 	if (!GEngine)
 	{
@@ -259,7 +259,7 @@ void UHKInteractionComponent::ShowDebugPrompt() const
 }
 
 
-void UHKInteractionComponent::HandleInteractStarted()
+void UPlayerInteractionComponent::HandleInteractStarted()
 {
 	AActor* Pawn = GetOwner();
 	AActor* Target = FocusedActor.Get();
@@ -280,7 +280,7 @@ void UHKInteractionComponent::HandleInteractStarted()
 	}
 }
 
-void UHKInteractionComponent::HandleUseStarted()
+void UPlayerInteractionComponent::HandleUseStarted()
 {
 	AActor* Pawn = GetOwner();
 	AActor* Target = FocusedActor.Get();
@@ -295,7 +295,7 @@ void UHKInteractionComponent::HandleUseStarted()
 	}
 }
 
-void UHKInteractionComponent::HandleUseCompleted()
+void UPlayerInteractionComponent::HandleUseCompleted()
 {
 	for (IInteractionExtension* Extension : GetExtensions())
 	{
@@ -303,7 +303,7 @@ void UHKInteractionComponent::HandleUseCompleted()
 	}
 }
 
-bool UHKInteractionComponent::IsActionKeyDown(const UInputAction* Action) const
+bool UPlayerInteractionComponent::IsActionKeyDown(const UInputAction* Action) const
 {
 	APlayerController* PC = InputOwner.Get();
 	const ULocalPlayer* LocalPlayer = PC ? PC->GetLocalPlayer() : nullptr;
@@ -324,7 +324,7 @@ bool UHKInteractionComponent::IsActionKeyDown(const UInputAction* Action) const
 	return false;
 }
 
-TArray<IInteractionExtension*> UHKInteractionComponent::GetExtensions() const
+TArray<IInteractionExtension*> UPlayerInteractionComponent::GetExtensions() const
 {
 	TArray<IInteractionExtension*> Extensions;
 	for (UActorComponent* Component : GetOwner()->GetComponents())
