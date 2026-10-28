@@ -35,4 +35,12 @@ public:
 	virtual void OnUseReleased()
 	{
 	}
+	
+	/*
+	시선 트레이스에서 제외할 액터 지정
+	*/
+	virtual void GetIgnoredActors(TArray<AActor*>& IgnoredActors) const
+	{
+		
+	}
 };
