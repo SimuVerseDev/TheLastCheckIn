@@ -131,6 +131,14 @@ void UHKInteractionComponent::UpdateFocus(APlayerController* PC)
 	const float CameraOffset = FVector::Dist(ViewLocation, Pawn->GetPawnViewLocation());
 	const FVector TraceEnd = ViewLocation + ViewRotation.Vector() * (InteractRange + CameraOffset);
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(HKInteractTrace), false, Pawn);
+	
+	TArray<AActor*> IgnoredActors;
+	for (const IInteractionExtension* Extension : Extensions)
+	{
+		Extension->GetIgnoredActors(IgnoredActors);
+	}
+	Params.AddIgnoredActors(IgnoredActors);
+	
 	FHitResult Hit;
 	const bool bHit = GetWorld()->SweepSingleByChannel(Hit, ViewLocation, TraceEnd, FQuat::Identity, TraceChannel, FCollisionShape::MakeSphere(TraceRadius), Params);
 	AActor* HitActor = bHit ? Hit.GetActor() : nullptr;
