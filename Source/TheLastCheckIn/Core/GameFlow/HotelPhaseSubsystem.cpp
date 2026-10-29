@@ -24,7 +24,7 @@ void UHotelPhaseSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	
 	if (InWorld.IsGameWorld())
 	{
-		StartRun();
+		InWorld.GetTimerManager().SetTimerForNextTick(this, &UHotelPhaseSubsystem::StartRun);
 	}
 }
 
