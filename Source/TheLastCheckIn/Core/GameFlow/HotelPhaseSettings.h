@@ -15,15 +15,17 @@ public:
 		return GetDefault<UHotelPhaseSettings>();
 	}
 
-	// 시각 순서: Settlement < Day < Midday < CheckIn < Evening < Rest < Night
+	// 시각 순서: 0 <= Settlement < Day < Midday < CheckIn < Evening < Rest < Night <= 23
 	bool HasValidHourOrder() const
 	{
-		return SettlementStartHour < DayStartHour
+		return SettlementStartHour >= 0
+			&& SettlementStartHour < DayStartHour
 			&& DayStartHour < MiddayStartHour
 			&& MiddayStartHour < CheckInStartHour
 			&& CheckInStartHour < EveningStartHour
 			&& EveningStartHour < RestStartHour
-			&& RestStartHour < NightStartHour;
+			&& RestStartHour < NightStartHour
+			&& NightStartHour <= 23;
 	}
 	UPROPERTY(Config, EditAnywhere, Category = "Time", meta = (ClampMin = "1.0"))
 	double TimeRate = 60.0;
