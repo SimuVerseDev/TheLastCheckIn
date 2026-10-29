@@ -7,15 +7,19 @@
 #include "Engine/DataTable.h"
 #include "Data/GuestDataTypes.h"
 #include "TimerManager.h"
+#include "Core/Interaction/Interactable.h"
 
 #include "GuestCharacter.generated.h"
 
 class UBehaviorTree;
 class ARoomActor;
 class AGuestPoolManager;
+class AGuestCharacter;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGuestRoomAssigned, AGuestCharacter*, Guest);
 
 UCLASS()
-class THELASTCHECKIN_API AGuestCharacter : public ACharacter
+class THELASTCHECKIN_API AGuestCharacter : public ACharacter, public IInteractable
 {
 	GENERATED_BODY()
 
@@ -80,6 +84,25 @@ public:
 	bool DeactivateToPool();
 	
 	void SetPoolManager(AGuestPoolManager* InPoolManager);
+	
+	UPROPERTY(BlueprintAssignable, Category ="Guests|Events")
+	FGuestRoomAssigned OnGuestRoomAssigned;
+	
+	FGuid GetStayId() const
+	{
+		return StayId;
+	}
+	
+	// 잔류 손님 상호작용
+	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
+
+	virtual FText GetInteractPrompt_Implementation(AActor* Interactor) const override;
+
+	virtual void Interact_Implementation(AActor* Interactor) override;
+	
+	// 객실 배정 없이 방문을 종료하고 출구로 이동
+	UFUNCTION(BlueprintCallable, Category="Guests|CheckIn")
+	bool TryLeaveWithoutCheckIn(AActor* ExitTarget);
 
 protected:
 	virtual void BeginPlay() override;
