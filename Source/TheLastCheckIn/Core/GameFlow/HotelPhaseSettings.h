@@ -20,7 +20,12 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Days", meta = (ClampMin = "1"))
 	int32 MaxDays = 10;
 	
-	UPROPERTY(Config, EditAnywhere, Category = "Time", meta = (ClampMin = "1.0"))
+	// 1일차는 Night를 건너뛰고 Rest 종료 시 바로 Settlement로 이동
+	UPROPERTY(Config, EditAnywhere, Category = "Days")
+	bool bSkipNightOnFirstDay = true;
+
+	// 낮 이상현상이 처음 허용되는 날
+	UPROPERTY(Config, EditAnywhere, Category = "Days", meta = (ClampMin = "1"))
 	int32 FirstAnomalyDay = 2;
 	
 	UPROPERTY(Config, EditAnywhere, Category = "Phase Hours", meta = (ClampMin = "0", ClampMax = "23"))
