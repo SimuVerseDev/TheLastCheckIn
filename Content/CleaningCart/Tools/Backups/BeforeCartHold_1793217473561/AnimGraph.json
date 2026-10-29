@@ -1,0 +1,374 @@
+[
+  {
+    "output_pins": [],
+    "input_pins": [
+      {
+        "value": "(LinkID=-1,SourceLinkID=-1)",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_ControlRig_0"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Input",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_Root_0"
+          }
+        },
+        "type_id": "Pose Link Structure",
+        "name": "Result"
+      }
+    ],
+    "position": {
+      "x": -64,
+      "y": 80
+    },
+    "node": {
+      "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_Root_0"
+    },
+    "type_id": "Misc.|OutputPose"
+  },
+  {
+    "output_pins": [
+      {
+        "value": "",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_SaveCachedPose_0"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Output",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_StateMachine_0"
+          }
+        },
+        "type_id": "Pose Link Structure",
+        "name": "Pose"
+      }
+    ],
+    "input_pins": [],
+    "position": {
+      "x": -768,
+      "y": 0
+    },
+    "node": {
+      "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_StateMachine_0"
+    },
+    "type_id": "Animation|StateMachines|Locomotion"
+  },
+  {
+    "output_pins": [],
+    "input_pins": [
+      {
+        "value": "(LinkID=-1,SourceLinkID=-1)",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_StateMachine_0"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Input",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_SaveCachedPose_0"
+          }
+        },
+        "type_id": "Pose Link Structure",
+        "name": "Pose"
+      }
+    ],
+    "position": {
+      "x": -576,
+      "y": 16
+    },
+    "node": {
+      "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_SaveCachedPose_0"
+    },
+    "type_id": "Animation|CachedPoses|Savecachedpose'Locomotion'"
+  },
+  {
+    "output_pins": [
+      {
+        "value": "",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_Slot_0"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Output",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_StateMachine_1"
+          }
+        },
+        "type_id": "Pose Link Structure",
+        "name": "Pose"
+      }
+    ],
+    "input_pins": [],
+    "position": {
+      "x": -768,
+      "y": 128
+    },
+    "node": {
+      "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_StateMachine_1"
+    },
+    "type_id": "Animation|StateMachines|MainStates"
+  },
+  {
+    "output_pins": [
+      {
+        "value": "",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_ControlRig_0"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Output",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_Slot_0"
+          }
+        },
+        "type_id": "Pose Link Structure",
+        "name": "Pose"
+      }
+    ],
+    "input_pins": [
+      {
+        "value": "(LinkID=-1,SourceLinkID=-1)",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_StateMachine_1"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Input",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_Slot_0"
+          }
+        },
+        "type_id": "Pose Link Structure",
+        "name": "Source"
+      }
+    ],
+    "position": {
+      "x": -576,
+      "y": 128
+    },
+    "node": {
+      "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_Slot_0"
+    },
+    "type_id": "Animation|Montage|Slot'DefaultSlot'"
+  },
+  {
+    "output_pins": [
+      {
+        "value": "false",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.K2Node_CallFunction_0"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Output",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.K2Node_VariableGet_0"
+          }
+        },
+        "type_id": "Boolean",
+        "name": "IsFalling"
+      }
+    ],
+    "input_pins": [],
+    "position": {
+      "x": -320,
+      "y": 336
+    },
+    "node": {
+      "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.K2Node_VariableGet_0"
+    },
+    "type_id": "|GetIsFalling"
+  },
+  {
+    "output_pins": [
+      {
+        "value": "false",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Input",
+            "index_id": 2,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_ControlRig_0"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Output",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.K2Node_CallFunction_0"
+          }
+        },
+        "type_id": "Boolean",
+        "name": "ReturnValue"
+      }
+    ],
+    "input_pins": [
+      {
+        "value": "false",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.K2Node_VariableGet_0"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Input",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.K2Node_CallFunction_0"
+          }
+        },
+        "type_id": "Boolean",
+        "name": "A"
+      }
+    ],
+    "position": {
+      "x": -320,
+      "y": 288
+    },
+    "node": {
+      "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.K2Node_CallFunction_0"
+    },
+    "type_id": "Math|Boolean|NOTBoolean"
+  },
+  {
+    "output_pins": [
+      {
+        "value": "",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Input",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_Root_0"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Output",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_ControlRig_0"
+          }
+        },
+        "type_id": "Pose Link Structure",
+        "name": "Pose"
+      }
+    ],
+    "input_pins": [
+      {
+        "value": "(LinkID=-1,SourceLinkID=-1)",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_Slot_0"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Input",
+          "index_id": 0,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_ControlRig_0"
+          }
+        },
+        "type_id": "Pose Link Structure",
+        "name": "Source"
+      },
+      {
+        "value": "1.000000",
+        "connected_pins": [],
+        "pin_id": {
+          "direction": "EGPD_Input",
+          "index_id": 1,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_ControlRig_0"
+          }
+        },
+        "type_id": "Float (single-precision)",
+        "name": "Alpha"
+      },
+      {
+        "value": "false",
+        "connected_pins": [
+          {
+            "direction": "EGPD_Output",
+            "index_id": 0,
+            "node": {
+              "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.K2Node_CallFunction_0"
+            }
+          }
+        ],
+        "pin_id": {
+          "direction": "EGPD_Input",
+          "index_id": 2,
+          "node": {
+            "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_ControlRig_0"
+          }
+        },
+        "type_id": "Boolean",
+        "name": "ShouldDoIKTrace"
+      }
+    ],
+    "position": {
+      "x": -352,
+      "y": 144
+    },
+    "node": {
+      "refPath": "/Game/CleaningCart/Test/Character/ABP_CartCharacter.ABP_CartCharacter:AnimGraph.AnimGraphNode_ControlRig_0"
+    },
+    "type_id": "Misc.|ControlRig"
+  }
+]
