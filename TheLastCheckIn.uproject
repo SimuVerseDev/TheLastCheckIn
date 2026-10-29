@@ -42,6 +42,10 @@
 		{
 			"Name": "UMGToolSet",
 			"Enabled": true
+		},
+		{
+			"Name": "Fab",
+			"Enabled": false
 		}
 	]
 }

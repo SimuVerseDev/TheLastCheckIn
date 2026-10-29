@@ -11,6 +11,9 @@ enum class EHotelPhase : uint8
 	Settlement UMETA(DisplayName = "Settlement")   // 05:00 ~ 06:00
 };
 
+/*
+세부구간
+*/
 UENUM(BlueprintType)
 enum class EDaySlot : uint8
 {
