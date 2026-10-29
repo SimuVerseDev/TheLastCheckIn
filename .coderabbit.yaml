@@ -1,0 +1,44 @@
+﻿# CodeRabbit 설정 - TheLastCheckIn (UE5 C++)
+language: "ko-KR"
+
+reviews:
+  profile: "chill"              # 익숙해지면 "assertive"로
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false               # Draft PR은 리뷰 안 함
+  path_filters:
+    # 바이너리/생성물 제외 (LFS 에셋은 리뷰 불가)
+    - "!Content/**"
+    - "!**/*.uasset"
+    - "!**/*.umap"
+    - "!Binaries/**"
+    - "!Intermediate/**"
+    - "!Saved/**"
+    - "!DerivedDataCache/**"
+    - "!Plugins/**/Binaries/**"
+    - "!Plugins/**/Intermediate/**"
+    - "!**/*.sln"
+    - "!**/*.slnx"
+  path_instructions:
+    - path: "Source/**/*.{h,cpp}"
+      instructions: |
+        UE5 C++ 기준으로 리뷰해줘.
+        - UObject 포인터는 UPROPERTY 또는 TObjectPtr로 GC 안전한지
+        - IsValid / nullptr 검사 누락
+        - Tick 사용 시 꼭 필요한지, 타이머/이벤트로 대체 가능한지
+        - 헤더 include 최소화 (전방 선언 우선)
+        - 네이밍 접두사 (U/A/F/E/I, bBool)
+        - UFUNCTION/UPROPERTY 블루프린트 노출 범위가 적절한지
+    - path: "Source/TheLastCheckIn/Legacy/**"
+      instructions: "레거시 코드. 치명적인 버그만 지적하고 스타일 지적은 생략."
+    - path: "Source/**/*.Build.cs"
+      instructions: "모듈 의존성 추가가 필요한 것인지, Public/Private 구분이 맞는지 확인."
+    - path: "Config/**/*.ini"
+      instructions: "의도치 않은 개인 에디터 설정이 섞여 들어갔는지 확인."
+
+chat:
+  auto_reply: true              # PR 코멘트에서 @coderabbitai 로 질문 가능
