@@ -51,6 +51,14 @@ void UHotelPhaseSubsystem::StartRun()
 		return;
 	}
 
+	// 순서가 어긋나면 일부 페이즈(특히 Settlement)에 진입하지 못함
+	if (!UHotelPhaseSettings::Get()->HasValidHourOrder())
+	{
+		UE_LOG(LogHotelPhase, Error,
+			TEXT("Invalid phase hours. Check Project Settings > Game > Hotel Phase."));
+		return;
+	}
+
 	if (!Clock->OnTimeAdvanced.IsAlreadyBound(this, &UHotelPhaseSubsystem::HandleTimeAdvanced))
 	{
 		Clock->OnTimeAdvanced.AddDynamic(this, &UHotelPhaseSubsystem::HandleTimeAdvanced);

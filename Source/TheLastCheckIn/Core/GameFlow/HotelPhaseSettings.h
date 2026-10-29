@@ -14,6 +14,17 @@ public:
 	{
 		return GetDefault<UHotelPhaseSettings>();
 	}
+
+	// 시각 순서: Settlement < Day < Midday < CheckIn < Evening < Rest < Night
+	bool HasValidHourOrder() const
+	{
+		return SettlementStartHour < DayStartHour
+			&& DayStartHour < MiddayStartHour
+			&& MiddayStartHour < CheckInStartHour
+			&& CheckInStartHour < EveningStartHour
+			&& EveningStartHour < RestStartHour
+			&& RestStartHour < NightStartHour;
+	}
 	UPROPERTY(Config, EditAnywhere, Category = "Time", meta = (ClampMin = "1.0"))
 	double TimeRate = 60.0;
 	
