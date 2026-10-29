@@ -148,9 +148,10 @@ void UHotelPhaseSubsystem::EnterSettlement()
 {
 	SetDaySlot(EDaySlot::None);
 
-	SetPhase(EHotelPhase::Settlement);
-
+	// 구독자가 OnPhaseChanged에서 바로 ConfirmSettlement를 호출해도 다음 날 시계가 멈추지 않도록 먼저 정지
 	Clock->StopClock();
+
+	SetPhase(EHotelPhase::Settlement);
 }
 
 void UHotelPhaseSubsystem::SetPhase(EHotelPhase NewPhase)
