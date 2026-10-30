@@ -1,0 +1,47 @@
+{
+  "defaults": {
+    "VisualAsset": {
+      "refPath": "/Engine/BasicShapes/Cube.Cube"
+    },
+    "VisualScale": {
+      "x": 0.2,
+      "y": 0.2,
+      "z": 0.2
+    },
+    "VisualOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "BodyHalfExtent": {
+      "x": 10,
+      "y": 10,
+      "z": 10
+    },
+    "ToolType": "Mop"
+  },
+  "construction": "(fn ConstructionScript ()\n  (|Parent:ConstructionScript))\n",
+  "source": {
+    "StaticMesh": {
+      "refPath": "/Game/Design/Assets/Props/Mop/SM_Mop.SM_Mop"
+    },
+    "RelativeLocation": {
+      "x": -81.87957746809948,
+      "y": -1.5134470909660158,
+      "z": 13.359692196653498
+    },
+    "RelativeRotation": {
+      "pitch": 19.68349807941361,
+      "yaw": 3.6164415730028967,
+      "roll": 10.627584138330883
+    },
+    "RelativeScale3D": {
+      "x": 1.2600000032782555,
+      "y": 1.2600000032782555,
+      "z": 1.2600000032782555
+    },
+    "OverrideMaterials": [],
+    "bHiddenInGame": false,
+    "bVisible": true
+  }
+}

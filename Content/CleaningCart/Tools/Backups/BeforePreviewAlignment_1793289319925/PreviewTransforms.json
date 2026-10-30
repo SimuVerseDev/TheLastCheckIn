@@ -1,0 +1,71 @@
+[
+  {
+    "component": {
+      "refPath": "/Game/CleaningCart/Test/Maps/Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CleaningCart_C_0.MopPreview"
+    },
+    "StaticMesh": {
+      "refPath": "/Game/Design/Assets/Props/Mop/SM_Mop.SM_Mop"
+    },
+    "RelativeLocation": {
+      "x": -9.775702539826309,
+      "y": -1.5217366375785826,
+      "z": -128.04536182078812
+    },
+    "RelativeRotation": {
+      "pitch": 19.683,
+      "yaw": 3.616,
+      "roll": 10.628
+    },
+    "RelativeScale3D": {
+      "x": 1.26,
+      "y": 1.26,
+      "z": 1.26
+    }
+  },
+  {
+    "component": {
+      "refPath": "/Game/CleaningCart/Test/Maps/Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CleaningCart_C_0.ClothPreview"
+    },
+    "StaticMesh": {
+      "refPath": "/Game/Design/Assets/Props/CleaningSupplies/SM_MicrofiberCloth.SM_MicrofiberCloth"
+    },
+    "RelativeLocation": {
+      "x": 13.111086821395695,
+      "y": -8.56164511282482,
+      "z": -5.844624632202148
+    },
+    "RelativeRotation": {
+      "pitch": 2.1452603669011768e-14,
+      "yaw": 97.41480591068944,
+      "roll": 1.1382335150801594e-15
+    },
+    "RelativeScale3D": {
+      "x": 0.8,
+      "y": 0.8,
+      "z": 0.8
+    }
+  },
+  {
+    "component": {
+      "refPath": "/Game/CleaningCart/Test/Maps/Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CleaningCart_C_0.TrashBinPreview"
+    },
+    "StaticMesh": {
+      "refPath": "/Game/Design/Assets/Props/SM_LaundryHamper.SM_LaundryHamper"
+    },
+    "RelativeLocation": {
+      "x": 5.976276397705078,
+      "y": 1.371948864096879,
+      "z": -49.73238182068937
+    },
+    "RelativeRotation": {
+      "pitch": 0,
+      "yaw": 0,
+      "roll": 0
+    },
+    "RelativeScale3D": {
+      "x": 1,
+      "y": 1,
+      "z": 1
+    }
+  }
+]

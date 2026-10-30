@@ -1,0 +1,793 @@
+{
+  "pd": [
+    {
+      "c": {
+        "refPath": "/Game/CleaningCart/Test/Maps/Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CleaningCart_C_0.PickupBody"
+      },
+      "BodyInstance": {
+        "positionSolverIterationCount": 8,
+        "velocitySolverIterationCount": 2,
+        "projectionSolverIterationCount": 1,
+        "objectType": "ECC_PhysicsBody",
+        "collisionEnabled": "QueryAndPhysics",
+        "sleepFamily": "Normal",
+        "dOFMode": "SixDOF",
+        "bUseCCD": true,
+        "bUseMACD": false,
+        "bAllowPartialIslandSleep": true,
+        "bIgnoreAnalyticCollisions": false,
+        "bNotifyRigidBodyCollision": false,
+        "bSmoothEdgeCollisions": false,
+        "bLockTranslation": true,
+        "bLockRotation": true,
+        "bLockXTranslation": false,
+        "bLockYTranslation": false,
+        "bLockZTranslation": false,
+        "bLockXRotation": true,
+        "bLockYRotation": true,
+        "bLockZRotation": false,
+        "bOverrideMaxAngularVelocity": false,
+        "bOverrideMaxDepenetrationVelocity": false,
+        "bOverrideWalkableSlopeOnInstance": false,
+        "bOverrideIterationCounts": false,
+        "bInterpolateWhenSubStepping": true,
+        "bInertiaConditioning": true,
+        "bOneWayInteraction": false,
+        "bOverrideSolverAsyncDeltaTime": false,
+        "solverAsyncDeltaTime": 0.01666666753590107,
+        "collisionProfileName": "PhysicsActor",
+        "collisionResponses": {
+          "responseArray": []
+        },
+        "maxDepenetrationVelocity": 0,
+        "massInKgOverride": 2,
+        "linearDamping": 2,
+        "angularDamping": 8,
+        "customDOFPlaneNormal": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "cOMNudge": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "massScale": 1,
+        "gravityGroupIndex": 0,
+        "inertiaTensorScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "walkableSlopeOverride": {
+          "walkableSlopeBehavior": "WalkableSlope_Default",
+          "walkableSlopeAngle": 0
+        },
+        "physMaterialOverride": "None",
+        "maxAngularVelocity": 3599.999755859375,
+        "customSleepThresholdMultiplier": 1,
+        "stabilizationThresholdMultiplier": 1,
+        "physicsBlendWeight": 0,
+        "bSimulatePhysics": false,
+        "bOverrideMass": true,
+        "bEnableGravity": true,
+        "bUpdateKinematicFromSimulation": false,
+        "bGyroscopicTorqueEnabled": false,
+        "bAutoWeld": false,
+        "bStartAwake": true,
+        "bGenerateWakeEvents": false,
+        "bUpdateMassWhenScaleChanges": true
+      },
+      "RelativeLocation": {
+        "x": 250,
+        "y": 0,
+        "z": 70
+      },
+      "RelativeScale3D": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "bHiddenInGame": true,
+      "bIsEditorOnly": false
+    },
+    {
+      "c": {
+        "refPath": "/Game/CleaningCart/Test/Maps/Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CleaningCart_C_0.VisualMesh"
+      },
+      "BodyInstance": {
+        "positionSolverIterationCount": 8,
+        "velocitySolverIterationCount": 2,
+        "projectionSolverIterationCount": 1,
+        "objectType": "ECC_WorldStatic",
+        "collisionEnabled": "NoCollision",
+        "sleepFamily": "Normal",
+        "dOFMode": "Default",
+        "bUseCCD": false,
+        "bUseMACD": false,
+        "bAllowPartialIslandSleep": true,
+        "bIgnoreAnalyticCollisions": false,
+        "bNotifyRigidBodyCollision": false,
+        "bSmoothEdgeCollisions": false,
+        "bLockTranslation": true,
+        "bLockRotation": true,
+        "bLockXTranslation": false,
+        "bLockYTranslation": false,
+        "bLockZTranslation": false,
+        "bLockXRotation": false,
+        "bLockYRotation": false,
+        "bLockZRotation": false,
+        "bOverrideMaxAngularVelocity": false,
+        "bOverrideMaxDepenetrationVelocity": false,
+        "bOverrideWalkableSlopeOnInstance": false,
+        "bOverrideIterationCounts": false,
+        "bInterpolateWhenSubStepping": true,
+        "bInertiaConditioning": true,
+        "bOneWayInteraction": false,
+        "bOverrideSolverAsyncDeltaTime": false,
+        "solverAsyncDeltaTime": 0.01666666753590107,
+        "collisionProfileName": "NoCollision",
+        "collisionResponses": {
+          "responseArray": [
+            {
+              "channel": "Visibility",
+              "response": "ECR_Ignore"
+            },
+            {
+              "channel": "Camera",
+              "response": "ECR_Ignore"
+            }
+          ]
+        },
+        "maxDepenetrationVelocity": 0,
+        "massInKgOverride": 100,
+        "linearDamping": 0.009999999776482582,
+        "angularDamping": 0,
+        "customDOFPlaneNormal": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "cOMNudge": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "massScale": 1,
+        "gravityGroupIndex": 0,
+        "inertiaTensorScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "walkableSlopeOverride": {
+          "walkableSlopeBehavior": "WalkableSlope_Default",
+          "walkableSlopeAngle": 0
+        },
+        "physMaterialOverride": "None",
+        "maxAngularVelocity": 3599.999755859375,
+        "customSleepThresholdMultiplier": 1,
+        "stabilizationThresholdMultiplier": 1,
+        "physicsBlendWeight": 0,
+        "bSimulatePhysics": false,
+        "bOverrideMass": false,
+        "bEnableGravity": true,
+        "bUpdateKinematicFromSimulation": false,
+        "bGyroscopicTorqueEnabled": false,
+        "bAutoWeld": false,
+        "bStartAwake": true,
+        "bGenerateWakeEvents": false,
+        "bUpdateMassWhenScaleChanges": true
+      },
+      "RelativeLocation": {
+        "x": -1.343999999999994,
+        "y": 0,
+        "z": -32.166
+      },
+      "RelativeScale3D": {
+        "x": 0.25,
+        "y": 0.25,
+        "z": 0.25
+      },
+      "bHiddenInGame": false,
+      "bIsEditorOnly": false
+    },
+    {
+      "c": {
+        "refPath": "/Game/CleaningCart/Test/Maps/Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CleaningCart_C_0.ReturnZone_1"
+      },
+      "BodyInstance": {
+        "positionSolverIterationCount": 8,
+        "velocitySolverIterationCount": 2,
+        "projectionSolverIterationCount": 1,
+        "objectType": "ECC_WorldStatic",
+        "collisionEnabled": "NoCollision",
+        "sleepFamily": "Normal",
+        "dOFMode": "Default",
+        "bUseCCD": false,
+        "bUseMACD": false,
+        "bAllowPartialIslandSleep": true,
+        "bIgnoreAnalyticCollisions": false,
+        "bNotifyRigidBodyCollision": false,
+        "bSmoothEdgeCollisions": false,
+        "bLockTranslation": true,
+        "bLockRotation": true,
+        "bLockXTranslation": false,
+        "bLockYTranslation": false,
+        "bLockZTranslation": false,
+        "bLockXRotation": false,
+        "bLockYRotation": false,
+        "bLockZRotation": false,
+        "bOverrideMaxAngularVelocity": false,
+        "bOverrideMaxDepenetrationVelocity": false,
+        "bOverrideWalkableSlopeOnInstance": false,
+        "bOverrideIterationCounts": false,
+        "bInterpolateWhenSubStepping": true,
+        "bInertiaConditioning": true,
+        "bOneWayInteraction": false,
+        "bOverrideSolverAsyncDeltaTime": false,
+        "solverAsyncDeltaTime": 0.01666666753590107,
+        "collisionProfileName": "NoCollision",
+        "collisionResponses": {
+          "responseArray": [
+            {
+              "channel": "Visibility",
+              "response": "ECR_Ignore"
+            },
+            {
+              "channel": "Camera",
+              "response": "ECR_Ignore"
+            }
+          ]
+        },
+        "maxDepenetrationVelocity": 0,
+        "massInKgOverride": 100,
+        "linearDamping": 0.009999999776482582,
+        "angularDamping": 0,
+        "customDOFPlaneNormal": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "cOMNudge": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "massScale": 1,
+        "gravityGroupIndex": 0,
+        "inertiaTensorScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "walkableSlopeOverride": {
+          "walkableSlopeBehavior": "WalkableSlope_Default",
+          "walkableSlopeAngle": 0
+        },
+        "physMaterialOverride": "None",
+        "maxAngularVelocity": 3599.999755859375,
+        "customSleepThresholdMultiplier": 1,
+        "stabilizationThresholdMultiplier": 1,
+        "physicsBlendWeight": 0,
+        "bSimulatePhysics": false,
+        "bOverrideMass": false,
+        "bEnableGravity": true,
+        "bUpdateKinematicFromSimulation": false,
+        "bGyroscopicTorqueEnabled": false,
+        "bAutoWeld": true,
+        "bStartAwake": true,
+        "bGenerateWakeEvents": false,
+        "bUpdateMassWhenScaleChanges": true
+      },
+      "RelativeLocation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "RelativeScale3D": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "bHiddenInGame": true,
+      "bIsEditorOnly": false
+    },
+    {
+      "c": {
+        "refPath": "/Game/CleaningCart/Test/Maps/Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CleaningCart_C_0.MopPreview"
+      },
+      "BodyInstance": {
+        "positionSolverIterationCount": 8,
+        "velocitySolverIterationCount": 2,
+        "projectionSolverIterationCount": 1,
+        "objectType": "ECC_WorldDynamic",
+        "collisionEnabled": "QueryAndPhysics",
+        "sleepFamily": "Normal",
+        "dOFMode": "Default",
+        "bUseCCD": false,
+        "bUseMACD": false,
+        "bAllowPartialIslandSleep": true,
+        "bIgnoreAnalyticCollisions": false,
+        "bNotifyRigidBodyCollision": false,
+        "bSmoothEdgeCollisions": false,
+        "bLockTranslation": true,
+        "bLockRotation": true,
+        "bLockXTranslation": false,
+        "bLockYTranslation": false,
+        "bLockZTranslation": false,
+        "bLockXRotation": false,
+        "bLockYRotation": false,
+        "bLockZRotation": false,
+        "bOverrideMaxAngularVelocity": false,
+        "bOverrideMaxDepenetrationVelocity": false,
+        "bOverrideWalkableSlopeOnInstance": false,
+        "bOverrideIterationCounts": false,
+        "bInterpolateWhenSubStepping": true,
+        "bInertiaConditioning": true,
+        "bOneWayInteraction": false,
+        "bOverrideSolverAsyncDeltaTime": false,
+        "solverAsyncDeltaTime": 0.01666666753590107,
+        "collisionProfileName": "BlockAllDynamic",
+        "collisionResponses": {
+          "responseArray": []
+        },
+        "maxDepenetrationVelocity": 0,
+        "massInKgOverride": 100,
+        "linearDamping": 0.009999999776482582,
+        "angularDamping": 0,
+        "customDOFPlaneNormal": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "cOMNudge": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "massScale": 1,
+        "gravityGroupIndex": 0,
+        "inertiaTensorScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "walkableSlopeOverride": {
+          "walkableSlopeBehavior": "WalkableSlope_Default",
+          "walkableSlopeAngle": 0
+        },
+        "physMaterialOverride": "None",
+        "maxAngularVelocity": 3599.999755859375,
+        "customSleepThresholdMultiplier": 1,
+        "stabilizationThresholdMultiplier": 1,
+        "physicsBlendWeight": 0,
+        "bSimulatePhysics": false,
+        "bOverrideMass": false,
+        "bEnableGravity": true,
+        "bUpdateKinematicFromSimulation": false,
+        "bGyroscopicTorqueEnabled": false,
+        "bAutoWeld": true,
+        "bStartAwake": true,
+        "bGenerateWakeEvents": false,
+        "bUpdateMassWhenScaleChanges": true
+      },
+      "RelativeLocation": {
+        "x": -9.775702539826309,
+        "y": -1.5217366375785826,
+        "z": -128.04536182078812
+      },
+      "RelativeScale3D": {
+        "x": 1.26,
+        "y": 1.26,
+        "z": 1.26
+      },
+      "bHiddenInGame": false,
+      "bIsEditorOnly": false
+    },
+    {
+      "c": {
+        "refPath": "/Game/CleaningCart/Test/Maps/Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CleaningCart_C_0.ReturnZone_2"
+      },
+      "BodyInstance": {
+        "positionSolverIterationCount": 8,
+        "velocitySolverIterationCount": 2,
+        "projectionSolverIterationCount": 1,
+        "objectType": "ECC_WorldStatic",
+        "collisionEnabled": "NoCollision",
+        "sleepFamily": "Normal",
+        "dOFMode": "Default",
+        "bUseCCD": false,
+        "bUseMACD": false,
+        "bAllowPartialIslandSleep": true,
+        "bIgnoreAnalyticCollisions": false,
+        "bNotifyRigidBodyCollision": false,
+        "bSmoothEdgeCollisions": false,
+        "bLockTranslation": true,
+        "bLockRotation": true,
+        "bLockXTranslation": false,
+        "bLockYTranslation": false,
+        "bLockZTranslation": false,
+        "bLockXRotation": false,
+        "bLockYRotation": false,
+        "bLockZRotation": false,
+        "bOverrideMaxAngularVelocity": false,
+        "bOverrideMaxDepenetrationVelocity": false,
+        "bOverrideWalkableSlopeOnInstance": false,
+        "bOverrideIterationCounts": false,
+        "bInterpolateWhenSubStepping": true,
+        "bInertiaConditioning": true,
+        "bOneWayInteraction": false,
+        "bOverrideSolverAsyncDeltaTime": false,
+        "solverAsyncDeltaTime": 0.01666666753590107,
+        "collisionProfileName": "NoCollision",
+        "collisionResponses": {
+          "responseArray": [
+            {
+              "channel": "Visibility",
+              "response": "ECR_Ignore"
+            },
+            {
+              "channel": "Camera",
+              "response": "ECR_Ignore"
+            }
+          ]
+        },
+        "maxDepenetrationVelocity": 0,
+        "massInKgOverride": 100,
+        "linearDamping": 0.009999999776482582,
+        "angularDamping": 0,
+        "customDOFPlaneNormal": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "cOMNudge": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "massScale": 1,
+        "gravityGroupIndex": 0,
+        "inertiaTensorScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "walkableSlopeOverride": {
+          "walkableSlopeBehavior": "WalkableSlope_Default",
+          "walkableSlopeAngle": 0
+        },
+        "physMaterialOverride": "None",
+        "maxAngularVelocity": 3599.999755859375,
+        "customSleepThresholdMultiplier": 1,
+        "stabilizationThresholdMultiplier": 1,
+        "physicsBlendWeight": 0,
+        "bSimulatePhysics": false,
+        "bOverrideMass": false,
+        "bEnableGravity": true,
+        "bUpdateKinematicFromSimulation": false,
+        "bGyroscopicTorqueEnabled": false,
+        "bAutoWeld": true,
+        "bStartAwake": true,
+        "bGenerateWakeEvents": false,
+        "bUpdateMassWhenScaleChanges": true
+      },
+      "RelativeLocation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "RelativeScale3D": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "bHiddenInGame": true,
+      "bIsEditorOnly": false
+    },
+    {
+      "c": {
+        "refPath": "/Game/CleaningCart/Test/Maps/Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CleaningCart_C_0.ClothPreview"
+      },
+      "BodyInstance": {
+        "positionSolverIterationCount": 8,
+        "velocitySolverIterationCount": 2,
+        "projectionSolverIterationCount": 1,
+        "objectType": "ECC_WorldDynamic",
+        "collisionEnabled": "QueryAndPhysics",
+        "sleepFamily": "Normal",
+        "dOFMode": "Default",
+        "bUseCCD": false,
+        "bUseMACD": false,
+        "bAllowPartialIslandSleep": true,
+        "bIgnoreAnalyticCollisions": false,
+        "bNotifyRigidBodyCollision": false,
+        "bSmoothEdgeCollisions": false,
+        "bLockTranslation": true,
+        "bLockRotation": true,
+        "bLockXTranslation": false,
+        "bLockYTranslation": false,
+        "bLockZTranslation": false,
+        "bLockXRotation": false,
+        "bLockYRotation": false,
+        "bLockZRotation": false,
+        "bOverrideMaxAngularVelocity": false,
+        "bOverrideMaxDepenetrationVelocity": false,
+        "bOverrideWalkableSlopeOnInstance": false,
+        "bOverrideIterationCounts": false,
+        "bInterpolateWhenSubStepping": true,
+        "bInertiaConditioning": true,
+        "bOneWayInteraction": false,
+        "bOverrideSolverAsyncDeltaTime": false,
+        "solverAsyncDeltaTime": 0.01666666753590107,
+        "collisionProfileName": "BlockAllDynamic",
+        "collisionResponses": {
+          "responseArray": []
+        },
+        "maxDepenetrationVelocity": 0,
+        "massInKgOverride": 100,
+        "linearDamping": 0.009999999776482582,
+        "angularDamping": 0,
+        "customDOFPlaneNormal": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "cOMNudge": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "massScale": 1,
+        "gravityGroupIndex": 0,
+        "inertiaTensorScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "walkableSlopeOverride": {
+          "walkableSlopeBehavior": "WalkableSlope_Default",
+          "walkableSlopeAngle": 0
+        },
+        "physMaterialOverride": "None",
+        "maxAngularVelocity": 3599.999755859375,
+        "customSleepThresholdMultiplier": 1,
+        "stabilizationThresholdMultiplier": 1,
+        "physicsBlendWeight": 0,
+        "bSimulatePhysics": false,
+        "bOverrideMass": false,
+        "bEnableGravity": true,
+        "bUpdateKinematicFromSimulation": false,
+        "bGyroscopicTorqueEnabled": false,
+        "bAutoWeld": true,
+        "bStartAwake": true,
+        "bGenerateWakeEvents": false,
+        "bUpdateMassWhenScaleChanges": true
+      },
+      "RelativeLocation": {
+        "x": 13.111086821395695,
+        "y": -8.56164511282482,
+        "z": -5.844624632202148
+      },
+      "RelativeScale3D": {
+        "x": 0.8,
+        "y": 0.8,
+        "z": 0.8
+      },
+      "bHiddenInGame": false,
+      "bIsEditorOnly": false
+    },
+    {
+      "c": {
+        "refPath": "/Game/CleaningCart/Test/Maps/Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CleaningCart_C_0.ReturnZone_3"
+      },
+      "BodyInstance": {
+        "positionSolverIterationCount": 8,
+        "velocitySolverIterationCount": 2,
+        "projectionSolverIterationCount": 1,
+        "objectType": "ECC_WorldStatic",
+        "collisionEnabled": "NoCollision",
+        "sleepFamily": "Normal",
+        "dOFMode": "Default",
+        "bUseCCD": false,
+        "bUseMACD": false,
+        "bAllowPartialIslandSleep": true,
+        "bIgnoreAnalyticCollisions": false,
+        "bNotifyRigidBodyCollision": false,
+        "bSmoothEdgeCollisions": false,
+        "bLockTranslation": true,
+        "bLockRotation": true,
+        "bLockXTranslation": false,
+        "bLockYTranslation": false,
+        "bLockZTranslation": false,
+        "bLockXRotation": false,
+        "bLockYRotation": false,
+        "bLockZRotation": false,
+        "bOverrideMaxAngularVelocity": false,
+        "bOverrideMaxDepenetrationVelocity": false,
+        "bOverrideWalkableSlopeOnInstance": false,
+        "bOverrideIterationCounts": false,
+        "bInterpolateWhenSubStepping": true,
+        "bInertiaConditioning": true,
+        "bOneWayInteraction": false,
+        "bOverrideSolverAsyncDeltaTime": false,
+        "solverAsyncDeltaTime": 0.01666666753590107,
+        "collisionProfileName": "NoCollision",
+        "collisionResponses": {
+          "responseArray": [
+            {
+              "channel": "Visibility",
+              "response": "ECR_Ignore"
+            },
+            {
+              "channel": "Camera",
+              "response": "ECR_Ignore"
+            }
+          ]
+        },
+        "maxDepenetrationVelocity": 0,
+        "massInKgOverride": 100,
+        "linearDamping": 0.009999999776482582,
+        "angularDamping": 0,
+        "customDOFPlaneNormal": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "cOMNudge": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "massScale": 1,
+        "gravityGroupIndex": 0,
+        "inertiaTensorScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "walkableSlopeOverride": {
+          "walkableSlopeBehavior": "WalkableSlope_Default",
+          "walkableSlopeAngle": 0
+        },
+        "physMaterialOverride": "None",
+        "maxAngularVelocity": 3599.999755859375,
+        "customSleepThresholdMultiplier": 1,
+        "stabilizationThresholdMultiplier": 1,
+        "physicsBlendWeight": 0,
+        "bSimulatePhysics": false,
+        "bOverrideMass": false,
+        "bEnableGravity": true,
+        "bUpdateKinematicFromSimulation": false,
+        "bGyroscopicTorqueEnabled": false,
+        "bAutoWeld": true,
+        "bStartAwake": true,
+        "bGenerateWakeEvents": false,
+        "bUpdateMassWhenScaleChanges": true
+      },
+      "RelativeLocation": {
+        "x": 6.838222503662109,
+        "y": 0,
+        "z": 0
+      },
+      "RelativeScale3D": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "bHiddenInGame": true,
+      "bIsEditorOnly": false
+    },
+    {
+      "c": {
+        "refPath": "/Game/CleaningCart/Test/Maps/Lvl_Cart_test.Lvl_Cart_test:PersistentLevel.BP_CleaningCart_C_0.TrashBinPreview"
+      },
+      "BodyInstance": {
+        "positionSolverIterationCount": 8,
+        "velocitySolverIterationCount": 2,
+        "projectionSolverIterationCount": 1,
+        "objectType": "ECC_WorldDynamic",
+        "collisionEnabled": "QueryAndPhysics",
+        "sleepFamily": "Normal",
+        "dOFMode": "Default",
+        "bUseCCD": false,
+        "bUseMACD": false,
+        "bAllowPartialIslandSleep": true,
+        "bIgnoreAnalyticCollisions": false,
+        "bNotifyRigidBodyCollision": false,
+        "bSmoothEdgeCollisions": false,
+        "bLockTranslation": true,
+        "bLockRotation": true,
+        "bLockXTranslation": false,
+        "bLockYTranslation": false,
+        "bLockZTranslation": false,
+        "bLockXRotation": false,
+        "bLockYRotation": false,
+        "bLockZRotation": false,
+        "bOverrideMaxAngularVelocity": false,
+        "bOverrideMaxDepenetrationVelocity": false,
+        "bOverrideWalkableSlopeOnInstance": false,
+        "bOverrideIterationCounts": false,
+        "bInterpolateWhenSubStepping": true,
+        "bInertiaConditioning": true,
+        "bOneWayInteraction": false,
+        "bOverrideSolverAsyncDeltaTime": false,
+        "solverAsyncDeltaTime": 0.01666666753590107,
+        "collisionProfileName": "BlockAllDynamic",
+        "collisionResponses": {
+          "responseArray": []
+        },
+        "maxDepenetrationVelocity": 0,
+        "massInKgOverride": 100,
+        "linearDamping": 0.009999999776482582,
+        "angularDamping": 0,
+        "customDOFPlaneNormal": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "cOMNudge": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "massScale": 1,
+        "gravityGroupIndex": 0,
+        "inertiaTensorScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "walkableSlopeOverride": {
+          "walkableSlopeBehavior": "WalkableSlope_Default",
+          "walkableSlopeAngle": 0
+        },
+        "physMaterialOverride": "None",
+        "maxAngularVelocity": 3599.999755859375,
+        "customSleepThresholdMultiplier": 1,
+        "stabilizationThresholdMultiplier": 1,
+        "physicsBlendWeight": 0,
+        "bSimulatePhysics": false,
+        "bOverrideMass": false,
+        "bEnableGravity": true,
+        "bUpdateKinematicFromSimulation": false,
+        "bGyroscopicTorqueEnabled": false,
+        "bAutoWeld": true,
+        "bStartAwake": true,
+        "bGenerateWakeEvents": false,
+        "bUpdateMassWhenScaleChanges": true
+      },
+      "RelativeLocation": {
+        "x": 5.976276397705078,
+        "y": 1.371948864096879,
+        "z": -49.73238182068937
+      },
+      "RelativeScale3D": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "bHiddenInGame": false,
+      "bIsEditorOnly": false
+    }
+  ],
+  "beforePos": {
+    "location": {
+      "x": -182.97989850872654,
+      "y": 406.1907894201036,
+      "z": -4091.9782666373567
+    },
+    "rotation": {
+      "pitch": 0.18900850609332748,
+      "yaw": 115.90133448723414,
+      "roll": -0.11833210207902309
+    },
+    "scale": {
+      "x": 1,
+      "y": 1,
+      "z": 1
+    }
+  }
+}
