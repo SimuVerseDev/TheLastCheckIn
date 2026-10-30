@@ -9,6 +9,7 @@ class UGameClockSubsystem;
 class AGuestPoolManager;
 class AGuestCharacter;
 class ARoomActor;
+class UGuestParty;
 
 UCLASS()
 class THELASTCHECKIN_API AGuestScheduleManager : public AActor
@@ -29,6 +30,11 @@ protected:
 
     UPROPERTY(EditInstanceOnly, Category = "Schedule|References")
     TObjectPtr<AActor> SpawnPoint;
+    
+    // 두 번째~네 번째 손님이 등장할 위치(일행)
+    // 첫 번째 손님은 SpawnPoint 사용
+    UPROPERTY(EditInstanceOnly, Category = "Schedule|Party")
+    TArray<TObjectPtr<AActor>> CompanionSpawnPoints;
 
     UPROPERTY(EditInstanceOnly, Category = "Schedule|References")
     TObjectPtr<AActor> CounterTarget;
@@ -48,7 +54,32 @@ protected:
 
     UPROPERTY(EditAnywhere, Category = "Schedule|Guests",
         meta = (ClampMin = "0"))
-    int32 DailyGuestLimit = 3;
+    int32 DailyGuestLimit = 12;
+    
+    // 한 일행의 최소 인원
+    UPROPERTY(EditAnywhere, Category = "Schedule|Party",
+        meta = (ClampMin = "1", ClampMax = "4"))
+    int32 MinPartySize = 1;
+
+    // 한 일행의 최대 인원
+    UPROPERTY(EditAnywhere, Category = "Schedule|Party",
+        meta = (ClampMin = "1", ClampMax = "4"))
+    int32 MaxPartySize = 4;
+
+    // 생성 실패 후 재시도 횟수. 풀 부족 대기는 횟수에 포함하지 않음.
+    UPROPERTY(EditAnywhere, Category = "Schedule|Recovery", meta = (ClampMin = "0"))
+    int32 MaxSpawnRetries = 3;
+
+    // 게임 내부 시간 기준
+    UPROPERTY(EditAnywhere, Category = "Schedule|Recovery", meta = (ClampMin = "1"))
+    int32 SpawnRetryIntervalMinutes = 1;
+
+    // 호텔 시계 배속과 무관한 월드 시간. 일시정지 중에는 흐르지 않음.
+    UPROPERTY(EditAnywhere, Category = "Schedule|Recovery", meta = (ClampMin = "1.0"))
+    float MovementTimeoutSeconds = 60.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Schedule|Recovery", meta = (ClampMin = "0"))
+    int32 MaxMovementRetries = 3;
 
     // 게임 내부 시간 기준 최소 등장 간격
     UPROPERTY(EditAnywhere, Category = "Schedule|Guests",
@@ -76,50 +107,27 @@ protected:
     int32 CheckoutEndHour = 11;
 
 private:
-    struct FCheckoutSchedule
-    {
-        TWeakObjectPtr<AGuestCharacter> Guest;
-
-        FGuid StayId;
-
-        // 날짜까지 포함한 누적 게임 초
-        double CheckoutAtSeconds = 0.0;
-
-        // 잔류 정책까지 적용했는지
-        bool bCheckoutTimeHandled = false;
-    };
 
     UFUNCTION()
     void HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds);
-
-    UFUNCTION()
-    void HandleRoomAssigned(AGuestCharacter* Guest);
-
-    void ProcessCheckouts(double CurrentSeconds);
+    
     void TryAdmitGuest(double CurrentSeconds);
-
     bool HasAvailableRoom() const;
 
     TWeakObjectPtr<UGameClockSubsystem> Clock;
 
-    // 아직 객실을 배정받지 않은 손님 한 명
-    TWeakObjectPtr<AGuestCharacter> PendingCheckInGuest;
-
-    // 이벤트 연결 해제용 목록
-    TArray<TWeakObjectPtr<AGuestCharacter>> TrackedGuests;
-
-    TArray<FCheckoutSchedule> CheckoutSchedules;
-
+    
+    int32 NextPartySize = 0;
+    int32 SpawnFailureCount = 0;
+    bool bArrivalsDisabled = false;
     int64 ArrivalDayIndex = -1;
     int32 AdmittedToday = 0;
-
     double NextArrivalSeconds = 0.0;
     
-    // 미배정 손님의 접수 마감 처리
-    void ProcessCheckInDeadline(double CurrentSeconds);
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UGuestParty>> ActiveParties;
 
-    // 현재 미배정 손님의 접수 마감 시각
-    // 날짜까지 포함한 누적 게임 초
-    double PendingCheckInDeadlineSeconds = 0.0;
+    UFUNCTION()
+    void HandlePartyRoomAssigned(UGuestParty* Party);
     
 };

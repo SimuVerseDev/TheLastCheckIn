@@ -6,6 +6,7 @@
 #include "Core/Time/GameClockSubsystem.h"
 #include "Guests/GuestCharacter.h"
 #include "Guests/Pool/GuestPoolManager.h"
+#include "Guests/Party/GuestParty.h"
 #include "Rooms/RoomActor.h"
 
 AGuestScheduleManager::AGuestScheduleManager()
@@ -31,22 +32,32 @@ void AGuestScheduleManager::BeginPlay()
         Rooms.IsEmpty() ||
         GuestTypeRow.IsNull())
     {
-        UE_LOG(LogTemp, Error,
-            TEXT("GuestSchedule: References, rooms or guest data are missing."));
         return;
     }
 
     if (CheckInStartHour >= CheckInEndHour ||
         CheckoutStartHour > CheckoutEndHour)
     {
-        UE_LOG(LogTemp, Error,
-            TEXT("GuestSchedule: Invalid schedule hours."));
         return;
     }
 
     Clock->OnTimeAdvanced.AddUniqueDynamic(
         this,
         &AGuestScheduleManager::HandleTimeAdvanced);
+
+    TArray<AActor*> SpawnPoints;
+    SpawnPoints.Add(SpawnPoint.Get());
+    for (const TObjectPtr<AActor>& Point : CompanionSpawnPoints)
+    {
+        SpawnPoints.Add(Point.Get());
+    }
+    const int32 MaxSize = FMath::Clamp(MaxPartySize, FMath::Clamp(MinPartySize, 1, 4), 4);
+    bArrivalsDisabled = !GuestPool->ValidatePartyConfiguration(
+        SpawnPoints, CounterTarget.Get(), GuestTypeRow, MaxSize);
+    if (bArrivalsDisabled)
+    {
+        UE_LOG(LogTemp, Error, TEXT("GuestSchedule: Arrivals disabled due to configuration errors. Fix the settings and restart play."));
+    }
 }
 
 void AGuestScheduleManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -58,20 +69,19 @@ void AGuestScheduleManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
             &AGuestScheduleManager::HandleTimeAdvanced);
     }
 
-    for (const TWeakObjectPtr<AGuestCharacter>& WeakGuest : TrackedGuests)
+    for (const TObjectPtr<UGuestParty>& Party : ActiveParties)
     {
-        if (AGuestCharacter* Guest = WeakGuest.Get())
+        if (IsValid(Party.Get()))
         {
-            Guest->OnGuestRoomAssigned.RemoveDynamic(
+            Party->StopMovementMonitoring();
+            Party->OnRoomAssigned.RemoveDynamic(
                 this,
-                &AGuestScheduleManager::HandleRoomAssigned);
+                &AGuestScheduleManager::HandlePartyRoomAssigned);
         }
     }
 
-    CheckoutSchedules.Reset();
-    TrackedGuests.Reset();
-    PendingCheckInGuest.Reset();
-    PendingCheckInDeadlineSeconds = 0.0;
+    ActiveParties.Reset();
+    NextPartySize = 0;
 
     Super::EndPlay(EndPlayReason);
 }
@@ -80,13 +90,30 @@ void AGuestScheduleManager::HandleTimeAdvanced(
     double PreviousSeconds,
     double CurrentSeconds)
 {
-    // 미배정 손님은 접수 마감 시 귀가
-    ProcessCheckInDeadline(CurrentSeconds);
-    
-    // 날짜가 바뀌어도 이전 날의 투숙, 퇴실 일정은 유지
-    ProcessCheckouts(CurrentSeconds);
+    for (int32 Index = ActiveParties.Num() - 1;
+         Index >= 0;
+         --Index)
+    {
+        UGuestParty* Party = ActiveParties[Index].Get();
 
-    // 신규 등장만 당일 접수 시간으로 판정
+        if (!IsValid(Party))
+        {
+            ActiveParties.RemoveAtSwap(Index);
+            continue;
+        }
+
+        Party->Advance(CurrentSeconds);
+
+        if (Party->IsFinished())
+        {
+            Party->OnRoomAssigned.RemoveDynamic(
+                this,
+                &AGuestScheduleManager::HandlePartyRoomAssigned);
+
+            ActiveParties.RemoveAtSwap(Index);
+        }
+    }
+
     TryAdmitGuest(CurrentSeconds);
 }
 
@@ -106,35 +133,11 @@ bool AGuestScheduleManager::HasAvailableRoom() const
     return false;
 }
 
-void AGuestScheduleManager::ProcessCheckInDeadline(double CurrentSeconds)
-{
-    AGuestCharacter* Guest = PendingCheckInGuest.Get();
 
-    if (!IsValid(Guest))
-    {
-        PendingCheckInGuest.Reset();
-        PendingCheckInDeadlineSeconds = 0.0;
-        return;
-    }
-
-    if (CurrentSeconds < PendingCheckInDeadlineSeconds)
-    {
-        return;
-    }
-
-    if (Guest->TryLeaveWithoutCheckIn(ExitTarget.Get()))
-    {
-        // 출구 이동을 시작했으므로 접수 대기 목록에서 제거
-        PendingCheckInGuest.Reset();
-        PendingCheckInDeadlineSeconds = 0.0;
-    }
-
-    // 실패하면 참조를 유지하여 다음 시간 이벤트에서 재시도
-}
 
 void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
 {
-    if (!IsValid(GuestPool.Get()) ||
+    if (bArrivalsDisabled || !IsValid(GuestPool.Get()) ||
         !IsValid(SpawnPoint.Get()) ||
         !IsValid(CounterTarget.Get()))
     {
@@ -149,8 +152,8 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
         ArrivalDayIndex = DayIndex;
         AdmittedToday = 0;
         NextArrivalSeconds = CurrentSeconds;
-
-        // 기존 투숙 일정과 미배정 손님은 초기화하지 않음
+        NextPartySize = 0;
+        SpawnFailureCount = 0;
     }
 
     const double SecondsOfDay =
@@ -167,10 +170,13 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
         return;
     }
 
-    // 이전 손님이 객실을 배정받기 전까지 다음 손님을 보내지 않음
-    if (PendingCheckInGuest.IsValid())
+    // 접수 중인 일행이 있으면 다음 일행은 대기
+    for (const TObjectPtr<UGuestParty>& Party : ActiveParties)
     {
-        return;
+        if (IsValid(Party.Get()) && Party->IsCheckingIn())
+        {
+            return;
+        }
     }
 
     if (!HasAvailableRoom())
@@ -178,40 +184,105 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
         return;
     }
 
-    AGuestCharacter* Guest = GuestPool->AcquireGuest(
-        SpawnPoint.Get(),
-        CounterTarget.Get(),
-        GuestTypeRow);
+    const int32 MinSize = FMath::Clamp(MinPartySize, 1, 4);
+    const int32 MaxSize = FMath::Clamp(MaxPartySize, MinSize, 4);
 
-    if (!IsValid(Guest))
+    const int32 RemainingGuests = DailyGuestLimit - AdmittedToday;
+
+    // 남은 입장 가능 인원이 최소 일행 인원보다 적으면 종료
+    if (RemainingGuests < MinSize)
     {
-        // 풀 부족이나 스폰 위치 막힘:
-        // 이번 입장 시도는 인원에 포함하지 않고 나중에 재시도
-        NextArrivalSeconds = CurrentSeconds + 60.0;
         return;
     }
 
-    Guest->OnGuestRoomAssigned.AddUniqueDynamic(
+    // 새 일행의 인원을 한 번만 결정
+    if (NextPartySize == 0)
+    {
+        NextPartySize = FMath::RandRange(
+            MinSize,
+            FMath::Min(MaxSize, RemainingGuests));
+    }
+
+    if (NextPartySize > RemainingGuests)
+    {
+        return;
+    }
+
+    TArray<AActor*> SpawnPoints;
+    SpawnPoints.Add(SpawnPoint.Get());
+
+    for (const TObjectPtr<AActor>& Point : CompanionSpawnPoints)
+    {
+        SpawnPoints.Add(Point.Get());
+    }
+
+    TArray<AGuestCharacter*> Members;
+
+    const EGuestAcquireResult Result = GuestPool->TryAcquireParty(
+            SpawnPoints,
+            CounterTarget.Get(),
+            GuestTypeRow,
+            NextPartySize,
+            Members);
+    if (Result != EGuestAcquireResult::Success)
+    {
+        if (Result == EGuestAcquireResult::InvalidConfiguration)
+        {
+            bArrivalsDisabled = true;
+            UE_LOG(LogTemp, Error, TEXT("GuestSchedule: Arrivals disabled; see GuestPool configuration error above."));
+            return;
+        }
+
+        NextArrivalSeconds = CurrentSeconds + FMath::Max(1, SpawnRetryIntervalMinutes) * 60.0;
+        // 손님이 모두 사용 중이면 같은 인원을 유지하고 반환을 기다림.
+        if (Result == EGuestAcquireResult::PoolExhausted)
+        {
+            return;
+        }
+
+        ++SpawnFailureCount;
+
+        if (SpawnFailureCount > FMath::Max(0, MaxSpawnRetries))
+        {
+            NextPartySize = 0;
+            SpawnFailureCount = 0;
+            const int32 MinMinutes = FMath::Max(1, MinArrivalIntervalMinutes);
+            NextArrivalSeconds = CurrentSeconds + FMath::RandRange(
+                MinMinutes, FMath::Max(MinMinutes, MaxArrivalIntervalMinutes)) * 60.0;
+        }
+        return;
+    }
+
+    UGuestParty* NewParty = Members[0]->GetParty();
+
+    const double DeadlineSeconds =
+        static_cast<double>(DayIndex) * 86400.0
+        + CheckInEndHour * 3600.0;
+
+    NewParty->ConfigureMovementRecovery(MovementTimeoutSeconds, MaxMovementRetries);
+    NewParty->ConfigureVisit(
+        DeadlineSeconds,
+        LobbyTarget.Get(),
+        ExitTarget.Get());
+
+    NewParty->OnRoomAssigned.AddUniqueDynamic(
         this,
-        &AGuestScheduleManager::HandleRoomAssigned);
+        &AGuestScheduleManager::HandlePartyRoomAssigned);
 
-    TrackedGuests.AddUnique(TWeakObjectPtr<AGuestCharacter>(Guest));
-    PendingCheckInGuest = Guest;
-    
-    PendingCheckInDeadlineSeconds =
-    static_cast<double>(DayIndex) * 86400.0
-    + CheckInEndHour * 3600.0;
+    ActiveParties.Add(NewParty);
 
-    ++AdmittedToday;
+    // 팀 수가 아니라 실제 등장한 사람 수를 누적
+    AdmittedToday += Members.Num();
 
-    // 잘못된 설정값 보정
+    NextPartySize = 0;
+    SpawnFailureCount = 0;
+
     const int32 MinMinutes =
         FMath::Max(1, MinArrivalIntervalMinutes);
 
     const int32 MaxMinutes =
         FMath::Max(MinMinutes, MaxArrivalIntervalMinutes);
 
-    // 등장에 성공했을 때 다음 간격을 한 번 결정
     const int32 IntervalMinutes =
         FMath::RandRange(MinMinutes, MaxMinutes);
 
@@ -219,33 +290,13 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
         CurrentSeconds + IntervalMinutes * 60.0;
 }
 
-void AGuestScheduleManager::HandleRoomAssigned(AGuestCharacter* Guest)
+void AGuestScheduleManager::HandlePartyRoomAssigned(UGuestParty* Party)
 {
-    if (!IsValid(Guest) || !Clock.IsValid())
+    if (!IsValid(Party) ||
+        !Clock.IsValid() ||
+        Party->GetCheckoutTime() >= 0.0)
     {
         return;
-    }
-
-    const FGuid StayId = Guest->GetStayId();
-
-    if (!StayId.IsValid())
-    {
-        return;
-    }
-
-    if (PendingCheckInGuest.Get() == Guest)
-    {
-        PendingCheckInGuest.Reset();
-        PendingCheckInDeadlineSeconds = 0.0;
-    }
-
-    // 같은 투숙에 이벤트가 다시 와도 퇴실 시각을 다시 뽑지 않음
-    for (const FCheckoutSchedule& Existing : CheckoutSchedules)
-    {
-        if (Existing.StayId == StayId)
-        {
-            return;
-        }
     }
 
     const double Now = Clock->GetTotalGameSeconds();
@@ -256,73 +307,9 @@ void AGuestScheduleManager::HandleRoomAssigned(AGuestCharacter* Guest)
     const double NextDayStart =
         static_cast<double>(CheckInDayIndex + 1) * 86400.0;
 
-    // 다음 날 06:00~11:00 중 분 단위로 한 번 결정
     const int32 CheckoutMinuteOfDay = FMath::RandRange(
         CheckoutStartHour * 60,
         CheckoutEndHour * 60);
 
-    FCheckoutSchedule Entry;
-    Entry.Guest = Guest;
-    Entry.StayId = StayId;
-    Entry.CheckoutAtSeconds =
-        NextDayStart + CheckoutMinuteOfDay * 60.0;
-
-    CheckoutSchedules.Add(Entry);
-}
-
-void AGuestScheduleManager::ProcessCheckouts(
-    double CurrentSeconds)
-{
-    for (int32 Index = CheckoutSchedules.Num() - 1;
-         Index >= 0;
-         --Index)
-    {
-        FCheckoutSchedule& Entry = CheckoutSchedules[Index];
-        AGuestCharacter* Guest = Entry.Guest.Get();
-
-        // NPC가 사라졌거나 다른 투숙으로 재사용되었다면 이전 일정 제거
-        if (!IsValid(Guest) || Guest->GetStayId() != Entry.StayId)
-        {
-            CheckoutSchedules.RemoveAtSwap(Index);
-            continue;
-        }
-
-        const EGuestState State = Guest->GetGuestState();
-
-        if (State == EGuestState::Inactive ||
-            State == EGuestState::ExitCompleted)
-        {
-            CheckoutSchedules.RemoveAtSwap(Index);
-            continue;
-        }
-
-        // 로비 도착 이후에는 출구로 이동
-        if (State == EGuestState::ReadyToExit)
-        {
-            if (IsValid(ExitTarget.Get()))
-            {
-                Guest->TryBeginExit(ExitTarget.Get());
-            }
-
-            continue;
-        }
-
-        if (Entry.bCheckoutTimeHandled ||
-            CurrentSeconds < Entry.CheckoutAtSeconds ||
-            State != EGuestState::Staying)
-        {
-            continue;
-        }
-
-        if (!IsValid(LobbyTarget.Get()))
-        {
-            continue;
-        }
-
-        // 기존 Automatic / RequireRequest / Random 정책 적용
-        if (Guest->HandleCheckoutTime(LobbyTarget.Get()))
-        {
-            Entry.bCheckoutTimeHandled = true;
-        }
-    }
+    Party->SetCheckoutTime(NextDayStart + CheckoutMinuteOfDay * 60.0);
 }

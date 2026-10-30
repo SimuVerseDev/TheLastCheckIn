@@ -9,6 +9,14 @@
 
 class AGuestCharacter;
 
+enum class EGuestAcquireResult : uint8
+{
+	Success,
+	InvalidConfiguration,
+	PoolExhausted,
+	SpawnFailed
+};
+
 UCLASS()
 class THELASTCHECKIN_API AGuestPoolManager : public AActor
 {
@@ -23,6 +31,24 @@ public:
 		AActor* SpawnPoint,
 		AActor* CounterTarget,
 		const FDataTableRowHandle& GuestTypeRow);
+	
+	// 여러 위치에서 손님을 꺼내 하나의 일행으로 묶음
+	bool AcquireParty(
+		const TArray<AActor*>& SpawnPoints,
+		AActor* CounterTarget,
+		const FDataTableRowHandle& GuestTypeRow,
+		int32 PartySize,
+		TArray<AGuestCharacter*>& OutMembers);
+
+	// 실패 원인을 일정 관리자에게 전달. 기존 AcquireParty 호출도 유지.
+	EGuestAcquireResult TryAcquireParty(
+		const TArray<AActor*>& SpawnPoints, AActor* CounterTarget,
+		const FDataTableRowHandle& GuestTypeRow, int32 PartySize,
+		TArray<AGuestCharacter*>& OutMembers);
+
+	bool ValidatePartyConfiguration(
+		const TArray<AActor*>& SpawnPoints, AActor* CounterTarget,
+		const FDataTableRowHandle& GuestTypeRow, int32 MaxPartySize) const;
 
 	// 퇴실한 손님 반환
 	UFUNCTION(BlueprintCallable, Category = "Guests|Pool")
@@ -58,4 +84,11 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly,
 		Category = "Guests|Pool")
 	TArray<TObjectPtr<AGuestCharacter>> ActiveGuests;
+	
+private:
+	// 일행 구성 중에만 사용하는 개별 NPC 활성화 함수
+	AGuestCharacter* AcquireGuestInternal(
+		AActor* SpawnPoint,
+		AActor* CounterTarget,
+		const FDataTableRowHandle& GuestTypeRow);
 };

@@ -10,6 +10,7 @@
 #include "GameFramework/PlayerController.h"
 #include "UObject/UnrealType.h"
 #include "Guests/GuestCharacter.h"
+#include "Guests/Party/GuestParty.h"
 #include "Rooms/RoomActor.h"
 #include "Housekeeping/Core/Carry/HKCarryComponent.h"
 
@@ -168,8 +169,11 @@ AGuestCharacter*UCheckInInteractionComponent::FindWaitingGuest() const
             continue;
         }
 
-        if (Guest->GetGuestState()
-            != EGuestState::WaitingForCheckIn)
+        UGuestParty* Party = Guest->GetParty();
+
+        if (!IsValid(Party) ||
+            Party->GetLeader() != Guest ||
+            !Party->CanCheckIn())
         {
             continue;
         }
@@ -203,8 +207,12 @@ bool UCheckInInteractionComponent::IsCurrentGuestReady() const
         return false;
     }
 
+    UGuestParty* Party = Guest->GetParty();
+
     return
-        Guest->GetGuestState() == EGuestState::WaitingForCheckIn
+        IsValid(Party)
+        && Party->GetLeader() == Guest
+        && Party->CanCheckIn()
         && Guest->GetInitialMoveTarget() == Target
         && FVector::DistSquared(
             Guest->GetActorLocation(),
@@ -411,14 +419,17 @@ void UCheckInInteractionComponent::GetRoomStatus(
         State == ERoomState::Assigned
         || State == ERoomState::Occupied;
 
+    UGuestParty* Party = CurrentGuest.IsValid()
+        ? CurrentGuest.Get()->GetParty()
+        : nullptr;
+
     bSelectable =
         bInsideCounter
         && bCheckInOpen
         && !bAssignedThisSession
         && IsCurrentGuestReady()
-        && State == ERoomState::Available
-        && IsValid(Room->GetArrivalTarget())
-        && Room->GetCapacity() > 0;
+        && IsValid(Party)
+        && Party->CanAssignRoom(Room);
 }
 
 bool UCheckInInteractionComponent::TryAssignRoomNumber(int32 RoomNumber)
@@ -444,7 +455,12 @@ bool UCheckInInteractionComponent::TryAssignRoomNumber(int32 RoomNumber)
         return false;
     }
 
-    const bool bSuccess = Guest->TryAssignRoom(Room);
+    UGuestParty* Party = Guest->GetParty();
+
+    const bool bSuccess =
+        IsValid(Party)
+        && Party->GetLeader() == Guest
+        && Party->TryAssignRoom(Room);
 
     if (bSuccess)
     {
