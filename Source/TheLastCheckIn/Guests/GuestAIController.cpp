@@ -160,17 +160,18 @@ void AGuestAIController::OnPossess(APawn* InPawn)
 		return;
 	}
 	
-	// 풀용 손님은 일행과 카운터 등록을 마친 뒤 풀 매니저에서 AI를 시작
-	if (Guest->ShouldStartInPool())
+	// AI는 풀 매니저가 이동 목적지 설정과 일행/카운터 등록을 마친 뒤 시작한다.
+	StopGuestAI();
+	if (!Guest->ShouldStartInPool())
 	{
-		StopGuestAI();
-		return;
+		//비풀 손님 미지원 경고 로그 추가
+		UE_LOG(LogTemp, Warning,
+			TEXT("Guest %s: Non-pooled guests (bStartInPool=false), including level-placed guests, "
+				"are not supported. AI will remain stopped. Use a guest class with bStartInPool=true "
+				"and spawn parties through GuestPoolManager::TryAcquireParty to initialize "
+				"the move target, party, and counter registration before starting AI."),
+			*GetNameSafe(Guest));
 	}
-
-	
-	StartGuestAI(Guest->GetInitialMoveTarget());
-	
-	
 }
 
 void AGuestAIController::UseWaitingAvoidance()

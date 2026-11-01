@@ -5,6 +5,7 @@
 #include "Guests/GuestAIController.h"
 #include "Rooms/RoomActor.h"
 #include "Engine/World.h"
+#include "TimerManager.h"
 
 UWorld* UGuestParty::GetWorld() const
 {

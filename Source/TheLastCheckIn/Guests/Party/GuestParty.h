@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "Guests/Data/GuestDataTypes.h"
-#include "TimerManager.h"
+#include "Engine/TimerHandle.h"
 #include "GuestParty.generated.h"
 
 class AActor;

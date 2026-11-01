@@ -12,6 +12,7 @@
 #include "Guests/Party/GuestParty.h"
 #include "Rooms/RoomActor.h"
 #include "Housekeeping/Core/Carry/HKCarryComponent.h"
+#include "TimerManager.h"
 
 // Sets default values for this component's properties
 UCheckInInteractionComponent::UCheckInInteractionComponent()
