@@ -4,69 +4,112 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
+#include "CheckIn/CheckInCounter.h"
+#include "Navigation/CrowdFollowingComponent.h"
+#include "NavigationSystem.h"
 
-bool AGuestAIController::SetGuestMoveTarget(AActor* NewTarget)
+
+AGuestAIController::AGuestAIController(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<
+		UCrowdFollowingComponent>(TEXT("PathFollowingComponent")))
 {
-	if (!IsValid(NewTarget))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] Move target is invalid."), *GetName());
-		
-		return false;
-	}
-	
-	UBlackboardComponent* BlackboardComponent = GetBlackboardComponent();
-	
-	if (BlackboardComponent == nullptr)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] Blackboard component is not initialized."), *GetName());
-		
-		return false;
-	}
-	
-	BlackboardComponent->SetValueAsObject(TEXT("TargetActor"),NewTarget);
-	
-	return true;
 }
+
 
 bool AGuestAIController::StartGuestAI(AActor* StartTarget)
 {
-	AGuestCharacter* Guest = Cast<AGuestCharacter>(GetPawn());
+    AGuestCharacter* Guest = Cast<AGuestCharacter>(GetPawn());
 
-	if (!IsValid(Guest) || !IsValid(StartTarget))
-	{
-		return false;
-	}
+    if (!IsValid(Guest) || !IsValid(StartTarget))
+    {
+        return false;
+    }
 
-	UBehaviorTree* BehaviorTree = Guest->GetGuestBehaviorTree();
+    UBehaviorTree* BehaviorTree = Guest->GetGuestBehaviorTree();
 
-	if (!IsValid(BehaviorTree) ||
-		!IsValid(BehaviorTree->BlackboardAsset))
-	{
-		return false;
-	}
+    if (!IsValid(BehaviorTree) ||
+        !IsValid(BehaviorTree->BlackboardAsset))
+    {
+        return false;
+    }
 
-	// 이전 실행과 이동 요청 정리
-	StopGuestAI();
+    StopGuestAI();
 
-	UBlackboardComponent* BlackboardComponent = nullptr;
+    UBlackboardComponent* BlackboardComponent = nullptr;
 
-	if (!UseBlackboard(
-		BehaviorTree->BlackboardAsset,
-		BlackboardComponent) ||
-		!IsValid(BlackboardComponent))
-	{
-		return false;
-	}
+    if (!UseBlackboard(
+            BehaviorTree->BlackboardAsset,
+            BlackboardComponent) ||
+        !IsValid(BlackboardComponent))
+    {
+        return false;
+    }
 
-	BlackboardComponent->SetValueAsObject(TEXT("TargetActor"), StartTarget);
+    const bool bUseCounterSlot =
+        Guest->GetGuestState() == EGuestState::MovingToCounter;
 
-	if (!RunBehaviorTree(BehaviorTree))
-	{
-		StopGuestAI();
-		return false;
-	}
+    BlackboardComponent->SetValueAsObject(
+        TEXT("TargetActor"), StartTarget);
 
-	return true;
+    BlackboardComponent->SetValueAsBool(
+        TEXT("UseCounterSlot"), bUseCounterSlot);
+
+    if (bUseCounterSlot)
+    {
+        const ACheckInCounter* Counter =
+            Cast<ACheckInCounter>(StartTarget);
+
+        FTransform Slot;
+
+        if (!IsValid(Counter) ||
+            !Counter->GetSlotTransformForGuest(Guest, Slot))
+        {
+            return false;
+        }
+
+        UNavigationSystemV1* Nav =
+            FNavigationSystem::GetCurrent<UNavigationSystemV1>(
+                GetWorld());
+
+        FNavLocation ProjectedLocation;
+
+        if (!Nav ||
+            !Nav->ProjectPointToNavigation(
+                Slot.GetLocation(),
+                ProjectedLocation,
+                FVector(30.0, 30.0, 200.0),
+                &Guest->GetNavAgentPropertiesRef()))
+        {
+            return false;
+        }
+
+        // 고정 자리가 옆으로 크게 밀린 경우 사용하지 않음.
+        if (FVector::DistSquared2D(
+                Slot.GetLocation(),
+                ProjectedLocation.Location) > FMath::Square(10.0))
+        {
+            return false;
+        }
+
+        BlackboardComponent->SetValueAsVector(
+            TEXT("MoveLocation"),
+            ProjectedLocation.Location);
+    }
+
+    if (UCrowdFollowingComponent* Crowd =
+        Cast<UCrowdFollowingComponent>(GetPathFollowingComponent()))
+    {
+        Crowd->SetCrowdSimulationState(
+            ECrowdSimulationState::Enabled);
+    }
+
+    if (!RunBehaviorTree(BehaviorTree))
+    {
+        StopGuestAI();
+        return false;
+    }
+
+    return true;
 }
 
 void AGuestAIController::StopGuestAI()
@@ -82,6 +125,17 @@ void AGuestAIController::StopGuestAI()
 
 	// 현재 진행 중인 이동 중단
 	StopMovement();
+	
+	if (UCrowdFollowingComponent* Crowd =
+	Cast<UCrowdFollowingComponent>(GetPathFollowingComponent()))
+	{
+		Crowd->SetCrowdSimulationState(ECrowdSimulationState::Disabled);
+	}
+	
+	if (AGuestCharacter* Guest = Cast<AGuestCharacter>(GetPawn()))
+	{
+		Guest->ReleaseMoveLocation();
+	}
 
 	// 이전 목적지 제거
 	UBlackboardComponent* BlackboardComponent = GetBlackboardComponent();
@@ -89,6 +143,7 @@ void AGuestAIController::StopGuestAI()
 	if (IsValid(BlackboardComponent))
 	{
 		BlackboardComponent->ClearValue(TEXT("TargetActor"));
+		BlackboardComponent->ClearValue(TEXT("MoveLocation"));
 	}
 
 	ClearFocus(EAIFocusPriority::Gameplay);
@@ -105,9 +160,10 @@ void AGuestAIController::OnPossess(APawn* InPawn)
 		return;
 	}
 	
-	// 풀용 손님은 ActivateFromPool에서 AI를 시작
+	// 풀용 손님은 일행과 카운터 등록을 마친 뒤 풀 매니저에서 AI를 시작
 	if (Guest->ShouldStartInPool())
 	{
+		StopGuestAI();
 		return;
 	}
 
@@ -115,4 +171,13 @@ void AGuestAIController::OnPossess(APawn* InPawn)
 	StartGuestAI(Guest->GetInitialMoveTarget());
 	
 	
+}
+
+void AGuestAIController::UseWaitingAvoidance()
+{
+	if (UCrowdFollowingComponent* Crowd =
+		Cast<UCrowdFollowingComponent>(GetPathFollowingComponent()))
+	{
+		Crowd->SetCrowdSimulationState(ECrowdSimulationState::ObstacleOnly);
+	}
 }

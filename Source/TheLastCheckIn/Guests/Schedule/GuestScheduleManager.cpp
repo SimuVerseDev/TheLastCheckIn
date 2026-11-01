@@ -13,8 +13,7 @@ AGuestScheduleManager::AGuestScheduleManager()
 {
     PrimaryActorTick.bCanEverTick = false;
 
-    SetRootComponent(
-        CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot")));
+    SetRootComponent(CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot")));
 }
 
 void AGuestScheduleManager::BeginPlay()
@@ -235,7 +234,8 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
 
         NextArrivalSeconds = CurrentSeconds + FMath::Max(1, SpawnRetryIntervalMinutes) * 60.0;
         // 손님이 모두 사용 중이면 같은 인원을 유지하고 반환을 기다림.
-        if (Result == EGuestAcquireResult::PoolExhausted)
+        if (Result == EGuestAcquireResult::PoolExhausted ||
+            Result == EGuestAcquireResult::CounterBusy)
         {
             return;
         }

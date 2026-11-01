@@ -76,6 +76,25 @@ public:
 	virtual FText GetInteractPrompt_Implementation(AActor* Interactor) const override;
 
 	virtual void Interact_Implementation(AActor* Interactor) override;
+	
+	// EQS가 탐색할 공통 목적지
+	UFUNCTION(BlueprintPure, Category = "Guests|Movement")
+	AActor* GetDestinationActor() const
+	{
+		return MoveTarget.Get();
+	}
+
+	// 해당 위치를 사용할 수 있는지 검사
+	bool CanReserveMoveLocation(const FVector& Location) const;
+
+	// EQS 결과를 실제로 예약
+	UFUNCTION(BlueprintCallable, Category = "Guests|Movement")
+	bool TryReserveMoveLocation(const FVector& Location);
+
+	void ReleaseMoveLocation();
+
+	// 행동 트리 Move To의 Acceptable Radius와 맞춰야 함
+	static constexpr float MoveAcceptanceRadius = 20.0f;
 
 protected:
 	virtual void BeginPlay() override;
@@ -118,5 +137,11 @@ protected:
 	FTimerHandle PoolReturnTimerHandle;
 
 	void ReturnToPool();
+	
+	UPROPERTY(Transient)
+	bool bHasReservedMoveLocation = false;
+
+	UPROPERTY(Transient)
+	FVector ReservedMoveLocation = FVector::ZeroVector;
 
 };

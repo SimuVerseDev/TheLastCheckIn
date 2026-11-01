@@ -10,6 +10,7 @@
 #include "CollisionShape.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardData.h"
+#include "CheckIn/CheckInCounter.h"
 
 AGuestPoolManager::AGuestPoolManager()
 {
@@ -84,38 +85,6 @@ AGuestCharacter* AGuestPoolManager::AcquireGuestInternal(AActor* SpawnPoint, AAc
 	return Guest;
 }
 
-AGuestCharacter* AGuestPoolManager::AcquireGuest(
-	AActor* SpawnPoint,
-	AActor* CounterTarget,
-	const FDataTableRowHandle& GuestTypeRow)
-{
-	TArray<AActor*> SpawnPoints;
-	SpawnPoints.Add(SpawnPoint);
-
-	TArray<AGuestCharacter*> Members;
-
-	// 한 명도 동일한 일행 생성 절차 사용
-	if (!AcquireParty(
-		SpawnPoints,
-		CounterTarget,
-		GuestTypeRow,
-		1,
-		Members))
-	{
-		return nullptr;
-	}
-
-	return Members[0];
-}
-
-bool AGuestPoolManager::AcquireParty(const TArray<AActor*>& SpawnPoints, AActor* CounterTarget,
-                                     const FDataTableRowHandle& GuestTypeRow, int32 PartySize,
-                                     TArray<AGuestCharacter*>& OutMembers)
-{
-	return TryAcquireParty(SpawnPoints, CounterTarget, GuestTypeRow, PartySize, OutMembers)
-		== EGuestAcquireResult::Success;
-}
-
 bool AGuestPoolManager::ValidatePartyConfiguration(
 	const TArray<AActor*>& SpawnPoints, AActor* CounterTarget,
 	const FDataTableRowHandle& GuestTypeRow, int32 MaxPartySize) const
@@ -124,6 +93,13 @@ bool AGuestPoolManager::ValidatePartyConfiguration(
 		MaxPartySize > 4 || 
 		SpawnPoints.Num() < MaxPartySize ||
 		!IsValid(CounterTarget))
+	{
+		return false;
+	}
+	
+	const ACheckInCounter* Counter =Cast<ACheckInCounter>(CounterTarget);
+
+	if (!IsValid(Counter) || !Counter->HasSlots(MaxPartySize))
 	{
 		return false;
 	}
@@ -178,6 +154,18 @@ EGuestAcquireResult AGuestPoolManager::TryAcquireParty(
 	if (!ValidatePartyConfiguration(SpawnPoints, CounterTarget, GuestTypeRow, PartySize))
 	{
 		return EGuestAcquireResult::InvalidConfiguration;
+	}
+	
+	ACheckInCounter* Counter = Cast<ACheckInCounter>(CounterTarget);
+
+	if (!IsValid(Counter))
+	{
+		return EGuestAcquireResult::InvalidConfiguration;
+	}
+
+	if (!Counter->CanAcceptParty())
+	{
+		return EGuestAcquireResult::CounterBusy;
 	}
 
 	// 사라진 NPC 참조 정리
@@ -244,11 +232,33 @@ EGuestAcquireResult AGuestPoolManager::TryAcquireParty(
 		OutMembers.Add(Guest);
 	}
 
-	// 전원이 등장에 성공했으면 같은 일행으로 연결
-	if (UGuestParty::Create(this, OutMembers) == nullptr)
+	UGuestParty* NewParty = UGuestParty::Create(this, OutMembers);
+
+	if (!IsValid(NewParty))
 	{
 		CancelCreatedGuests();
 		return EGuestAcquireResult::SpawnFailed;
+	}
+
+	if (!Counter->RegisterParty(NewParty))
+	{
+		CancelCreatedGuests();
+		return EGuestAcquireResult::CounterBusy;
+	}
+
+	// 일행과 카운터 등록을 끝낸 뒤 각 손님의 AI 시작.
+	for (AGuestCharacter* Member : OutMembers)
+	{
+		AGuestAIController* GuestController =
+			Cast<AGuestAIController>(Member->GetController());
+
+		if (!IsValid(GuestController) ||
+			!GuestController->StartGuestAI(Counter))
+		{
+			Counter->UnregisterParty(NewParty);
+			CancelCreatedGuests();
+			return EGuestAcquireResult::SpawnFailed;
+		}
 	}
 
 	return EGuestAcquireResult::Success;

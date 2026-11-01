@@ -14,6 +14,7 @@ enum class EGuestAcquireResult : uint8
 	Success,
 	InvalidConfiguration,
 	PoolExhausted,
+	CounterBusy,
 	SpawnFailed
 };
 
@@ -25,20 +26,6 @@ class THELASTCHECKIN_API AGuestPoolManager : public AActor
 public:
 	AGuestPoolManager();
 	
-	// 대기 중인 손님을 꺼내 입장시키기
-	UFUNCTION(BlueprintCallable, Category = "Guests|Pool")
-	AGuestCharacter* AcquireGuest(
-		AActor* SpawnPoint,
-		AActor* CounterTarget,
-		const FDataTableRowHandle& GuestTypeRow);
-	
-	// 여러 위치에서 손님을 꺼내 하나의 일행으로 묶음
-	bool AcquireParty(
-		const TArray<AActor*>& SpawnPoints,
-		AActor* CounterTarget,
-		const FDataTableRowHandle& GuestTypeRow,
-		int32 PartySize,
-		TArray<AGuestCharacter*>& OutMembers);
 
 	// 실패 원인을 일정 관리자에게 전달. 기존 AcquireParty 호출도 유지.
 	EGuestAcquireResult TryAcquireParty(

@@ -5,6 +5,13 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Pool/GuestPoolManager.h"
 #include "Guests/Party/GuestParty.h"
+#include "Components/BoxComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "CollisionQueryParams.h"
+#include "CollisionShape.h"
+#include "CheckIn/CheckInCounter.h"
 
 AGuestCharacter::AGuestCharacter()
 {
@@ -26,8 +33,32 @@ bool AGuestCharacter::NotifyDestinationReached(AActor* ReachedTarget)
 	switch (GuestState)
 	{
 	case EGuestState::MovingToCounter:
-		GuestState = EGuestState::WaitingForCheckIn;
-		break;
+		{
+			const ACheckInCounter* Counter = Cast<ACheckInCounter>(ReachedTarget);
+
+			FTransform Slot;
+
+			if (!IsValid(Counter) ||
+				!Counter->GetSlotTransformForGuest(this, Slot))
+			{
+				return false;
+			}
+
+			const FRotator FacingRotation(
+				0.0f,
+				Slot.Rotator().Yaw,
+				0.0f);
+
+			SetActorRotation(FacingRotation);
+
+			if (AController* GuestController = GetController())
+			{
+				GuestController->SetControlRotation(FacingRotation);
+			}
+
+			GuestState = EGuestState::WaitingForCheckIn;
+			break;
+		}
 
 	case EGuestState::MovingToRoom:
 		GuestState = EGuestState::Staying;
@@ -52,6 +83,14 @@ bool AGuestCharacter::NotifyDestinationReached(AActor* ReachedTarget)
 	default:
 		return false;
 	}
+	
+	GetCharacterMovement()->StopMovementImmediately();
+
+	if (AGuestAIController* GuestController =Cast<AGuestAIController>(GetController()))
+	{
+		GuestController->UseWaitingAvoidance();
+	}
+
 
 	MoveTarget = nullptr;
 	return true;
@@ -109,14 +148,7 @@ bool AGuestCharacter::ActivateFromPool(const FVector& SpawnLocation, const FRota
 	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 
 	GuestController->SetActorTickEnabled(true);
-
-	if (!GuestController->StartGuestAI(CounterTarget))
-	{
-		// 입장 시작에 실패하면 다시 풀 대기로 복구
-		GuestState = EGuestState::Inactive;
-		DeactivateToPool();
-		return false;
-	}
+	
 
 	return true;
 	
@@ -136,6 +168,8 @@ bool AGuestCharacter::DeactivateToPool()
 	{
 		return false;
 	}
+	
+	ReleaseMoveLocation();
 	
 	GetWorldTimerManager().ClearTimer(PoolReturnTimerHandle);
 	GuestState = EGuestState::Inactive;
@@ -326,4 +360,165 @@ bool AGuestCharacter::BeginMoveTo(
 	}
 
 	return true;
+}
+
+bool AGuestCharacter::CanReserveMoveLocation(const FVector& Location) const
+{
+    UWorld* World = GetWorld();
+    AActor* Destination = MoveTarget.Get();
+
+    if (!World || !IsValid(Destination) || Location.ContainsNaN())
+    {
+        return false;
+    }
+
+    // 목적지에 지정된 도착 가능 영역 찾기
+	const UCapsuleComponent* Capsule = GetCapsuleComponent();
+	const float Radius = Capsule->GetScaledCapsuleRadius();
+	const float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+
+	if (const ACheckInCounter* Counter =
+		Cast<ACheckInCounter>(Destination))
+	{
+		FTransform Slot;
+
+		if (!Counter->GetSlotTransformForGuest(this, Slot))
+		{
+			return false;
+		}
+
+		// 이 손님에게 배정된 고정 자리인지 확인.
+		if (FVector::DistSquared2D(
+				Location, Slot.GetLocation()) > FMath::Square(10.0) ||
+			FMath::Abs(Location.Z - Slot.GetLocation().Z) > 200.0)
+		{
+			return false;
+		}
+	}
+	else
+	{
+		// 객실·로비 등은 기존 EQS 도착 영역 검사.
+		UBoxComponent* ArrivalArea = nullptr;
+		TInlineComponentArray<UBoxComponent*> Boxes(Destination);
+
+		for (UBoxComponent* Box : Boxes)
+		{
+			if (Box->ComponentHasTag(TEXT("GuestArrivalArea")))
+			{
+				ArrivalArea = Box;
+				break;
+			}
+		}
+
+		if (!IsValid(ArrivalArea))
+		{
+			return false;
+		}
+
+		const FTransform AreaTransform =
+			ArrivalArea->GetComponentTransform();
+
+		const FVector LocalPoint =
+			AreaTransform.InverseTransformPosition(Location);
+
+		const FVector Extent = ArrivalArea->GetUnscaledBoxExtent();
+		const FVector Scale = AreaTransform.GetScale3D();
+
+		const double PaddingX =
+			Radius / FMath::Max(FMath::Abs(Scale.X), 0.001);
+
+		const double PaddingY =
+			Radius / FMath::Max(FMath::Abs(Scale.Y), 0.001);
+
+		if (FMath::Abs(LocalPoint.X) + PaddingX > Extent.X ||
+			FMath::Abs(LocalPoint.Y) + PaddingY > Extent.Y ||
+			FMath::Abs(LocalPoint.Z) > Extent.Z)
+		{
+			return false;
+		}
+	}
+
+    // 후보 좌표는 바닥 위치이므로 캡슐 중심 높이로 보정
+    const FVector CapsuleCenter =
+        Location + FVector(0.0, 0.0, HalfHeight + 5.0f);
+
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    // 벽, 가구, 현재 서 있는 손님과 충돌하면 제외
+    if (World->OverlapBlockingTestByProfile(
+            CapsuleCenter,
+            FQuat::Identity,
+            Capsule->GetCollisionProfileName(),
+            FCollisionShape::MakeCapsule(Radius, HalfHeight),
+            Params))
+    {
+        return false;
+    }
+
+    // 다른 일행까지 포함하여 예약된 자리 검사
+    for (TActorIterator<AGuestCharacter> It(World); It; ++It)
+    {
+        const AGuestCharacter* Other = *It;
+
+        if (!IsValid(Other) ||
+            Other == this ||
+            !Other->bHasReservedMoveLocation)
+        {
+            continue;
+        }
+
+        const UCapsuleComponent* OtherCapsule =
+            Other->GetCapsuleComponent();
+
+        const float OtherRadius =
+            OtherCapsule->GetScaledCapsuleRadius();
+
+        const float OtherHalfHeight =
+            OtherCapsule->GetScaledCapsuleHalfHeight();
+
+        const FVector OtherCenter =
+            Other->ReservedMoveLocation +
+            FVector(0.0, 0.0, OtherHalfHeight + 5.0f);
+
+        // 서로 다른 층의 자리는 간섭하지 않음
+        const bool bHeightOverlaps =
+            FMath::Abs(CapsuleCenter.Z - OtherCenter.Z) <
+            HalfHeight + OtherHalfHeight;
+
+        // 도착 허용 반경까지 고려해서 자리 간격 확보
+        const float RequiredDistance =
+            Radius + OtherRadius +
+            MoveAcceptanceRadius * 2.0f + 10.0f;
+
+        if (bHeightOverlaps &&
+            FVector::DistSquared2D(
+                Location, Other->ReservedMoveLocation) <
+                FMath::Square(RequiredDistance))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool AGuestCharacter::TryReserveMoveLocation(
+    const FVector& Location)
+{
+    // EQS 계산 이후 다른 손님이 예약했을 수 있으므로 재검사
+    if (!CanReserveMoveLocation(Location))
+    {
+        return false;
+    }
+
+    ReservedMoveLocation = Location;
+    bHasReservedMoveLocation = true;
+    return true;
+}
+
+void AGuestCharacter::ReleaseMoveLocation()
+{
+    bHasReservedMoveLocation = false;
+    ReservedMoveLocation = FVector::ZeroVector;
 }
