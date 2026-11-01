@@ -105,17 +105,8 @@ void UHotelPhaseSubsystem::HandleTimeAdvanced(double PreviousSeconds, double Cur
 		return;
 	}
 
-	const UHotelPhaseSettings* Settings = UHotelPhaseSettings::Get();
 	const int32 Hour = Clock->GetHour();
-
 	EHotelPhase TargetPhase = EvaluatePhase(Hour);
-
-	if (TargetPhase == EHotelPhase::Night
-		&& CurrentDay == 1
-		&& Settings->bSkipNightOnFirstDay)
-	{
-		TargetPhase = EHotelPhase::Settlement;
-	}
 
 	if (TargetPhase == EHotelPhase::Settlement)
 	{
