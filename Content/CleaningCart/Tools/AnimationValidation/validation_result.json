@@ -1,0 +1,44 @@
+{
+  "level": "/Game/CleaningCart/Test/Maps/Lvl_Cart_test",
+  "method": "PIE; aim using player controller; invoke CartInteract bound to E. No hardware keyboard injection.",
+  "results": {
+    "initial": {
+      "holding": false,
+      "alpha": 0
+    },
+    "cartHeld": {
+      "holding": true,
+      "alpha": 1,
+      "bodyHandsRaised": true,
+      "firstPersonHandsRaised": true
+    },
+    "cartReleased": {
+      "holding": false,
+      "alpha": 0,
+      "originalArmPoseRestored": true
+    },
+    "repeatCartCycle": "passed",
+    "mop": {
+      "holding": false,
+      "alpha": 0
+    },
+    "cloth": {
+      "holding": false,
+      "alpha": 0
+    },
+    "trashBin": {
+      "holding": false,
+      "alpha": 0
+    },
+    "finalEmptyHands": {
+      "holding": false,
+      "alpha": 0
+    }
+  },
+  "limitations": [
+    "Hands do not yet meet the cart surface because runtime carry distance and pose alignment need adjustment.",
+    "Physical E key input was not injected; the connected interaction function was exercised in PIE."
+  ],
+  "pieStopped": true,
+  "temporaryHelperRemoved": true
+}
