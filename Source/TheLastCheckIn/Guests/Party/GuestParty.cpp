@@ -489,6 +489,7 @@ void UGuestParty::Advance(double CurrentSeconds)
             AssignedRoom->MarkOccupied(StayId))
         {
             State = EGuestPartyState::Staying;
+            OnCheckedIn.Broadcast(this);
         }
     }
 

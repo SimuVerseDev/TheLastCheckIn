@@ -130,4 +130,6 @@ private:
     UFUNCTION()
     void HandlePartyRoomAssigned(UGuestParty* Party);
     
+    UFUNCTION()
+    void HandlePartyCheckedIn(UGuestParty* Party);
 };
