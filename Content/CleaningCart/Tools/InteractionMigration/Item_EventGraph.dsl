@@ -1,0 +1,20 @@
+(event Housekeeping|Interaction|EventInteract (Interactor)
+  (CallFunction|ItemToggle :Interactor Interactor))
+(event Housekeeping|Interaction|EventOnInteractFocusBegin (Interactor)
+  (CallFunction|ShowItemPrompt :Interactor Interactor))
+(event Housekeeping|Interaction|EventOnInteractFocusEnd (Interactor)
+  (CallFunction|HideItemPrompt))
+(event EventTick (DeltaSeconds)
+  (if (Variables|Default|GetItemCarrying)
+    (CallFunction|ItemUpdateCarry))
+  (Utilities|IsValid (Variables|Default|GetItemPickupPrompt)
+    (:"Is Valid"
+      (bind available (CallFunction|CanPickUp))
+      (if available
+        (Widget|SetVisibility (Variables|Default|GetItemPickupPrompt) "HitTestInvisible")
+        (else
+          (Widget|SetVisibility (Variables|Default|GetItemPickupPrompt) "Collapsed"))))))
+(event EventEndPlay (EndPlayReason)
+  (CallFunction|HideItemPrompt)
+  (if (Variables|Default|GetItemCarrying)
+    (Physics|Components|PhysicsHandle|ReleaseComponent (Variables|Default|GetItemGrabHandle))))
