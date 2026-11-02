@@ -77,6 +77,9 @@ void AGuestScheduleManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
             Party->OnRoomAssigned.RemoveDynamic(
                 this,
                 &AGuestScheduleManager::HandlePartyRoomAssigned);
+            Party->OnCheckedIn.RemoveDynamic(
+                this,
+                &AGuestScheduleManager::HandlePartyCheckedIn);
         }
     }
 
@@ -109,6 +112,9 @@ void AGuestScheduleManager::HandleTimeAdvanced(
             Party->OnRoomAssigned.RemoveDynamic(
                 this,
                 &AGuestScheduleManager::HandlePartyRoomAssigned);
+            Party->OnCheckedIn.RemoveDynamic(
+                this,
+                &AGuestScheduleManager::HandlePartyCheckedIn);
 
             ActiveParties.RemoveAtSwap(Index);
         }
@@ -269,6 +275,10 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
     NewParty->OnRoomAssigned.AddUniqueDynamic(
         this,
         &AGuestScheduleManager::HandlePartyRoomAssigned);
+    
+    NewParty->OnCheckedIn.AddUniqueDynamic(
+        this,
+        &AGuestScheduleManager::HandlePartyCheckedIn);
 
     ActiveParties.Add(NewParty);
 
@@ -313,7 +323,15 @@ void AGuestScheduleManager::HandlePartyRoomAssigned(UGuestParty* Party)
         CheckoutEndHour * 60);
 
     Party->SetCheckoutTime(NextDayStart + CheckoutMinuteOfDay * 60.0);
-    
+}
+
+void AGuestScheduleManager::HandlePartyCheckedIn(UGuestParty* Party)
+{
+    if (!IsValid(Party))
+    {
+        return;
+    }
+
     ARoomActor* Room = Party->GetAssignedRoom();
     UHotelEconomySubsystem* Economy =
         GetWorld()->GetSubsystem<UHotelEconomySubsystem>();
