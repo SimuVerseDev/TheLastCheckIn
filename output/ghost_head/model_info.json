@@ -1,0 +1,11 @@
+{
+  "objects": 238,
+  "vertices": 74516,
+  "triangles": 147764,
+  "rigged": false,
+  "unit": "meters",
+  "dimensions_m": {
+    "head_height": 0.293,
+    "with_hair_height": 0.405
+  }
+}
