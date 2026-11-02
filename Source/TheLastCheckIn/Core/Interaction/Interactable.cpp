@@ -1,5 +1,10 @@
 #include "Core/Interaction/Interactable.h"
 
+bool IInteractable::IsInteractionActive_Implementation(AActor* Interactor) const
+{
+	return false;
+}
+
 bool IInteractable::CanInteract_Implementation(AActor* Interactor) const
 {
 	return true;

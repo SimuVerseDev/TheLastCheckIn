@@ -31,6 +31,11 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Housekeeping|Interaction")
 	void Interact(AActor* Interactor);
 
+	/** True while this actor owns an ongoing interaction (for example, pushing a cart).
+	 * The next E press is routed here even when the actor leaves the view trace. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Housekeeping|Interaction")
+	bool IsInteractionActive(AActor* Interactor) const;
+
 	/*
 	Use : LMB
 	*/
@@ -56,6 +61,7 @@ public:
 	virtual FText GetInteractPrompt_Implementation(AActor* Interactor) const;
 	virtual float GetInteractHoldDuration_Implementation(AActor* Interactor) const;
 	virtual void Interact_Implementation(AActor* Interactor);
+	virtual bool IsInteractionActive_Implementation(AActor* Interactor) const;
 	virtual bool CanUse_Implementation(AActor* Interactor) const;
 	virtual FText GetUsePrompt_Implementation(AActor* Interactor) const;
 	virtual bool Use_Implementation(AActor* Interactor);

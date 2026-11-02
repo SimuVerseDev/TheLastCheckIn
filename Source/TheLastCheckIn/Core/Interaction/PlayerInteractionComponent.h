@@ -66,6 +66,8 @@ private:
 	void CancelHold();
 	void ShowDebugPrompt() const;
 	void HandleInteractStarted();
+	void ExecuteInteraction(AActor* Target);
+	AActor* GetActiveInteraction();
 	void HandleUseStarted();
 	void HandleUseCompleted();
 
@@ -76,6 +78,7 @@ private:
 	TObjectPtr<UEnhancedInputComponent> InteractionInput;
 	TWeakObjectPtr<APlayerController> InputOwner;
 	TWeakObjectPtr<AActor> FocusedActor;
+	TWeakObjectPtr<AActor> ActiveInteraction;
 	TWeakObjectPtr<AActor> HoldTarget;
 	float HoldElapsed = 0.0f;
 	float HoldDuration = 0.0f;
