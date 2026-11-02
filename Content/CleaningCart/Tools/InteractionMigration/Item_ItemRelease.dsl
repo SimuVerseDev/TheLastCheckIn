@@ -1,0 +1,7 @@
+(fn ItemRelease ()
+  (Physics|Components|PhysicsHandle|ReleaseComponent (Variables|Default|GetItemGrabHandle))
+  (Variables|Default|SetItemCarrying false)
+  (Variables|Default|SetItemController 0)
+  (Collision|SetCollisionEnabled (Variables|Default|GetPickupBody) "QueryAndPhysics")
+  (Physics|SetSimulatePhysics (Variables|Default|GetPickupBody) true)
+  (CallFunction|EndCarry))

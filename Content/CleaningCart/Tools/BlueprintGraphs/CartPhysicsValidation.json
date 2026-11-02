@@ -1,0 +1,106 @@
+{
+  "date": "2026-10-29T13:28:07.930Z",
+  "fix": "Disable collision on CartAppearance child actor before enabling PickupBody physics; hide and remove visual-only tool previews at BeginPlay.",
+  "verification": [
+    {
+      "run": 1,
+      "pos1": {
+        "location": {
+          "x": 250.00000015721213,
+          "y": 0.000040142445627324425,
+          "z": 68.00000001165898
+        },
+        "rotation": {
+          "pitch": 1.3698966879665297e-13,
+          "yaw": -0.000004690928335548957,
+          "roll": -4.860112312599084e-11
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "pos2": {
+        "location": {
+          "x": 250.00000015721213,
+          "y": 0.000040142445627324425,
+          "z": 68.00000001165898
+        },
+        "rotation": {
+          "pitch": 1.3698966879665297e-13,
+          "yaw": -0.000004690928335548957,
+          "roll": -4.860112312599084e-11
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "items": [
+        {
+          "tool": "Mop",
+          "count": 1,
+          "stored": {
+            "IsStored": true
+          }
+        },
+        {
+          "tool": "Cloth",
+          "count": 1,
+          "stored": {
+            "IsStored": true
+          }
+        },
+        {
+          "tool": "TrashBin",
+          "count": 1,
+          "stored": {
+            "IsStored": true
+          }
+        }
+      ],
+      "bodyCollision": "QueryAndPhysics",
+      "bodyPhysics": true,
+      "previewCount": 0
+    },
+    {
+      "run": 2,
+      "pos": {
+        "location": {
+          "x": 250.00000015721213,
+          "y": 0.000040142445627324425,
+          "z": 68.00000001165898
+        },
+        "rotation": {
+          "pitch": 1.3698966879665297e-13,
+          "yaw": -0.000004690928335548957,
+          "roll": -4.860112312599084e-11
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "later": {
+        "location": {
+          "x": 250.00000015721213,
+          "y": 0.000040142445627324425,
+          "z": 68.00000001165898
+        },
+        "rotation": {
+          "pitch": 1.3698966879665297e-13,
+          "yaw": -0.000004690928335548957,
+          "roll": -4.860112312599084e-11
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      }
+    }
+  ]
+}

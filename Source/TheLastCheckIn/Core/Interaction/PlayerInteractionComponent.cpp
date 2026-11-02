@@ -30,6 +30,7 @@ Virtual
 */
 void UPlayerInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	ActiveInteraction.Reset();
 	SetFocus(nullptr);
 	if (APlayerController* PC = InputOwner.Get())
 	{
@@ -110,6 +111,11 @@ void UPlayerInteractionComponent::EnsureInputSetup(APlayerController* PC)
 
 void UPlayerInteractionComponent::UpdateFocus(APlayerController* PC)
 {
+	if (AActor* Active = GetActiveInteraction())
+	{
+		SetFocus(Active);
+		return;
+	}
 	const TArray<IInteractionExtension*> Extensions = GetExtensions();
 	for (const IInteractionExtension* Extension : Extensions)
 	{
@@ -139,16 +145,35 @@ void UPlayerInteractionComponent::UpdateFocus(APlayerController* PC)
 	}
 	Params.AddIgnoredActors(IgnoredActors);
 	
-	FHitResult Hit;
-	const bool bHit = GetWorld()->SweepSingleByChannel(Hit, ViewLocation, TraceEnd, FQuat::Identity, TraceChannel, FCollisionShape::MakeSphere(TraceRadius), Params);
-	AActor* HitActor = bHit ? Hit.GetActor() : nullptr;
-	if (CanFocus(HitActor))
+	TArray<FHitResult> Hits;
+	GetWorld()->SweepMultiByChannel(Hits, ViewLocation, TraceEnd, FQuat::Identity, TraceChannel,
+		FCollisionShape::MakeSphere(TraceRadius), Params);
+	AActor* OverlapTarget = nullptr;
+	FVector RayEnd = TraceEnd;
+	for (const FHitResult& Hit : Hits)
 	{
-		SetFocus(HitActor);
+		if (Hit.bBlockingHit)
+		{
+			RayEnd = Hit.Location;
+			if (CanFocus(Hit.GetActor()))
+			{
+				SetFocus(Hit.GetActor());
+				return;
+			}
+		}
+		else if (!OverlapTarget && CanFocus(Hit.GetActor()))
+		{
+			// An overlapping cart body remains selectable without hiding the items it carries.
+			// Multi traces stop at the first blocking hit, so targets behind walls stay excluded.
+			OverlapTarget = Hit.GetActor();
+		}
+	}
+	if (OverlapTarget)
+	{
+		SetFocus(OverlapTarget);
 		return;
 	}
 
-	const FVector RayEnd = bHit ? Hit.Location : TraceEnd;
 	for (const IInteractionExtension* Extension : Extensions)
 	{
 		AActor* Found = Extension->FindInteractionTarget(ViewLocation, RayEnd);
@@ -204,7 +229,7 @@ void UPlayerInteractionComponent::UpdateHold(float DeltaTime)
 	if (HoldElapsed >= HoldDuration)
 	{
 		HoldTarget.Reset();
-		IInteractable::Execute_Interact(Target, GetOwner());
+		ExecuteInteraction(Target);
 	}
 }
 
@@ -262,7 +287,11 @@ void UPlayerInteractionComponent::ShowDebugPrompt() const
 void UPlayerInteractionComponent::HandleInteractStarted()
 {
 	AActor* Pawn = GetOwner();
-	AActor* Target = FocusedActor.Get();
+	AActor* Target = GetActiveInteraction();
+	if (!Target)
+	{
+		Target = FocusedActor.Get();
+	}
 	if (!IsInteractable(Target) || !IInteractable::Execute_CanInteract(Target, Pawn))
 	{
 		return;
@@ -270,7 +299,7 @@ void UPlayerInteractionComponent::HandleInteractStarted()
 	const float Duration = IInteractable::Execute_GetInteractHoldDuration(Target, Pawn);
 	if (Duration <= 0.0f)
 	{
-		IInteractable::Execute_Interact(Target, Pawn);
+		ExecuteInteraction(Target);
 	}
 	else
 	{
@@ -278,6 +307,25 @@ void UPlayerInteractionComponent::HandleInteractStarted()
 		HoldDuration = Duration;
 		HoldElapsed = 0.0f;
 	}
+}
+
+AActor* UPlayerInteractionComponent::GetActiveInteraction()
+{
+	AActor* Target = ActiveInteraction.Get();
+	if (IsValid(Target) && IsInteractable(Target)
+		&& IInteractable::Execute_IsInteractionActive(Target, GetOwner()))
+	{
+		return Target;
+	}
+	ActiveInteraction.Reset();
+	return nullptr;
+}
+
+void UPlayerInteractionComponent::ExecuteInteraction(AActor* Target)
+{
+	IInteractable::Execute_Interact(Target, GetOwner());
+	ActiveInteraction = IsValid(Target)
+		&& IInteractable::Execute_IsInteractionActive(Target, GetOwner()) ? Target : nullptr;
 }
 
 void UPlayerInteractionComponent::HandleUseStarted()
