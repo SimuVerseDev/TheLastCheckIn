@@ -4,6 +4,7 @@
 #include "Engine/World.h"
 
 #include "Core/Time/GameClockSubsystem.h"
+#include "Core/Economy/HotelEconomySubsystem.h"
 #include "Guests/GuestCharacter.h"
 #include "Guests/Pool/GuestPoolManager.h"
 #include "Guests/Party/GuestParty.h"
@@ -312,4 +313,15 @@ void AGuestScheduleManager::HandlePartyRoomAssigned(UGuestParty* Party)
         CheckoutEndHour * 60);
 
     Party->SetCheckoutTime(NextDayStart + CheckoutMinuteOfDay * 60.0);
+    
+    ARoomActor* Room = Party->GetAssignedRoom();
+    UHotelEconomySubsystem* Economy =
+        GetWorld()->GetSubsystem<UHotelEconomySubsystem>();
+    if (IsValid(Room) && IsValid(Economy))
+    {
+        /*
+        인당 부과
+        */
+        Economy->AddIncome(Room->GetBaseRoomRate() * Party->GetSize());
+    }
 }
