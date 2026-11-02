@@ -209,8 +209,9 @@ void AHKBlanketActor::SolveTether()
 	const int32 CountX = SegmentsX + 1;
 	const int32 GrabX = GrabbedIndex % CountX;
 	const int32 GrabY = GrabbedIndex / CountX;
-	const float DX = Size.X / SegmentsX;
-	const float DY = Size.Y / SegmentsY;
+	const FVector Scale = GetActorScale3D();
+	const float DX = Size.X * Scale.X / SegmentsX;
+	const float DY = Size.Y * Scale.Y / SegmentsY;
 	const FVector Anchor = Positions[GrabbedIndex];
 
 	for (int32 I = 0; I < Positions.Num(); ++I)
@@ -524,9 +525,10 @@ void AHKBlanketActor::MakeBed(const FTransform& Target, float Duration)
 
 	const int32 CountX = SegmentsX + 1;
 	const int32 CountY = SegmentsY + 1;
-	const float DX = Size.X / SegmentsX;
-	const float DY = Size.Y / SegmentsY;
-	const FVector Origin(-Size.X * 0.5f, -Size.Y * 0.5f, 0.0f);
+	const FVector Scale = GetActorScale3D();
+	const float DX = Size.X * Scale.X / SegmentsX;
+	const float DY = Size.Y * Scale.Y / SegmentsY;
+	const FVector Origin(-Size.X * Scale.X * 0.5f, -Size.Y * Scale.Y * 0.5f, 0.0f);
 
 	MakeStartPositions = Positions;
 	MakeTargetPositions.SetNum(Positions.Num());
@@ -550,10 +552,11 @@ void AHKBlanketActor::Scramble(FRandomStream& Random, const FVector& Center, flo
 
 	const int32 LayersX = Random.RandRange(1, 3);
 	const int32 LayersY = Random.RandRange(1, 2);
-	const float FoldX = Size.X / LayersX;
-	const float FoldY = Size.Y / LayersY;
-	const float DX = Size.X / SegmentsX;
-	const float DY = Size.Y / SegmentsY;
+	const FVector Scale = GetActorScale3D();
+	const float FoldX = Size.X * Scale.X / LayersX;
+	const float FoldY = Size.Y * Scale.Y / LayersY;
+	const float DX = Size.X * Scale.X / SegmentsX;
+	const float DY = Size.Y * Scale.Y / SegmentsY;
 	const float LayerGap = Thickness * 0.5f;
 
 	const FQuat Yaw(FVector::UpVector, FMath::DegreesToRadians(Random.FRandRange(0.0f, 360.0f)));
