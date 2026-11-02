@@ -111,18 +111,21 @@ void UPlayerInteractionComponent::EnsureInputSetup(APlayerController* PC)
 
 void UPlayerInteractionComponent::UpdateFocus(APlayerController* PC)
 {
-	if (AActor* Active = GetActiveInteraction())
-	{
-		SetFocus(Active);
-		return;
-	}
+	/*
+	상호작용 중(아이템을 든 상태)이어도 시선 검사는 계속한다.
+	E는 HandleInteractStarted에서 진행 중인 대상으로 가고, 사용(LMB) 가능한 대상만 포커스를 가져간다.
+	*/
+	AActor* Active = GetActiveInteraction();
 	const TArray<IInteractionExtension*> Extensions = GetExtensions();
-	for (const IInteractionExtension* Extension : Extensions)
+	if (!Active)
 	{
-		if (Extension->BlocksFocus())
+		for (const IInteractionExtension* Extension : Extensions)
 		{
-			SetFocus(nullptr);
-			return;
+			if (Extension->BlocksFocus())
+			{
+				SetFocus(nullptr);
+				return;
+			}
 		}
 	}
 
@@ -143,11 +146,16 @@ void UPlayerInteractionComponent::UpdateFocus(APlayerController* PC)
 	{
 		Extension->GetIgnoredActors(IgnoredActors);
 	}
+	if (Active)
+	{
+		IgnoredActors.Add(Active); // 손에 든 아이템이 조준을 가리지 않도록
+	}
 	Params.AddIgnoredActors(IgnoredActors);
-	
+
 	TArray<FHitResult> Hits;
 	GetWorld()->SweepMultiByChannel(Hits, ViewLocation, TraceEnd, FQuat::Identity, TraceChannel,
 		FCollisionShape::MakeSphere(TraceRadius), Params);
+	AActor* Found = nullptr;
 	AActor* OverlapTarget = nullptr;
 	FVector RayEnd = TraceEnd;
 	for (const FHitResult& Hit : Hits)
@@ -157,8 +165,8 @@ void UPlayerInteractionComponent::UpdateFocus(APlayerController* PC)
 			RayEnd = Hit.Location;
 			if (CanFocus(Hit.GetActor()))
 			{
-				SetFocus(Hit.GetActor());
-				return;
+				Found = Hit.GetActor();
+				break;
 			}
 		}
 		else if (!OverlapTarget && CanFocus(Hit.GetActor()))
@@ -168,22 +176,30 @@ void UPlayerInteractionComponent::UpdateFocus(APlayerController* PC)
 			OverlapTarget = Hit.GetActor();
 		}
 	}
-	if (OverlapTarget)
+	if (!Found)
 	{
-		SetFocus(OverlapTarget);
-		return;
+		Found = OverlapTarget;
 	}
 
-	for (const IInteractionExtension* Extension : Extensions)
+	if (!Found)
 	{
-		AActor* Found = Extension->FindInteractionTarget(ViewLocation, RayEnd);
-		if (CanFocus(Found))
+		for (const IInteractionExtension* Extension : Extensions)
 		{
-			SetFocus(Found);
-			return;
+			AActor* Target = Extension->FindInteractionTarget(ViewLocation, RayEnd);
+			if (CanFocus(Target))
+			{
+				Found = Target;
+				break;
+			}
 		}
 	}
-	SetFocus(nullptr);
+
+	if (Active)
+	{
+		SetFocus(Found && IInteractable::Execute_CanUse(Found, Pawn) ? Found : Active);
+		return;
+	}
+	SetFocus(Found);
 }
 
 void UPlayerInteractionComponent::SetFocus(AActor* NewFocus)
