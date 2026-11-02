@@ -5,6 +5,9 @@
 #include "Core/Interaction/Interactable.h"
 #include "CheckInCounter.generated.h"
 
+
+class AGuestCharacter;
+class UGuestParty;
 /*
 체크인 카운터 : 공통 상호작용(E)으로 체크인 UI 열기
 */
@@ -28,4 +31,24 @@ public:
 	E : 체크인 UI 열기
 	*/
 	virtual void Interact_Implementation(AActor* Interactor) override;
+	
+	bool HasSlots(int32 RequiredCount) const;
+	bool CanAcceptParty() const;
+
+	bool RegisterParty(UGuestParty* InParty);
+	void UnregisterParty(UGuestParty* InParty);
+
+	UGuestParty* GetCurrentParty() const;
+
+	bool GetSlotTransformForGuest(
+		const AGuestCharacter* Guest,
+		FTransform& OutTransform) const;
+	
+private:
+	bool GetSlotTransform(
+		int32 SlotIndex,
+		FTransform& OutTransform) const;
+
+	UPROPERTY(Transient, VisibleInstanceOnly, Category = "CheckIn")
+	TWeakObjectPtr<UGuestParty> CurrentParty;
 };

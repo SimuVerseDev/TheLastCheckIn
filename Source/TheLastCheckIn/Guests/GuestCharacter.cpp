@@ -2,9 +2,16 @@
 #include "GuestAIController.h"
 #include "Data/GuestDataTypes.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Rooms/RoomActor.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Pool/GuestPoolManager.h"
+#include "Guests/Party/GuestParty.h"
+#include "Components/BoxComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "CollisionQueryParams.h"
+#include "CollisionShape.h"
+#include "CheckIn/CheckInCounter.h"
 
 AGuestCharacter::AGuestCharacter()
 {
@@ -15,96 +22,10 @@ AGuestCharacter::AGuestCharacter()
 }
 
 
-bool AGuestCharacter::TryAssignRoom(ARoomActor* NewRoom)
-{
-	if (GuestState!=EGuestState::WaitingForCheckIn)
-	{
-		return false;
-	}
-	
-	if (!IsValid(NewRoom))
-	{
-		return false;
-	}
-	
-	//중복 배정 방지
-	if (AssignedRoom != nullptr || StayId.IsValid())
-	{
-		return false;
-	}
-	
-	AGuestAIController* GuestController = 
-		Cast<AGuestAIController>(GetController());
-	
-	if (!IsValid(GuestController))
-	{
-		return false;
-	}
-	
-	AActor* RoomTarget = NewRoom->GetArrivalTarget();
-
-	if (!IsValid(RoomTarget))
-	{
-		return false;
-	}
-	
-	const FGuid NewStayId = FGuid::NewGuid();
-	
-	if (!NewRoom->TryReserve(NewStayId))
-	{
-		return false;
-	}
-
-	AssignedRoom = NewRoom;
-	StayId = NewStayId;
-	
-	GuestState = EGuestState::MovingToRoom;
-	
-	if (!GuestController->SetGuestMoveTarget(RoomTarget))
-	{
-		NewRoom->CancelReservation(NewStayId);
-
-		AssignedRoom = nullptr;
-		StayId.Invalidate();
-		
-		GuestState = EGuestState::WaitingForCheckIn;
-
-		return false;
-	}
-	
-	//객실 배정에 성공하면 이번 투숙의 잔류 여부 결정
-	switch (CheckoutPolicy)
-	{
-	case EGuestCheckoutPolicy::Automatic:
-		bWillStayBehind = false;
-		break;
-
-	case EGuestCheckoutPolicy::RequireRequest:
-		bWillStayBehind = true;
-		break;
-
-	case EGuestCheckoutPolicy::Random:
-		bWillStayBehind =
-			StayBehindChance >= 1.0f ||
-			(StayBehindChance > 0.0f &&
-			 FMath::FRand() < StayBehindChance);
-		break;
-
-	default:
-		bWillStayBehind = false;
-		break;
-	}
-	
-	// 객실 배정과 퇴실 정책 결정까지 성공한 뒤 알림
-	OnGuestRoomAssigned.Broadcast(this);
-
-	return true;
-
-}
-
 bool AGuestCharacter::NotifyDestinationReached(AActor* ReachedTarget)
 {
-	if (!IsValid(ReachedTarget))
+	if (!IsValid(ReachedTarget) ||
+		ReachedTarget != MoveTarget.Get())
 	{
 		return false;
 	}
@@ -112,203 +33,75 @@ bool AGuestCharacter::NotifyDestinationReached(AActor* ReachedTarget)
 	switch (GuestState)
 	{
 	case EGuestState::MovingToCounter:
-	{
-		if (ReachedTarget!=InitialMoveTarget.Get())
 		{
-			return false;
-		}
-		
-		GuestState = EGuestState::WaitingForCheckIn;
+			const ACheckInCounter* Counter = Cast<ACheckInCounter>(ReachedTarget);
 
-		return true;
-	}
-	
+			FTransform Slot;
+
+			if (!IsValid(Counter) ||
+				!Counter->GetSlotTransformForGuest(this, Slot))
+			{
+				return false;
+			}
+
+			const FRotator FacingRotation(
+				0.0f,
+				Slot.Rotator().Yaw,
+				0.0f);
+
+			SetActorRotation(FacingRotation);
+
+			if (AController* GuestController = GetController())
+			{
+				GuestController->SetControlRotation(FacingRotation);
+			}
+
+			GuestState = EGuestState::WaitingForCheckIn;
+			break;
+		}
+
 	case EGuestState::MovingToRoom:
-		{
-			if (!IsValid(AssignedRoom.Get()))
-			{
-				return false;
-			}
-			
-			if (ReachedTarget != AssignedRoom->GetArrivalTarget())
-			{
-				return false;
-			}
+		GuestState = EGuestState::Staying;
+		break;
 
-			// 객실의 입실 처리에 성공한 경우만 투숙으로 변경
-			if (!AssignedRoom->MarkOccupied(StayId))
-			{
-				return false;
-			}
-
-			GuestState = EGuestState::Staying;
-
-			return true;
-		}
-	
 	case EGuestState::MovingToLobby:
-		{
-			if (!IsValid(CheckoutLobbyTarget.Get()) ||
-				ReachedTarget != CheckoutLobbyTarget.Get())
-			{
-				return false;
-			}
-			
-			if (!IsValid(AssignedRoom.Get()) || !StayId.IsValid())
-			{
-				return false;
-			}
-			
-			if (!AssignedRoom->TryEndStay(StayId))
-			{
-				return false;
-			}
-			
-			AssignedRoom = nullptr;
-			CheckoutLobbyTarget = nullptr;
-			
-			GuestState = EGuestState::ReadyToExit;
-			
-			return true;
-		}
+		GuestState = EGuestState::ReadyToExit;
+		break;
+
 	case EGuestState::MovingToExit:
+		GuestState = EGuestState::ExitCompleted;
+
+		if (IsValid(PoolManager.Get()))
 		{
-			if (!IsValid(CheckoutExitTarget.Get())||
-				ReachedTarget!=CheckoutExitTarget.Get())
-			{
-				return false;
-			}
-			
-			CheckoutExitTarget = nullptr;
-			GuestState = EGuestState::ExitCompleted;
-			
-			if (IsValid(PoolManager.Get()))
-			{
-				PoolReturnTimerHandle = 
-					GetWorldTimerManager().SetTimerForNextTick(this, &AGuestCharacter::ReturnToPool);
-			}
-			
-			return true;
+			PoolReturnTimerHandle =
+				GetWorldTimerManager().SetTimerForNextTick(
+					this,
+					&AGuestCharacter::ReturnToPool);
 		}
+		break;
 
 	default:
 		return false;
 	}
-}
+	
+	GetCharacterMovement()->StopMovementImmediately();
 
-bool AGuestCharacter::TryBeginCheckout(AActor* LobbyTarget)
-{
-	if (GuestState!=EGuestState::Staying &&
-		GuestState != EGuestState::WaitingForCheckoutRequest)
+	if (AGuestAIController* GuestController =Cast<AGuestAIController>(GetController()))
 	{
-		return false;
-	}
-	
-	if (!IsValid(AssignedRoom.Get()) ||
-		!StayId.IsValid() ||
-		!IsValid(LobbyTarget))
-	{
-		return false;
-	}
-	
-	AGuestAIController* GuestController = Cast<AGuestAIController>(GetController());
-	
-	if (!IsValid(GuestController))
-	{
-		return false;
-	}
-	
-	// 이동 요청 실패 시 돌아갈 상태
-	const EGuestState PreviousState = GuestState;
-	AActor* PreviousLobbyTarget = CheckoutLobbyTarget.Get();
-
-	CheckoutLobbyTarget = LobbyTarget;
-	GuestState = EGuestState::MovingToLobby;
-
-	// 로비를 새 이동 목적지로 등록
-	if (!GuestController->SetGuestMoveTarget(LobbyTarget))
-	{
-		CheckoutLobbyTarget = PreviousLobbyTarget;
-		GuestState = PreviousState;
-		return false;
+		GuestController->UseWaitingAvoidance();
 	}
 
+
+	MoveTarget = nullptr;
 	return true;
-}
-
-bool AGuestCharacter::TryBeginExit(AActor* ExitTarget)
-{
-	if (GuestState != EGuestState::ReadyToExit)
-	{
-		return false;
-	}
-	
-	if (!IsValid(ExitTarget) || AssignedRoom != nullptr)
-	{
-		return false;
-	}
-	
-	AGuestAIController* GuestController = Cast<AGuestAIController>(GetController());
-	
-	if (!IsValid(GuestController))
-	{
-		return false;
-	}
-	
-	CheckoutExitTarget = ExitTarget;
-	GuestState = EGuestState::MovingToExit;
-
-	if (!GuestController->SetGuestMoveTarget(ExitTarget))
-	{
-		CheckoutExitTarget = nullptr;
-		GuestState = EGuestState::ReadyToExit;
-
-		return false;
-	}
-
-	return true;
-}
-
-bool AGuestCharacter::HandleCheckoutTime(AActor* LobbyTarget)
-{
-	if (GuestState != EGuestState::Staying ||
-	!IsValid(AssignedRoom.Get()) ||
-	!StayId.IsValid() ||
-	!IsValid(LobbyTarget))
-	{
-		return false;
-	}
-
-	// 객실 배정 시 결정한 잔류 여부 사용
-	if (bWillStayBehind)
-	{
-		// 플레이어가 나중에 퇴실을 요청할 때 사용할 목적지
-		CheckoutLobbyTarget = LobbyTarget;
-		
-		GuestState = EGuestState::WaitingForCheckoutRequest;
-		return true;
-	}
-
-	return TryBeginCheckout(LobbyTarget);
-	
-}
-
-bool AGuestCharacter::RequestCheckout(AActor* LobbyTarget)
-{
-	if (GuestState != EGuestState::WaitingForCheckoutRequest)
-	{
-		return false;
-	}
-
-	return TryBeginCheckout(LobbyTarget);
 }
 
 bool AGuestCharacter::ActivateFromPool(const FVector& SpawnLocation, const FRotator& SpawnRotation,
-	AActor* CounterTarget, const FDataTableRowHandle& InGuestTypeRow)
+                                       AActor* CounterTarget, const FDataTableRowHandle& InGuestTypeRow)
 {
 	// 대기 중인 손님만 꺼낼 수 있음
 	if (GuestState != EGuestState::Inactive ||
-		AssignedRoom != nullptr ||
+		Party != nullptr ||
 		!IsValid(CounterTarget))
 	{
 		return false;
@@ -322,7 +115,7 @@ bool AGuestCharacter::ActivateFromPool(const FVector& SpawnLocation, const FRota
 		return false;
 	}
 
-	// 새 손님의 유형, 이동 속도, 퇴실 정책 적용
+	// 새 손님의 유형과 이동 속도 적용
 	if (!ApplyGuestData(InGuestTypeRow))
 	{
 		return false;
@@ -339,14 +132,11 @@ bool AGuestCharacter::ActivateFromPool(const FVector& SpawnLocation, const FRota
 		DeactivateToPool();
 		return false;
 	}
-
-	StayId.Invalidate();
-	CheckoutLobbyTarget = nullptr;
-	CheckoutExitTarget = nullptr;
-	bWillStayBehind = false;
+	
 
 	// 카운터 도착 판정에 사용하는 목적지도 갱신
 	InitialMoveTarget = CounterTarget;
+	MoveTarget = CounterTarget;
 	GuestState = EGuestState::MovingToCounter;
 
 	SetActorHiddenInGame(false);
@@ -358,14 +148,7 @@ bool AGuestCharacter::ActivateFromPool(const FVector& SpawnLocation, const FRota
 	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 
 	GuestController->SetActorTickEnabled(true);
-
-	if (!GuestController->StartGuestAI(CounterTarget))
-	{
-		// 입장 시작에 실패하면 다시 풀 대기로 복구
-		GuestState = EGuestState::Inactive;
-		DeactivateToPool();
-		return false;
-	}
+	
 
 	return true;
 	
@@ -381,10 +164,12 @@ bool AGuestCharacter::DeactivateToPool()
 	}
 
 	// 객실과 연결된 손님은 반환하지 않음
-	if (AssignedRoom != nullptr)
+	if (IsValid(Party.Get()) && Party->HasAssignedRoom())
 	{
 		return false;
 	}
+	
+	ReleaseMoveLocation();
 	
 	GetWorldTimerManager().ClearTimer(PoolReturnTimerHandle);
 	GuestState = EGuestState::Inactive;
@@ -408,16 +193,11 @@ bool AGuestCharacter::DeactivateToPool()
 	SetActorEnableCollision(false);
 	SetActorHiddenInGame(true);
 
-	// 이전 투숙 정보 초기화
-	StayId.Invalidate();
+	// 이전 일행 정보 초기화
+	Party = nullptr;
 	InitialMoveTarget = nullptr;
-	CheckoutLobbyTarget = nullptr;
-	CheckoutExitTarget = nullptr;
-
+	MoveTarget = nullptr;
 	GuestTypeRow = FDataTableRowHandle{};
-	CheckoutPolicy = EGuestCheckoutPolicy::Random;
-	StayBehindChance = 0.0f;
-	bWillStayBehind = false;
 
 	return true;
 }
@@ -431,9 +211,8 @@ bool AGuestCharacter::CanInteract_Implementation(AActor* Interactor) const
 {
 	return IsValid(Interactor)
 	&& GuestState == EGuestState::WaitingForCheckoutRequest
-	&& IsValid(AssignedRoom.Get())
-	&& StayId.IsValid()
-	&& IsValid(CheckoutLobbyTarget.Get());
+	&& IsValid(Party.Get())
+	&& Party->CanRequestCheckout();
 }
 
 FText AGuestCharacter::GetInteractPrompt_Implementation(AActor* Interactor) const
@@ -449,51 +228,7 @@ void AGuestCharacter::Interact_Implementation(AActor* Interactor)
 		return;
 	}
 
-	RequestCheckout(CheckoutLobbyTarget.Get());
-}
-
-bool AGuestCharacter::TryLeaveWithoutCheckIn(AActor* ExitTarget)
-{
-	// 이미 객실을 배정받은 손님은 처리하지 않음
-	if (AssignedRoom != nullptr || StayId.IsValid())
-	{
-		return false;
-	}
-
-	const bool bCanLeave =
-		GuestState == EGuestState::MovingToCounter
-		|| GuestState == EGuestState::WaitingForCheckIn
-		|| GuestState == EGuestState::ReadyToExit;
-
-	if (!bCanLeave || !IsValid(ExitTarget))
-	{
-		return false;
-	}
-
-	// 접수 종료 후에는 객실을 배정할 수 없도록 상태 변경
-	// 이동 시작에 실패하면 이 상태로 다음 시각 이벤트에서 재시도
-	GuestState = EGuestState::ReadyToExit;
-
-	AGuestAIController* GuestController =
-		Cast<AGuestAIController>(GetController());
-
-	if (!IsValid(GuestController))
-	{
-		return false;
-	}
-
-	CheckoutExitTarget = ExitTarget;
-	GuestState = EGuestState::MovingToExit;
-
-	// 기존 카운터 이동을 정리하고 출구를 향해 AI 재시작
-	if (!GuestController->StartGuestAI(ExitTarget))
-	{
-		CheckoutExitTarget = nullptr;
-		GuestState = EGuestState::ReadyToExit;
-		return false;
-	}
-
-	return true;
+	Party->RequestCheckout();
 }
 
 void AGuestCharacter::BeginPlay()
@@ -526,52 +261,264 @@ void AGuestCharacter::ReturnToPool()
 
 bool AGuestCharacter::ApplyGuestData(const FDataTableRowHandle& InGuestTypeRow)
 {
-	if (InGuestTypeRow.DataTable == nullptr ||
-		InGuestTypeRow.RowName.IsNone())
+	if (InGuestTypeRow.IsNull())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] Guest data table or row is not assigned."), *GetName());
-
 		return false;
 	}
-	
 
 	const FGuestTypeRow* GuestData =
 		InGuestTypeRow.GetRow<FGuestTypeRow>(
-		TEXT("AGuestCharacter::ApplyGuestData"));
-
-	if (GuestData == nullptr)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] Failed to read guest row: %s"), *GetName(), *InGuestTypeRow.RowName.ToString());
-
-		return false;
-	}
-	
-	if (GuestData->BehaviorRow.IsNull())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Guest behavior row is not assigned."));
-		return false;
-	}
-
-	const FGuestBehaviorRow* BehaviorData =
-		GuestData->BehaviorRow.GetRow<FGuestBehaviorRow>(
 			TEXT("AGuestCharacter::ApplyGuestData"));
 
-	if (BehaviorData == nullptr)
+	if (!GuestData)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Failed to read guest behavior row."));
 		return false;
 	}
 
-	CheckoutPolicy = BehaviorData->CheckoutPolicy;
-	StayBehindChance = FMath::Clamp(
-		BehaviorData->StayBehindChance, 0.0f, 1.0f);
-	
 	GuestTypeRow = InGuestTypeRow;
 
-	// 데이터 테이블의 값을 실제 이동 속도에 적용
-	GetCharacterMovement()->MaxWalkSpeed = FMath::Max(0.0f, GuestData->WalkSpeed);
+	GetCharacterMovement()->MaxWalkSpeed =
+		FMath::Max(0.0f, GuestData->WalkSpeed);
 
 	return true;
 }
 
 
+
+
+bool AGuestCharacter::CancelPoolActivation()
+{
+	// 이미 객실을 배정받았다면 취소할 수 없음
+	if (IsValid(Party.Get()) && Party->HasAssignedRoom())
+	{
+		return false;
+	}
+
+	if (GuestState != EGuestState::MovingToCounter &&
+		GuestState != EGuestState::WaitingForCheckIn)
+	{
+		return false;
+	}
+
+	GuestState = EGuestState::Inactive;
+	
+	return DeactivateToPool();
+}
+
+UGuestParty* AGuestCharacter::GetParty() const
+{
+	return Party.Get();
+}
+
+void AGuestCharacter::AbortVisitAndReturnToPool()
+{
+	if (IsValid(Party.Get()) && Party->HasAssignedRoom())
+	{
+		return;
+	}
+
+	// 정상 도착과 동일한 풀 정리 경로 사용. DeactivateToPool이 AI와 타이머도 정리.
+	GuestState = EGuestState::ExitCompleted;
+	if (IsValid(PoolManager.Get()) && PoolManager->ReleaseGuest(this))
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Error, TEXT("Guest %s: Pool return failed during visit cancellation; deactivating."), *GetName());
+	DeactivateToPool();
+}
+
+bool AGuestCharacter::BeginMoveTo(
+	AActor* Target,
+	EGuestState MovingState)
+{
+	if (!IsValid(Target))
+	{
+		return false;
+	}
+
+	AGuestAIController* GuestController =
+		Cast<AGuestAIController>(GetController());
+
+	if (!IsValid(GuestController))
+	{
+		return false;
+	}
+
+	const EGuestState PreviousState = GuestState;
+	AActor* PreviousTarget = MoveTarget.Get();
+
+	GuestState = MovingState;
+	MoveTarget = Target;
+
+	// 이전 이동을 정리하고 새 목적지로 AI 시작
+	if (!GuestController->StartGuestAI(Target))
+	{
+		GuestState = PreviousState;
+		MoveTarget = PreviousTarget;
+		return false;
+	}
+
+	return true;
+}
+
+bool AGuestCharacter::CanReserveMoveLocation(const FVector& Location) const
+{
+    UWorld* World = GetWorld();
+    AActor* Destination = MoveTarget.Get();
+
+    if (!World || !IsValid(Destination) || Location.ContainsNaN())
+    {
+        return false;
+    }
+
+    // 목적지에 지정된 도착 가능 영역 찾기
+	const UCapsuleComponent* Capsule = GetCapsuleComponent();
+	const float Radius = Capsule->GetScaledCapsuleRadius();
+	const float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+
+	if (const ACheckInCounter* Counter =
+		Cast<ACheckInCounter>(Destination))
+	{
+		FTransform Slot;
+
+		if (!Counter->GetSlotTransformForGuest(this, Slot))
+		{
+			return false;
+		}
+
+		// 이 손님에게 배정된 고정 자리인지 확인.
+		if (FVector::DistSquared2D(
+				Location, Slot.GetLocation()) > FMath::Square(10.0) ||
+			FMath::Abs(Location.Z - Slot.GetLocation().Z) > 200.0)
+		{
+			return false;
+		}
+	}
+	else
+	{
+		// 객실·로비 등은 기존 EQS 도착 영역 검사.
+		UBoxComponent* ArrivalArea = nullptr;
+		TInlineComponentArray<UBoxComponent*> Boxes(Destination);
+
+		for (UBoxComponent* Box : Boxes)
+		{
+			if (Box->ComponentHasTag(TEXT("GuestArrivalArea")))
+			{
+				ArrivalArea = Box;
+				break;
+			}
+		}
+
+		if (!IsValid(ArrivalArea))
+		{
+			return false;
+		}
+
+		const FTransform AreaTransform =
+			ArrivalArea->GetComponentTransform();
+
+		const FVector LocalPoint =
+			AreaTransform.InverseTransformPosition(Location);
+
+		const FVector Extent = ArrivalArea->GetUnscaledBoxExtent();
+		const FVector Scale = AreaTransform.GetScale3D();
+
+		const double PaddingX =
+			Radius / FMath::Max(FMath::Abs(Scale.X), 0.001);
+
+		const double PaddingY =
+			Radius / FMath::Max(FMath::Abs(Scale.Y), 0.001);
+
+		if (FMath::Abs(LocalPoint.X) + PaddingX > Extent.X ||
+			FMath::Abs(LocalPoint.Y) + PaddingY > Extent.Y ||
+			FMath::Abs(LocalPoint.Z) > Extent.Z)
+		{
+			return false;
+		}
+	}
+
+    // 후보 좌표는 바닥 위치이므로 캡슐 중심 높이로 보정
+    const FVector CapsuleCenter =
+        Location + FVector(0.0, 0.0, HalfHeight + 5.0f);
+
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    // 벽, 가구, 현재 서 있는 손님과 충돌하면 제외
+    if (World->OverlapBlockingTestByProfile(
+            CapsuleCenter,
+            FQuat::Identity,
+            Capsule->GetCollisionProfileName(),
+            FCollisionShape::MakeCapsule(Radius, HalfHeight),
+            Params))
+    {
+        return false;
+    }
+
+    // 다른 일행까지 포함하여 예약된 자리 검사
+    for (TActorIterator<AGuestCharacter> It(World); It; ++It)
+    {
+        const AGuestCharacter* Other = *It;
+
+        if (!IsValid(Other) ||
+            Other == this ||
+            !Other->bHasReservedMoveLocation)
+        {
+            continue;
+        }
+
+        const UCapsuleComponent* OtherCapsule =
+            Other->GetCapsuleComponent();
+
+        const float OtherRadius =
+            OtherCapsule->GetScaledCapsuleRadius();
+
+        const float OtherHalfHeight =
+            OtherCapsule->GetScaledCapsuleHalfHeight();
+
+        const FVector OtherCenter =
+            Other->ReservedMoveLocation +
+            FVector(0.0, 0.0, OtherHalfHeight + 5.0f);
+
+        // 서로 다른 층의 자리는 간섭하지 않음
+        const bool bHeightOverlaps =
+            FMath::Abs(CapsuleCenter.Z - OtherCenter.Z) <
+            HalfHeight + OtherHalfHeight;
+
+        // 도착 허용 반경까지 고려해서 자리 간격 확보
+        const float RequiredDistance =
+            Radius + OtherRadius +
+            MoveAcceptanceRadius * 2.0f + 10.0f;
+
+        if (bHeightOverlaps &&
+            FVector::DistSquared2D(
+                Location, Other->ReservedMoveLocation) <
+                FMath::Square(RequiredDistance))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool AGuestCharacter::TryReserveMoveLocation(
+    const FVector& Location)
+{
+    // EQS 계산 이후 다른 손님이 예약했을 수 있으므로 재검사
+    if (!CanReserveMoveLocation(Location))
+    {
+        return false;
+    }
+
+    ReservedMoveLocation = Location;
+    bHasReservedMoveLocation = true;
+    return true;
+}
+
+void AGuestCharacter::ReleaseMoveLocation()
+{
+    bHasReservedMoveLocation = false;
+    ReservedMoveLocation = FVector::ZeroVector;
+}

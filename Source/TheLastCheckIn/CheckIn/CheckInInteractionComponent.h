@@ -69,11 +69,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category="CheckIn|Detection", 
 		meta=(ClampMin="0.05", Units="s"))
 	float CheckInterval =0.2f;
-	
-	//손님이 카운터로부터 대기해야되는 거리
-	UPROPERTY(EditAnywhere, Category="CheckIn|Detection", 
-		meta=(ClampMin="1.0", Units="cm"))
-	float GuestRange =200.0f;
+
 	
 private:
 	void CheckInitialCounterOverlap();

@@ -21,6 +21,7 @@ public class TheLastCheckIn : ModuleRules
 			"Slate",
 			"ProceduralMeshComponent",
 			"DeveloperSettings",
+			"NavigationSystem",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
