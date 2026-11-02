@@ -31,6 +31,22 @@ int32 ARoomActor::GetCapacity() const
 	return FMath::Max(0, RoomData->Capacity);
 }
 
+float ARoomActor::GetBaseRoomRate() const
+{
+	if (RoomTypeRow.DataTable == nullptr ||
+		RoomTypeRow.RowName.IsNone())
+	{
+		return 0.0f;
+	}
+	const FRoomTypeRow* RoomData =
+		RoomTypeRow.GetRow<FRoomTypeRow>(TEXT("ARoomActor::GetBaseRoomRate"));
+	if (RoomData == nullptr)
+	{
+		return 0.0f;
+	}
+	return FMath::Max(0.0f, RoomData->BaseRoomRate);
+}
+
 bool ARoomActor::TryReserve(const FGuid& InStayId)
 {
 	if (!InStayId.IsValid())

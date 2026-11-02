@@ -37,11 +37,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Room")
 	int32 GetCapacity() const;
-
-	/*
+	
 	UFUNCTION(BlueprintPure, Category = "Room")
-	float GetBaseRoomRate() const;
-	*/
+	float GetBaseRoomRate() const; 
 	
 	// 객실 배정
 	bool TryReserve(const FGuid& InStayId);

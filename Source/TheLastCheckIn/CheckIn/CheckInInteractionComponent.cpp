@@ -8,10 +8,11 @@
 #include "EngineUtils.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
-#include "UObject/UnrealType.h"
 #include "Guests/GuestCharacter.h"
+#include "Guests/Party/GuestParty.h"
 #include "Rooms/RoomActor.h"
 #include "Housekeeping/Core/Carry/HKCarryComponent.h"
+#include "TimerManager.h"
 
 // Sets default values for this component's properties
 UCheckInInteractionComponent::UCheckInInteractionComponent()
@@ -58,15 +59,9 @@ void UCheckInInteractionComponent::CheckInitialCounterOverlap()
                 continue;
             }
 
-            const FObjectPropertyBase* TargetProperty =
-                FindFProperty<FObjectPropertyBase>(Counter->GetClass(), TEXT("CounterTarget"));
-            AActor* Target = TargetProperty
-                ? Cast<AActor>(TargetProperty->GetObjectPropertyValue_InContainer(Counter))
-                : nullptr;
-
-            if (IsValid(Target))
+            if (ACheckInCounter* CheckInCounter = Cast<ACheckInCounter>(Counter))
             {
-                BeginCounterInteraction(Target);
+                BeginCounterInteraction(CheckInCounter);
                 return;
             }
         }
@@ -120,20 +115,19 @@ void UCheckInInteractionComponent::EndCounterInteraction()
 
 AActor* UCheckInInteractionComponent::FindInteractionTarget(const FVector& Start, const FVector& End) const
 {
+    ACheckInCounter* Counter = Cast<ACheckInCounter>(CounterTarget.Get());
+
     const AActor* Owner = GetOwner();
-    if (!bInsideCounter || !IsValid(Owner) || !GetWorld())
+
+    if (!bInsideCounter ||
+        !IsValid(Owner) ||
+        !IsValid(Counter) ||
+        !Owner->IsOverlappingActor(Counter))
     {
         return nullptr;
     }
 
-    for (TActorIterator<ACheckInCounter> It(GetWorld()); It; ++It)
-    {
-        if (Owner->IsOverlappingActor(*It))
-        {
-            return *It;
-        }
-    }
-    return nullptr;
+    return Counter;
 }
 
 bool UCheckInInteractionComponent::IsCarryingObject() const
@@ -145,70 +139,39 @@ bool UCheckInInteractionComponent::IsCarryingObject() const
     return Carry && Carry->IsCarrying();
 }
 
-AGuestCharacter*UCheckInInteractionComponent::FindWaitingGuest() const
+AGuestCharacter* UCheckInInteractionComponent::FindWaitingGuest() const
 {
-    const AActor* Target = CounterTarget.Get();
+    const ACheckInCounter* Counter =
+        Cast<ACheckInCounter>(CounterTarget.Get());
 
-    if (!IsValid(Target) || !GetWorld())
+    if (!IsValid(Counter))
     {
         return nullptr;
     }
 
-    AGuestCharacter* BestGuest = nullptr;
+    UGuestParty* Party = Counter->GetCurrentParty();
 
-    double BestDistanceSquared =
-        FMath::Square(static_cast<double>(GuestRange));
-
-    for (TActorIterator<AGuestCharacter> It(GetWorld()); It; ++It)
+    if (!IsValid(Party) || !Party->CanCheckIn())
     {
-        AGuestCharacter* Guest = *It;
-
-        if (!IsValid(Guest) || Guest->IsHidden())
-        {
-            continue;
-        }
-
-        if (Guest->GetGuestState()
-            != EGuestState::WaitingForCheckIn)
-        {
-            continue;
-        }
-        
-        if (Guest->GetInitialMoveTarget() != Target)
-        {
-            continue;
-        }
-
-        const double DistanceSquared = FVector::DistSquared(
-            Guest->GetActorLocation(),
-            Target->GetActorLocation());
-
-        if (DistanceSquared <= BestDistanceSquared)
-        {
-            BestDistanceSquared = DistanceSquared;
-            BestGuest = Guest;
-        }
+        return nullptr;
     }
 
-    return BestGuest;
+    AGuestCharacter* Leader = Party->GetLeader();
+
+    if (!IsValid(Leader) ||
+        Leader->IsHidden() ||
+        Leader->GetInitialMoveTarget() != Counter)
+    {
+        return nullptr;
+    }
+
+    return Leader;
 }
 
 bool UCheckInInteractionComponent::IsCurrentGuestReady() const
 {
-    const AGuestCharacter* Guest = CurrentGuest.Get();
-    const AActor* Target = CounterTarget.Get();
-
-    if (!IsValid(Guest) || !IsValid(Target) || Guest->IsHidden())
-    {
-        return false;
-    }
-
-    return
-        Guest->GetGuestState() == EGuestState::WaitingForCheckIn
-        && Guest->GetInitialMoveTarget() == Target
-        && FVector::DistSquared(
-            Guest->GetActorLocation(),
-            Target->GetActorLocation()) <= FMath::Square(GuestRange);
+    return CurrentGuest.IsValid() &&
+        CurrentGuest.Get() == FindWaitingGuest();
 }
 
 bool UCheckInInteractionComponent::CanOpenCheckIn() const
@@ -411,14 +374,17 @@ void UCheckInInteractionComponent::GetRoomStatus(
         State == ERoomState::Assigned
         || State == ERoomState::Occupied;
 
+    UGuestParty* Party = CurrentGuest.IsValid()
+        ? CurrentGuest.Get()->GetParty()
+        : nullptr;
+
     bSelectable =
         bInsideCounter
         && bCheckInOpen
         && !bAssignedThisSession
         && IsCurrentGuestReady()
-        && State == ERoomState::Available
-        && IsValid(Room->GetArrivalTarget())
-        && Room->GetCapacity() > 0;
+        && IsValid(Party)
+        && Party->CanAssignRoom(Room);
 }
 
 bool UCheckInInteractionComponent::TryAssignRoomNumber(int32 RoomNumber)
@@ -444,7 +410,12 @@ bool UCheckInInteractionComponent::TryAssignRoomNumber(int32 RoomNumber)
         return false;
     }
 
-    const bool bSuccess = Guest->TryAssignRoom(Room);
+    UGuestParty* Party = Guest->GetParty();
+
+    const bool bSuccess =
+        IsValid(Party)
+        && Party->GetLeader() == Guest
+        && Party->TryAssignRoom(Room);
 
     if (bSuccess)
     {

@@ -20,6 +20,8 @@ public class TheLastCheckIn : ModuleRules
 			"UMG",
 			"Slate",
 			"ProceduralMeshComponent",
+			"DeveloperSettings",
+			"NavigationSystem",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
