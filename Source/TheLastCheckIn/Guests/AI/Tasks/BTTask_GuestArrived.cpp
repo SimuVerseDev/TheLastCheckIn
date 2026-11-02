@@ -49,6 +49,7 @@ EBTNodeResult::Type UBTTask_GuestArrived::ExecuteTask(UBehaviorTreeComponent& Ow
 	}
 	
 	//도착 처리가 성공한 경우에만 목적지를 정리
+	BlackboardComponent->ClearValue(TEXT("MoveLocation"));
 	BlackboardComponent->ClearValue(TargetKey);
 
 	return EBTNodeResult::Succeeded;
