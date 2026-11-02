@@ -15,6 +15,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
     FGuestPartyRoomAssigned,
     UGuestParty*, Party);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FGuestPartyCheckedIn,
+    UGuestParty*, Party);
+
 UENUM(BlueprintType)
 enum class EGuestPartyState : uint8
 {
@@ -108,6 +112,9 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "Guests|Party")
     FGuestPartyRoomAssigned OnRoomAssigned;
+    
+    UPROPERTY(BlueprintAssignable, Category = "Guests|Party")
+    FGuestPartyCheckedIn OnCheckedIn;
 
 private:
     bool AllMembersInState(EGuestState RequiredState) const;
