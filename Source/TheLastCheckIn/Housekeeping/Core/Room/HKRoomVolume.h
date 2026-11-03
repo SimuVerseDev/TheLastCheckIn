@@ -80,7 +80,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Room", meta=(ClampMin=0.05, Units="s"))
 	float EvaluateInterval = 0.25f;
 	
-	UPROPERTY(EditAnywhere, Category="Housekeeping|Room")
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Debug")
 	bool bDirtyOnBeginPlay = false;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Debug")
