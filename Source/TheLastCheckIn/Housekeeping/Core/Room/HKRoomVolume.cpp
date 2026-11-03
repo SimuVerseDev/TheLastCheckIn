@@ -252,6 +252,7 @@ void AHKRoomVolume::HandleRoomAssigned(ARoomActor* Room)
 {
 	if (bDirty)
 	{
+		// TODO: 평판 시스템 연결 - 청결도에 따라 평판 하락
 		UE_LOG(LogTemp, Warning, TEXT("[%s] 미청소 객실 %d 배정 (청결도 %.0f)"),
 			*GetActorNameOrLabel(), Room->GetRoomNumber(), Cleanliness);
 	}
