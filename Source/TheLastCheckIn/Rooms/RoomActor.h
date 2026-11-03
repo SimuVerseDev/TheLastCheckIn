@@ -9,6 +9,9 @@
 
 class USceneComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoomOnAssigned, ARoomActor*, Room);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoomOnCheckedOut, ARoomActor*, Room);
+
 UCLASS()
 class THELASTCHECKIN_API ARoomActor : public AActor
 {
@@ -16,6 +19,11 @@ class THELASTCHECKIN_API ARoomActor : public AActor
 
 public:
 	ARoomActor();
+	
+	UPROPERTY(BlueprintAssignable, Category = "Room")
+	FRoomOnAssigned OnAssigned;
+	UPROPERTY(BlueprintAssignable, Category = "Room")
+	FRoomOnCheckedOut OnCheckedOut;
 	
 	UFUNCTION(BlueprintPure, Category = "Room")
 	int32 GetRoomNumber() const
