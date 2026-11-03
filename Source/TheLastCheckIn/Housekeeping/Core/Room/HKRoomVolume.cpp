@@ -8,6 +8,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "TimerManager.h"
+#include "Rooms/RoomActor.h"
 
 AHKRoomVolume::AHKRoomVolume()
 {
@@ -25,6 +26,11 @@ AHKRoomVolume::AHKRoomVolume()
 void AHKRoomVolume::BeginPlay()
 {
 	Super::BeginPlay();
+	if (LinkedRoom)
+	{
+		LinkedRoom->OnAssigned.AddDynamic(this, &AHKRoomVolume::HandleRoomAssigned);
+		LinkedRoom->OnCheckedOut.AddDynamic(this, &AHKRoomVolume::HandleRoomCheckedOut);
+	}
 	if (bDirtyOnBeginPlay)
 	{
 		GetWorldTimerManager().SetTimerForNextTick(this, &AHKRoomVolume::ApplyRandomDirt);
@@ -240,4 +246,19 @@ void AHKRoomVolume::SetCleanliness(float NewCleanliness)
 		Cleanliness = NewCleanliness;
 		OnCleanlinessChanged.Broadcast(this, Cleanliness);
 	}
+}
+
+void AHKRoomVolume::HandleRoomAssigned(ARoomActor* Room)
+{
+	if (bDirty)
+	{
+		// TODO: 평판 시스템 연결 - 청결도에 따라 평판 하락
+		UE_LOG(LogTemp, Warning, TEXT("[%s] 미청소 객실 %d 배정 (청결도 %.0f)"),
+			*GetActorNameOrLabel(), Room->GetRoomNumber(), Cleanliness);
+	}
+}
+
+void AHKRoomVolume::HandleRoomCheckedOut(ARoomActor* Room)
+{
+	ApplyRandomDirt();
 }

@@ -97,6 +97,11 @@ private:
 	
 	TArray<TWeakObjectPtr<UHKDirtComponent>> ActiveDirt;
 	
+	UFUNCTION()
+	void HandleRoomAssigned(ARoomActor* Room);
+	UFUNCTION()
+	void HandleRoomCheckedOut(ARoomActor* Room);
+	
 	FTimerHandle EvaluateTimer;
 	float TotalWeight = 0.0f;
 	

@@ -69,6 +69,32 @@ bool ARoomActor::TryReserve(const FGuid& InStayId)
 	
 	CurrentStayId = InStayId;
 	RoomState = ERoomState::Assigned;
+	OnAssigned.Broadcast(this);
+	
+	return true;
+}
+
+bool ARoomActor::TryEndStay(const FGuid& InStayId)
+{
+	if (!InStayId.IsValid())
+	{
+		return false;
+	}
+	
+	if (CurrentStayId != InStayId)
+	{
+		return false;
+	}
+	
+	if (RoomState != ERoomState::Occupied)
+	{
+		return false;
+	}
+	
+	//투숙 연결 해제
+	CurrentStayId.Invalidate();
+	RoomState = ERoomState::Available;
+	OnCheckedOut.Broadcast(this);
 	
 	return true;
 }
@@ -102,28 +128,6 @@ bool ARoomActor::MarkOccupied(const FGuid& InStayId)
 	return true;
 }
 
-bool ARoomActor::TryEndStay(const FGuid& InStayId)
-{
-	if (!InStayId.IsValid())
-	{
-		return false;
-	}
-	
-	if (CurrentStayId != InStayId)
-	{
-		return false;
-	}
-	
-	if (RoomState != ERoomState::Occupied)
-	{
-		return false;
-	}
-	
-	//투숙 연결 해제
-	CurrentStayId.Invalidate();
-	RoomState = ERoomState::Available;
-	
-	return true;
-}
+
 
 
