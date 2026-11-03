@@ -120,14 +120,21 @@ bool UHKCarryComponent::TryPickup(UPrimitiveComponent* Target)
 	LastHoldLocation = HoldLocation;
 	HoldVelocity = FVector::ZeroVector;
 	const FQuat YawQuat = FRotator(0.0f, ViewRotation.Yaw, 0.0f).Quaternion();
-	RotationOffset = YawQuat.Inverse() * Target->GetComponentQuat(); // * 기호 확인
+	
+	FQuat TargetQuat = Target->GetComponentQuat();
+	AHKPhysicsPickupActor* Pickup = Cast<AHKPhysicsPickupActor>(Target->GetOwner());
+	if (Pickup && Pickup->ShouldStayUprightWhileCarried())
+	{
+		TargetQuat = FRotator(0.0f, Target->GetComponentRotation().Yaw, 0.0f).Quaternion();
+	}
+	RotationOffset = YawQuat.Inverse() * TargetQuat;
     
 	SavedPawnResponse = Target->GetCollisionResponseToChannel(ECC_Pawn);
 	Target->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 	Target->WakeRigidBody();
 	PhysicsHandle->GrabComponentAtLocationWithRotation(Target, NAME_None, Target->GetComponentLocation(), Target->GetComponentRotation());
 	
-	if (AHKPhysicsPickupActor* Pickup = Cast<AHKPhysicsPickupActor>(Target->GetOwner()))
+	if (Pickup)
 	{
 		Pickup->NotifyPickedUp(GetOwner());
 	}

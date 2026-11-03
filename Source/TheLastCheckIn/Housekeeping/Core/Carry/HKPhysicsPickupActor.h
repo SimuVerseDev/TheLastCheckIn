@@ -18,6 +18,14 @@ public:
 	{
 		return Carrier.IsValid();
 	}
+	
+	/*
+	잡을 때 기울기 무시하고 똑바로 세움
+	*/
+	bool ShouldStayUprightWhileCarried() const
+	{
+		return bUprightWhileCarried;
+	}
 
 	UFUNCTION(BlueprintPure, Category="Housekeeping|Pickup")
 	bool CanBePickedUp() const;
@@ -63,8 +71,10 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category="Housekeeping|Pickup", meta=(DisplayName="On Released"))
 	void BP_OnReleased(bool bThrown);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Pickup")
+	bool bUprightWhileCarried = false;
 
 private:
-
 	TWeakObjectPtr<AActor> Carrier;
 };
