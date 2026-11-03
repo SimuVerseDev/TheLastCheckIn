@@ -236,6 +236,33 @@ void UGuestParty::CheckMovementProgress()
         return;
     }
 
+    const int32 RoomNumber = IsValid(AssignedRoom.Get()) ? AssignedRoom->GetRoomNumber() : -1;
+    const FString StateName = StaticEnum<EGuestPartyState>()->GetNameStringByValue(static_cast<int64>(State));
+    const bool bRetriesExhausted = MovementRetryCount >= MaxMovementRetries;
+    UE_LOG(LogTemp, Warning,
+        TEXT("GuestParty %s: Movement timeout; room=%d roomActor=%s state=%s(%d) elapsed=%.2fs timeout=%.2fs; %s retry=%d/%d pending=%d/%d."),
+        *PartyId.ToString(), RoomNumber, *GetNameSafe(AssignedRoom.Get()), *StateName, static_cast<int32>(State),
+        Now - MovementAttemptStartedAt, MovementTimeoutSeconds,
+        bRetriesExhausted ? TEXT("cancelling visit") : TEXT("retrying"),
+        bRetriesExhausted ? MovementRetryCount : MovementRetryCount + 1, MaxMovementRetries,
+        PendingMembers.Num(), GetSize());
+
+    // AI 재시작/풀 반환 전에 기록해야 기존 목표와 예약 좌표를 확인할 수 있음.
+    for (const AGuestCharacter* Member : PendingMembers)
+    {
+        const AActor* MemberTarget = Member->GetDestinationActor();
+        const FString ReservedLocation = Member->bHasReservedMoveLocation
+            ? Member->ReservedMoveLocation.ToString() : TEXT("unset");
+        const FString TargetLocation = IsValid(MemberTarget)
+            ? MemberTarget->GetActorLocation().ToString() : TEXT("unset");
+        UE_LOG(LogTemp, Warning,
+            TEXT("GuestParty %s: Pending guest; room=%d guest=%s state=%s location=(%s) velocity=(%s) target=%s targetLocation=(%s) reservedLocation=(%s)."),
+            *PartyId.ToString(), RoomNumber, *Member->GetName(),
+            *StaticEnum<EGuestState>()->GetNameStringByValue(static_cast<int64>(Member->GetGuestState())),
+            *Member->GetActorLocation().ToString(), *Member->GetVelocity().ToString(),
+            *GetNameSafe(MemberTarget), *TargetLocation, *ReservedLocation);
+    }
+
     if (MovementRetryCount >= MaxMovementRetries)
     {
         CancelVisitAfterMovementFailure();
@@ -244,8 +271,6 @@ void UGuestParty::CheckMovementProgress()
 
     ++MovementRetryCount;
     MovementAttemptStartedAt = Now;
-    UE_LOG(LogTemp, Warning, TEXT("GuestParty %s: Movement timeout in state %d; retry %d/%d for %d guests."),
-        *PartyId.ToString(), static_cast<int32>(State), MovementRetryCount, MaxMovementRetries, PendingMembers.Num());
     for (AGuestCharacter* Member : PendingMembers)
     {
         // 이미 이동 중인 손님도 재시작. 도착한 손님은 그대로 기다림.
@@ -256,6 +281,12 @@ void UGuestParty::CheckMovementProgress()
 
 void UGuestParty::CancelVisitAfterMovementFailure()
 {
+    UE_LOG(LogTemp, Warning,
+        TEXT("GuestParty %s: Cancelling visit after movement failure; room=%d roomActor=%s state=%s retries=%d/%d; returning %d guests to pool."),
+        *PartyId.ToString(), IsValid(AssignedRoom.Get()) ? AssignedRoom->GetRoomNumber() : -1,
+        *GetNameSafe(AssignedRoom.Get()),
+        *StaticEnum<EGuestPartyState>()->GetNameStringByValue(static_cast<int64>(State)),
+        MovementRetryCount, MaxMovementRetries, GetMembers().Num());
     StopMovementMonitoring();
 
     if (IsValid(AssignedRoom.Get()))
