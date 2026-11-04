@@ -10,6 +10,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "TimerManager.h"
+#include "UObject/ConstructorHelpers.h"
 #include "Rooms/RoomActor.h"
 
 AHKRoomVolume::AHKRoomVolume()
@@ -23,6 +24,12 @@ AHKRoomVolume::AHKRoomVolume()
 	Bounds->SetBoxExtent(FVector(300.0f, 300.0f, 150.f));
 	Bounds->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Bounds->ShapeColor = FColor(80, 200, 255);
+
+	static ConstructorHelpers::FClassFinder<AHKStainActor> StainFinder(TEXT("/Game/HouseKeeping/Blueprints/BP_HK_Stain"));
+	if (StainFinder.Succeeded())
+	{
+		StainClass = StainFinder.Class;
+	}
 }
 
 void AHKRoomVolume::BeginPlay()
