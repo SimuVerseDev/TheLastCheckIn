@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
+#include "Core/Interaction/Interactable.h"
 #include "GameFramework/Actor.h"
 #include "HKStainActor.generated.h"
 class UBoxComponent;
@@ -8,11 +9,19 @@ class UHKStainDirtComponent;
 class UMaterialInstanceDynamic;
 
 UCLASS()
-class AHKStainActor : public AActor
+class AHKStainActor : public AActor, public IInteractable
 {
 	GENERATED_BODY()
 public:
 	AHKStainActor();
+	
+	/*
+	Interactable
+	*/
+	virtual bool CanUse_Implementation(AActor* Interactor) const override;
+	virtual FText GetUsePrompt_Implementation(AActor* Interactor) const override;
+	virtual bool Use_Implementation(AActor* Interactor) override;
+
 	
 	UHKStainDirtComponent* GetStain() const
 	{
@@ -35,6 +44,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UHKStainDirtComponent> Stain;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Stain")
+	FText WipePrompt = NSLOCTEXT("Housekeeping", "StainWipePrompt", "닦기");
 	
 	/*
 	데칼 머티리얼에서 투명도를 조절하는 스칼라 파라미터 이름

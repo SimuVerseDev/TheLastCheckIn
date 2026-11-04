@@ -3,6 +3,8 @@
 #include "Components/BoxComponent.h"
 #include "Components/DecalComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Housekeeping/Objects/Stain/HKWipeToolComponent.h"
+#include "Engine/Engine.h"
 
 AHKStainActor::AHKStainActor()
 {
@@ -57,4 +59,24 @@ void AHKStainActor::HandleAmountChanged(float Amount)
 	{
 		DecalMaterial->SetScalarParameterValue(AmountParameter, BaseParameterValue * Amount);
 	}
+}
+
+bool AHKStainActor::CanUse_Implementation(AActor* Interactor) const
+{
+	return Stain->GetAmount() > 0.0f && UHKWipeToolComponent::FindHeldBy(Interactor) != nullptr;
+}
+
+FText AHKStainActor::GetUsePrompt_Implementation(AActor* Interactor) const
+{
+	return WipePrompt;
+}
+
+bool AHKStainActor::Use_Implementation(AActor* Interactor)
+{
+	// TODO: 플레이어의 닦기 컴포넌트에 넘김 - 지금은 동작 확인용 
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("닦기 시작"));
+	}
+	return true;
 }
