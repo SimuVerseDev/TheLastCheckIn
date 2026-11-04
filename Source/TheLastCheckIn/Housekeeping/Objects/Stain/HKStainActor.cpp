@@ -35,6 +35,10 @@ void AHKStainActor::BeginPlay()
 {
 	Super::BeginPlay();
 	DecalMaterial = Decal->CreateDynamicMaterialInstance();
+	if (DecalMaterial)
+	{
+		DecalMaterial->GetScalarParameterValue(AmountParameter, BaseParameterValue);
+	}
 	Stain->OnAmountChanged.AddDynamic(this, &AHKStainActor::HandleAmountChanged);
 	HandleAmountChanged(Stain->GetAmount());
 	
@@ -51,6 +55,6 @@ void AHKStainActor::HandleAmountChanged(float Amount)
 	AimBox->SetCollisionEnabled(Amount > 0.0f ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
 	if (DecalMaterial)
 	{
-		DecalMaterial->SetScalarParameterValue(AmountParameter, Amount);
+		DecalMaterial->SetScalarParameterValue(AmountParameter, BaseParameterValue * Amount);
 	}
 }

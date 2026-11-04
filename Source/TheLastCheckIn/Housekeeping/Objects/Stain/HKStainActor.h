@@ -40,7 +40,7 @@ protected:
 	데칼 머티리얼에서 투명도를 조절하는 스칼라 파라미터 이름
 	*/
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Stain")
-	FName AmountParameter = FName("Amount");
+	FName AmountParameter = FName("Opacity");
 
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Debug")
 	bool bDirtyOnBeginPlay = false;
@@ -51,4 +51,6 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> DecalMaterial;
+
+	float BaseParameterValue = 1.0f;
 };
