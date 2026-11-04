@@ -3,8 +3,8 @@
 #include "Components/BoxComponent.h"
 #include "Components/DecalComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Housekeeping/Objects/Stain/HKWipeComponent.h"
 #include "Housekeeping/Objects/Stain/HKWipeToolComponent.h"
-#include "Engine/Engine.h"
 
 AHKStainActor::AHKStainActor()
 {
@@ -31,6 +31,17 @@ AHKStainActor::AHKStainActor()
 FVector AHKStainActor::GetSurfaceNormal() const
 {
 	return -Decal->GetForwardVector();
+}
+
+FVector AHKStainActor::GetWipeCenter() const
+{
+	return Decal->GetComponentLocation();
+}
+
+float AHKStainActor::GetWipeRadius() const
+{
+	const FVector Scale = Decal->GetComponentScale();
+	return FMath::Min(Decal->DecalSize.Y * Scale.Y, Decal->DecalSize.Z * Scale.Z);
 }
 
 void AHKStainActor::BeginPlay()
@@ -73,10 +84,6 @@ FText AHKStainActor::GetUsePrompt_Implementation(AActor* Interactor) const
 
 bool AHKStainActor::Use_Implementation(AActor* Interactor)
 {
-	// TODO: 플레이어의 닦기 컴포넌트에 넘김 - 지금은 동작 확인용 
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("닦기 시작"));
-	}
-	return true;
+	UHKWipeComponent* Wipe = Interactor ? Interactor->FindComponentByClass<UHKWipeComponent>() : nullptr;
+	return Wipe && Wipe->BeginWipe(this, UHKWipeToolComponent::FindHeldBy(Interactor));
 }

@@ -29,7 +29,9 @@ public:
 	}
 	
 	FVector GetSurfaceNormal() const;
-	
+	FVector GetWipeCenter() const;
+	float GetWipeRadius() const;
+
 protected:
 	virtual void BeginPlay() override;
 	
