@@ -1,4 +1,4 @@
-"""Editor startup script: registers the Blueprint Exploder menu entries.
+"""Editor startup script: registers the Blueprint tool menu entries.
 
 Unreal runs every init_unreal.py found on the Python path at editor startup,
 so this file only needs the PythonScriptPlugin to be enabled.
@@ -7,7 +7,7 @@ so this file only needs the PythonScriptPlugin to be enabled.
 import unreal
 
 SECTION_NAME = "BPExploder"
-SECTION_LABEL = "Blueprint Exploder"
+SECTION_LABEL = "Blueprint Tools"
 
 MENU_PATHS = (
     "LevelEditor.ActorContextMenu",
@@ -45,6 +45,18 @@ ENTRIES = (
         "Explode to separate actors (delete original)",
         "Spawns the separate actors and deletes the source actor.",
         "import importlib, bp_exploder; importlib.reload(bp_exploder); bp_exploder.explode_selected_and_delete()",
+    ),
+    (
+        "BPExploder_MeshToBlueprintPreview",
+        "Preview: meshes to same-name Blueprints",
+        "Logs which selected meshes have a matching Blueprint, without changing the level.",
+        "import importlib, mesh_to_blueprint; importlib.reload(mesh_to_blueprint); mesh_to_blueprint.preview_selected()",
+    ),
+    (
+        "BPExploder_MeshToBlueprint",
+        "Replace meshes with same-name Blueprints",
+        "Replaces selected meshes with their Blueprint, for example SM_TableLamp with BP_HK_TableLamp.",
+        "import importlib, mesh_to_blueprint; importlib.reload(mesh_to_blueprint); mesh_to_blueprint.replace_selected()",
     ),
 )
 
