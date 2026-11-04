@@ -28,7 +28,7 @@ AHKStainActor::AHKStainActor()
 
 FVector AHKStainActor::GetSurfaceNormal() const
 {
-	return  -Decal->GetForwardVector();
+	return -Decal->GetForwardVector();
 }
 
 void AHKStainActor::BeginPlay()
