@@ -82,6 +82,8 @@ bool UHKWipeComponent::BeginWipe(AHKStainActor* InStain, UHKWipeToolComponent* I
 	WipeOffset = FVector2D::ZeroVector;
 	Body->SetSimulatePhysics(false);
 	PC->SetIgnoreLookInput(true);
+	LookLockedPC = PC;
+	bWiping = true;
 	SetComponentTickEnabled(true);
 	return true;
 }
@@ -96,10 +98,13 @@ void UHKWipeComponent::EndWipe()
 	{
 		Body->SetSimulatePhysics(true);
 	}
-	if (APlayerController* PC = GetPlayerController())
+	// 시작 시 잠근 PC에서 해제 (도중에 빙의가 풀려도 잠금이 남지 않도록)
+	if (APlayerController* PC = LookLockedPC.Get())
 	{
 		PC->SetIgnoreLookInput(false);
 	}
+	bWiping = false;
+	LookLockedPC.Reset();
 	Stain.Reset();
 	Tool.Reset();
 	SetComponentTickEnabled(false);

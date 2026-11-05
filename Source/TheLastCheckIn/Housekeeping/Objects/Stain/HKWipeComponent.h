@@ -22,7 +22,7 @@ public:
 	UFUNCTION(BlueprintPure, Category="Housekeeping|Wipe")
 	bool IsWiping() const
 	{
-		return Stain.IsValid();
+		return bWiping;
 	}
 
 	virtual bool BlocksFocus() const override
@@ -47,5 +47,7 @@ private:
 
 	TWeakObjectPtr<AHKStainActor> Stain;
 	TWeakObjectPtr<UHKWipeToolComponent> Tool;
+	TWeakObjectPtr<APlayerController> LookLockedPC;
+	bool bWiping = false;
 	FVector2D WipeOffset = FVector2D::ZeroVector;
 };
