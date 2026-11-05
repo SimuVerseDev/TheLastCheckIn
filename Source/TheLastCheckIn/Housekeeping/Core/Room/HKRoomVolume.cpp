@@ -3,11 +3,14 @@
 #include "Housekeeping/Objects/Trash/HKTrashActor.h"
 #include "Housekeeping/Objects/Trash/HKTrashDirtComponent.h"
 #include "Housekeeping/Objects/Trash/HKTrashPoolSubsystem.h"
+#include "Housekeeping/Objects/Stain/HKStainActor.h"
+#include "Housekeeping/Objects/Stain/HKStainDirtComponent.h"
 #include "Components/BoxComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "TimerManager.h"
+#include "UObject/ConstructorHelpers.h"
 #include "Rooms/RoomActor.h"
 
 AHKRoomVolume::AHKRoomVolume()
@@ -21,6 +24,12 @@ AHKRoomVolume::AHKRoomVolume()
 	Bounds->SetBoxExtent(FVector(300.0f, 300.0f, 150.f));
 	Bounds->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Bounds->ShapeColor = FColor(80, 200, 255);
+
+	static ConstructorHelpers::FClassFinder<AHKStainActor> StainFinder(TEXT("/Game/HouseKeeping/Blueprints/BP_HK_Stain"));
+	if (StainFinder.Succeeded())
+	{
+		StainClass = StainFinder.Class;
+	}
 }
 
 void AHKRoomVolume::BeginPlay()
@@ -71,7 +80,10 @@ void AHKRoomVolume::ApplyRandomDirt()
 		ActiveDirt.Add(Candidates[I]);
 		TotalWeight += Candidates[I]->GetWeight();
 	}
+	//
 	SpawnTrash(Random);
+	SpawnStains(Random);
+	//
 	bDirty = TotalWeight > 0.0f;
 	if (bDirty)
 	{
@@ -96,6 +108,14 @@ void AHKRoomVolume::ClearDirt()
 		}
 		Dirt->ClearDirt();
 	}
+	for (AHKStainActor* SpawnedStain : SpawnedStains)
+	{
+		if (IsValid(SpawnedStain))
+		{
+			SpawnedStain->Destroy();
+		}
+	}
+	SpawnedStains.Reset();
 	ActiveDirt.Reset();
 	TotalWeight = 0.0f;
 	bDirty = false;
@@ -175,6 +195,61 @@ bool AHKRoomVolume::FindTrashSpawnTransform(FRandomStream& Random, FTransform& O
 	}
 	OutTransform = FTransform(FRotator(0.0f, Random.FRandRange(0.0f, 360.0f), 0.0f), Location + FVector(0.0f, 0.0f, 15.0f));
 	return true;
+}
+
+void AHKRoomVolume::SpawnStains(FRandomStream& Random)
+{
+	if (!StainClass)
+	{
+		return;
+	}
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	const int32 NumStains = Random.RandRange(MinStains, FMath::Max(MinStains, MaxStains));
+	for (int32 I = 0; I < NumStains; ++I)
+	{
+		FHitResult Hit;
+		if (!FindFloorPoint(Random, Hit))
+		{
+			continue;
+		}
+		const FRotator Rotation(0.0f, Random.FRandRange(0.0f, 360.0f), 0.0f);
+		AHKStainActor* NewStain = GetWorld()->SpawnActor<AHKStainActor>(StainClass, Hit.ImpactPoint, Rotation, Params);
+		if (!NewStain)
+		{
+			continue;
+		}
+		UHKStainDirtComponent* StainDirt = NewStain->GetStain();
+		StainDirt->ApplyDirt(Random);
+		SpawnedStains.Add(NewStain);
+		ActiveDirt.Add(StainDirt);
+		TotalWeight += StainDirt->GetWeight();
+	}
+}
+
+bool AHKRoomVolume::FindFloorPoint(FRandomStream& Random, FHitResult& OutHit) const
+{
+	const FVector Extent = Bounds->GetScaledBoxExtent();
+	const FCollisionQueryParams Params(SCENE_QUERY_STAT(HKStainSpawn), false, this);
+	for (int32 Attempt = 0; Attempt < StainSpawnAttempts; ++Attempt)
+	{
+		const FVector LocalXY(Random.FRandRange(-Extent.X, Extent.X) * 0.8f, Random.FRandRange(-Extent.Y, Extent.Y) * 0.8f, 0.0f);
+		const FVector Center = Bounds->GetComponentLocation() + Bounds->GetComponentQuat().RotateVector(LocalXY);
+		if (!GetWorld()->LineTraceSingleByChannel(OutHit, Center + FVector(0.0f, 0.0f, Extent.Z), Center - FVector(0.0f, 0.0f, Extent.Z), ECC_Visibility, Params))
+		{
+			continue;
+		}
+		const AActor* HitActor = OutHit.GetActor();
+		const UPrimitiveComponent* HitComponent = OutHit.GetComponent();
+		if (OutHit.ImpactNormal.Z < 0.9f
+			|| (HitActor && HitActor->FindComponentByClass<UHKDirtComponent>())
+			|| (HitComponent && HitComponent->IsSimulatingPhysics()))
+		{
+			continue;
+		}
+		return true;
+	}
+	return false;
 }
 
 bool AHKRoomVolume::IsCountedHere(const UHKDirtComponent* Dirt) const

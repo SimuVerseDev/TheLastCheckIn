@@ -4,6 +4,7 @@
 #include "HKRoomVolume.generated.h"
 class AHKRoomVolume;
 class AHKTrashActor;
+class AHKStainActor;
 class ARoomActor;
 class UBoxComponent;
 class UHKDirtComponent;
@@ -76,7 +77,7 @@ protected:
 	
 	UPROPERTY(EditInstanceOnly, Category="Housekeeping|Room|Trash")
 	TArray<TObjectPtr<AActor>> TrashSpawnPoints;
-	
+
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Room", meta=(ClampMin=0.05, Units="s"))
 	float EvaluateInterval = 0.25f;
 	
@@ -86,6 +87,23 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Debug")
 	bool bShowDebug = true;
 	
+	/*
+	걸레
+	*/
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Room|Stain")
+	TSubclassOf<AHKStainActor> StainClass;
+
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Room|Stain", meta=(ClampMin=0))
+	int32 MinStains = 1;
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Room|Stain", meta=(ClampMin=0))
+	int32 MaxStains = 3;
+
+	/*
+	바닥 찾기 실패 시 재시도 횟수
+	*/
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Room|Stain", meta=(ClampMin=1))
+	int32 StainSpawnAttempts = 8;
+	
 private:
 	void CollectCandidates(TArray<UHKDirtComponent*>& OutCandidates) const;
 	void SpawnTrash(FRandomStream& Random);
@@ -94,13 +112,18 @@ private:
 	void Evaluate();
 	void FinishCleaning();
 	void SetCleanliness(float NewCleanliness);
+	void SpawnStains(FRandomStream& Random);
+	bool FindFloorPoint(FRandomStream& Random, FHitResult& OutHit) const;
 	
 	TArray<TWeakObjectPtr<UHKDirtComponent>> ActiveDirt;
-	
+
 	UFUNCTION()
 	void HandleRoomAssigned(ARoomActor* Room);
 	UFUNCTION()
 	void HandleRoomCheckedOut(ARoomActor* Room);
+	
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<AHKStainActor>> SpawnedStains;
 	
 	FTimerHandle EvaluateTimer;
 	float TotalWeight = 0.0f;
