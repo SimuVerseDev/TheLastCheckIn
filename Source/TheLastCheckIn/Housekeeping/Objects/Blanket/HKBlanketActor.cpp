@@ -2,6 +2,9 @@
 #include "Housekeeping/Core/Carry/HKCarryComponent.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/Pawn.h"
 
 AHKBlanketActor::AHKBlanketActor()
 {
@@ -56,8 +59,15 @@ void AHKBlanketActor::Tick(float DeltaTime)
 		return;
 	}
 
-	const int32 NumSteps = FMath::Clamp(FMath::CeilToInt(DeltaTime / 0.016f), 1, 4);
-	const float SubStep = DeltaTime / NumSteps;
+	if (GrabbedIndex == INDEX_NONE && !IsPlayerNearby())
+	{
+		return;
+	}
+
+	// 프레임이 느려져도 계산량이 늘지 않도록 상한 적용 (렉 -> 서브스텝 증가 -> 렉 악순환 방지)
+	const float SimDelta = FMath::Min(DeltaTime, MaxSimDeltaTime);
+	const int32 NumSteps = FMath::Clamp(FMath::CeilToInt(SimDelta / 0.016f), 1, MaxSubSteps);
+	const float SubStep = SimDelta / NumSteps;
 	for (int32 S = 0; S < NumSteps; ++S)
 	{
 		Step(SubStep);
@@ -65,6 +75,69 @@ void AHKBlanketActor::Tick(float DeltaTime)
 
 	ComputeParticleNormals();
 	BuildMesh(false);
+
+	UpdateSleep(DeltaTime, SubStep);
+}
+
+void AHKBlanketActor::WakeUp()
+{
+	SleepTimer = 0.0f;
+	SetActorTickEnabled(true);
+}
+
+void AHKBlanketActor::UpdateSleep(float DeltaTime, float SubStep)
+{
+	if (GrabbedIndex != INDEX_NONE || bMakingBed || SleepDelay <= 0.0f)
+	{
+		SleepTimer = 0.0f;
+		return;
+	}
+
+	const float Threshold = SleepSpeed * SubStep;
+	const float ThresholdSq = Threshold * Threshold;
+	for (int32 I = 0; I < Positions.Num(); ++I)
+	{
+		if (FVector::DistSquared(Positions[I], PrevPositions[I]) > ThresholdSq)
+		{
+			SleepTimer = 0.0f;
+			return;
+		}
+	}
+
+	SleepTimer += DeltaTime;
+	if (SleepTimer >= SleepDelay)
+	{
+		// Grab / MakeBed / Scramble 시 WakeUp으로 다시 켜짐
+		PrevPositions = Positions;
+		SleepTimer = 0.0f;
+		SetActorTickEnabled(false);
+	}
+}
+
+bool AHKBlanketActor::IsPlayerNearby() const
+{
+	if (SimulationDistance <= 0.0f)
+	{
+		return true;
+	}
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return true;
+	}
+
+	const FVector Center = Positions.IsValidIndex(Positions.Num() / 2) ? Positions[Positions.Num() / 2] : GetActorLocation();
+	const float MaxDistSq = SimulationDistance * SimulationDistance;
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		const APlayerController* PC = It->Get();
+		const APawn* Pawn = PC ? PC->GetPawn() : nullptr;
+		if (Pawn && FVector::DistSquared(Pawn->GetActorLocation(), Center) <= MaxDistSq)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 void AHKBlanketActor::InitParticles()
@@ -343,6 +416,7 @@ void AHKBlanketActor::Grab(int32 ParticleIndex)
 	{
 		GrabbedIndex = ParticleIndex;
 		GrabTarget = Positions[ParticleIndex];
+		WakeUp();
 	}
 }
 
@@ -360,6 +434,7 @@ void AHKBlanketActor::Release(const FVector& Velocity)
 		PrevPositions[GrabbedIndex] = Positions[GrabbedIndex] - (ClampedVel * 0.016f);
 	}
 	GrabbedIndex = INDEX_NONE;
+	WakeUp();
 }
 
 /*
@@ -543,6 +618,7 @@ void AHKBlanketActor::MakeBed(const FTransform& Target, float Duration)
 	MakeElapsed = 0.0f;
 	MakeDuration = FMath::Max(Duration, KINDA_SMALL_NUMBER);
 	bMakingBed = true;
+	WakeUp();
 }
 
 void AHKBlanketActor::Scramble(FRandomStream& Random, const FVector& Center, float MaxOffset)
@@ -589,4 +665,5 @@ void AHKBlanketActor::Scramble(FRandomStream& Random, const FVector& Center, flo
 			PrevPositions[Idx] = Positions[Idx];
 		}
 	}
+	WakeUp();
 }
