@@ -203,13 +203,18 @@ void AHKRoomVolume::SpawnStains(FRandomStream& Random)
 	{
 		return;
 	}
+	float FloorZ = 0.0f;
+	if (!FindFloorZ(FloorZ))
+	{
+		return;
+	}
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	const int32 NumStains = Random.RandRange(MinStains, FMath::Max(MinStains, MaxStains));
 	for (int32 I = 0; I < NumStains; ++I)
 	{
 		FHitResult Hit;
-		if (!FindFloorPoint(Random, Hit))
+		if (!FindFloorPoint(Random, FloorZ, Hit))
 		{
 			continue;
 		}
@@ -227,29 +232,63 @@ void AHKRoomVolume::SpawnStains(FRandomStream& Random)
 	}
 }
 
-bool AHKRoomVolume::FindFloorPoint(FRandomStream& Random, FHitResult& OutHit) const
+bool AHKRoomVolume::FindFloorPoint(FRandomStream& Random, float FloorZ, FHitResult& OutHit) const
 {
 	const FVector Extent = Bounds->GetScaledBoxExtent();
-	const FCollisionQueryParams Params(SCENE_QUERY_STAT(HKStainSpawn), false, this);
 	for (int32 Attempt = 0; Attempt < StainSpawnAttempts; ++Attempt)
 	{
 		const FVector LocalXY(Random.FRandRange(-Extent.X, Extent.X) * 0.8f, Random.FRandRange(-Extent.Y, Extent.Y) * 0.8f, 0.0f);
-		const FVector Center = Bounds->GetComponentLocation() + Bounds->GetComponentQuat().RotateVector(LocalXY);
-		if (!GetWorld()->LineTraceSingleByChannel(OutHit, Center + FVector(0.0f, 0.0f, Extent.Z), Center - FVector(0.0f, 0.0f, Extent.Z), ECC_Visibility, Params))
+		if (!TraceStainSurface(LocalXY, OutHit))
 		{
 			continue;
 		}
 		const AActor* HitActor = OutHit.GetActor();
-		const UPrimitiveComponent* HitComponent = OutHit.GetComponent();
-		if (OutHit.ImpactNormal.Z < 0.9f
-			|| (HitActor && HitActor->FindComponentByClass<UHKDirtComponent>())
-			|| (HitComponent && HitComponent->IsSimulatingPhysics()))
+		if (OutHit.ImpactPoint.Z > FloorZ + FloorHeightTolerance
+			|| (HitActor && HitActor->FindComponentByClass<UHKDirtComponent>()))
 		{
 			continue;
 		}
 		return true;
 	}
 	return false;
+}
+
+bool AHKRoomVolume::FindFloorZ(float& OutFloorZ) const
+{
+	/*
+	가구는 항상 바닥 위에 있으므로, 격자로 쏜 트레이스 중 가장 낮은 평평한 면을 바닥 높이로 사용
+	*/
+	constexpr int32 GridSize = 6;
+	const FVector Extent = Bounds->GetScaledBoxExtent();
+	bool bFound = false;
+	for (int32 X = 0; X < GridSize; ++X)
+	{
+		for (int32 Y = 0; Y < GridSize; ++Y)
+		{
+			const float U = FMath::Lerp(-0.8f, 0.8f, static_cast<float>(X) / (GridSize - 1));
+			const float V = FMath::Lerp(-0.8f, 0.8f, static_cast<float>(Y) / (GridSize - 1));
+			FHitResult Hit;
+			if (TraceStainSurface(FVector(Extent.X * U, Extent.Y * V, 0.0f), Hit))
+			{
+				OutFloorZ = bFound ? FMath::Min(OutFloorZ, Hit.ImpactPoint.Z) : Hit.ImpactPoint.Z;
+				bFound = true;
+			}
+		}
+	}
+	return bFound;
+}
+
+bool AHKRoomVolume::TraceStainSurface(const FVector& LocalXY, FHitResult& OutHit) const
+{
+	const FVector Extent = Bounds->GetScaledBoxExtent();
+	const FVector Center = Bounds->GetComponentLocation() + Bounds->GetComponentQuat().RotateVector(LocalXY);
+	const FCollisionQueryParams Params(SCENE_QUERY_STAT(HKStainSpawn), false, this);
+	if (!GetWorld()->LineTraceSingleByChannel(OutHit, Center + FVector(0.0f, 0.0f, Extent.Z), Center - FVector(0.0f, 0.0f, Extent.Z), ECC_Visibility, Params))
+	{
+		return false;
+	}
+	const UPrimitiveComponent* HitComponent = OutHit.GetComponent();
+	return OutHit.ImpactNormal.Z >= 0.9f && !(HitComponent && HitComponent->IsSimulatingPhysics());
 }
 
 bool AHKRoomVolume::IsCountedHere(const UHKDirtComponent* Dirt) const
