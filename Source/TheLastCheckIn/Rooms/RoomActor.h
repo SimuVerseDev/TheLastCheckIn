@@ -62,6 +62,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Room")
 	bool TryEndStay(const FGuid& InStayId);
 	
+	// 객실 해금 여부
+	UFUNCTION(BlueprintPure, Category = "Room")
+	bool IsUnlocked() const
+	{
+		return bUnlocked;
+	}
+
+	// 객실 해금
+	UFUNCTION(BlueprintCallable, Category = "Room")
+	void UnlockRoom()
+	{
+		bUnlocked = true;
+	}
+	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Room")
 	TObjectPtr<USceneComponent> SceneRoot;
@@ -80,4 +94,8 @@ protected:
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Room")
 	FGuid CurrentStayId;
+	
+	// 레벨에 배치된 객실마다 초기 해금 여부 설정
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Room")
+	bool bUnlocked = false;
 };
