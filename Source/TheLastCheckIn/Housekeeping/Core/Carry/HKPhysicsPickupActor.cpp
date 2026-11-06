@@ -1,5 +1,6 @@
 ﻿#include "Housekeeping/Core/Carry/HKPhysicsPickupActor.h"
 #include "Housekeeping/Core/Carry/HKCarryComponent.h"
+#include "Housekeeping/Core/Dirt/HKPlacementDirtComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "UObject/ConstructorHelpers.h"
@@ -33,6 +34,16 @@ void AHKPhysicsPickupActor::NotifyPickedUp(AActor* InCarrier)
 void AHKPhysicsPickupActor::NotifyReleased(bool bThrown)
 {
 	Carrier.Reset();
+	/*
+	던진 게 아니라 내려놓은 경우만 제자리 스냅
+	*/
+	if (!bThrown)
+	{
+		if (UHKPlacementDirtComponent* Placement = FindComponentByClass<UHKPlacementDirtComponent>())
+		{
+			Placement->TrySnapHome();
+		}
+	}
 	BP_OnReleased(bThrown);
 }
 

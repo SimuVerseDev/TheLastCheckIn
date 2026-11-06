@@ -13,6 +13,8 @@ class UHKPlacementDirtComponent : public UHKDirtComponent
 
 public:
 	virtual void ApplyDirt(FRandomStream& Random) override;
+	
+	bool TrySnapHome();
 
 protected:
 	virtual void BeginPlay() override;
@@ -23,6 +25,18 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|Placement", meta=(ClampMin=1, ClampMax=180, Units="deg"))
 	float MaxAngle = 90.0f;
+	
+	/*
+	스냅 범위
+	*/
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|Snap", meta=(ClampMin=0, Units="cm"))
+	float SnapDistance = 30.0f;
+
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|Snap", meta=(ClampMin=0, ClampMax=180, Units="deg"))
+	float SnapAngle = 25.0f;
+
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|Snap", meta=(ClampMin=0.01, Units="s"))
+	float SnapDuration = 0.2f;
 
 	/*
 	흐트러뜨리기 범위
@@ -41,4 +55,11 @@ protected:
 	*/
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|Scatter", meta=(ClampMin=0, ClampMax=1))
 	float TipOverChance = 0.2f;
+	
+private:
+	void TickSnap();
+
+	FTimerHandle SnapTimer;
+	FTransform SnapStart;
+	float SnapStartTime = 0.0f;
 };
