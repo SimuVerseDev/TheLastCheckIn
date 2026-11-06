@@ -212,7 +212,10 @@ void UPlayerInteractionComponent::SetFocus(AActor* NewFocus)
 		IInteractable::Execute_OnInteractFocusEnd(OldFocus, Pawn);
 	}
 	FocusedActor = NewFocus;
-	CancelHold();
+	if (HoldTarget.Get() != GetActiveInteraction())
+	{
+		CancelHold();
+	}
 	FText Prompt;
 	if (IsInteractable(NewFocus))
 	{
@@ -232,7 +235,8 @@ void UPlayerInteractionComponent::UpdateHold(float DeltaTime)
 	{
 		return;
 	}
-	if (Target != FocusedActor.Get() /*시선이 벗어났거나*/ || !IsActionKeyDown(InteractAction) /*키를 뗐으면*/)
+	const bool bActiveHold = Target == GetActiveInteraction();
+	if ((!bActiveHold && Target != FocusedActor.Get()) /*시선이 벗어났거나*/ || !IsActionKeyDown(InteractAction) /*키를 뗐으면*/)
 	{
 		CancelHold();
 		return;
