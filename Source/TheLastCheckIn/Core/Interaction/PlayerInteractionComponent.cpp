@@ -51,10 +51,7 @@ void UPlayerInteractionComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	EnsureInputSetup(PC);
 	UpdateFocus(PC);
 	UpdateHold(DeltaTime);
-	if (bShowDebugPrompt)
-	{
-		ShowDebugPrompt();
-	}
+	UpdatePrompt();
 }
 
 /*
@@ -215,7 +212,10 @@ void UPlayerInteractionComponent::SetFocus(AActor* NewFocus)
 		IInteractable::Execute_OnInteractFocusEnd(OldFocus, Pawn);
 	}
 	FocusedActor = NewFocus;
-	CancelHold();
+	if (HoldTarget.Get() != GetActiveInteraction())
+	{
+		CancelHold();
+	}
 	FText Prompt;
 	if (IsInteractable(NewFocus))
 	{
@@ -235,7 +235,8 @@ void UPlayerInteractionComponent::UpdateHold(float DeltaTime)
 	{
 		return;
 	}
-	if (Target != FocusedActor.Get() /*시선이 벗어났거나*/ || !IsActionKeyDown(InteractAction) /*키를 뗐으면*/)
+	const bool bActiveHold = Target == GetActiveInteraction();
+	if ((!bActiveHold && Target != FocusedActor.Get()) /*시선이 벗어났거나*/ || !IsActionKeyDown(InteractAction) /*키를 뗐으면*/)
 	{
 		CancelHold();
 		return;
@@ -259,43 +260,35 @@ void UPlayerInteractionComponent::CancelHold()
 	HoldElapsed = 0.0f;
 }
 
-/*
-DEBUG
-*/
-void UPlayerInteractionComponent::ShowDebugPrompt() const
+void UPlayerInteractionComponent::UpdatePrompt()
 {
-	if (!GEngine)
-	{
-		return;
-	}
 	FString Message;
+	bool bBlocked = false;
 	for (const IInteractionExtension* Extension : GetExtensions())
 	{
 		if (Extension->BlocksFocus())
 		{
-			Message = Extension->GetBlockingPrompt().ToString();
+			bBlocked = true;
 			break;
 		}
 	}
-	if (AActor* Target = FocusedActor.Get(); Message.IsEmpty() && IsInteractable(Target))
+	AActor* Target = GetActiveInteraction();
+	if (!Target)
+	{
+		Target = FocusedActor.Get();
+	}
+	if (!bBlocked && IsInteractable(Target))
 	{
 		AActor* Pawn = GetOwner();
-		if (IInteractable::Execute_CanUse(Target, Pawn))
-		{
-			Message = FString::Printf(TEXT("[LMB] %s"), *IInteractable::Execute_GetUsePrompt(Target, Pawn).ToString());
-		}
 		if (IInteractable::Execute_CanInteract(Target, Pawn))
 		{
-			if (!Message.IsEmpty())
-			{
-				Message += TEXT("\n");
-			}
-			Message += FString::Printf(TEXT("[E] %s"), *IInteractable::Execute_GetInteractPrompt(Target, Pawn).ToString());
+			Message = FString::Printf(TEXT("[E] %s"), *IInteractable::Execute_GetInteractPrompt(Target, Pawn).ToString());
 		}
 	}
-	if (!Message.IsEmpty())
+	if (Message != LastPrompt)
 	{
-		GEngine->AddOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()), 0.0f, FColor::Yellow, Message);
+		LastPrompt = Message;
+		OnPromptChanged.Broadcast(FText::FromString(Message));
 	}
 }
 
