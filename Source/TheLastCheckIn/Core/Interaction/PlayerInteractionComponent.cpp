@@ -259,28 +259,21 @@ void UPlayerInteractionComponent::CancelHold()
 void UPlayerInteractionComponent::UpdatePrompt()
 {
 	FString Message;
+	bool bBlocked = false;
 	for (const IInteractionExtension* Extension : GetExtensions())
 	{
 		if (Extension->BlocksFocus())
 		{
-			Message = Extension->GetBlockingPrompt().ToString();
+			bBlocked = true;
 			break;
 		}
 	}
-	if (AActor* Target = FocusedActor.Get(); Message.IsEmpty() && IsInteractable(Target))
+	if (AActor* Target = FocusedActor.Get(); !bBlocked && IsInteractable(Target))
 	{
 		AActor* Pawn = GetOwner();
-		if (IInteractable::Execute_CanUse(Target, Pawn))
-		{
-			Message = FString::Printf(TEXT("[LMB] %s"), *IInteractable::Execute_GetUsePrompt(Target, Pawn).ToString());
-		}
 		if (IInteractable::Execute_CanInteract(Target, Pawn))
 		{
-			if (!Message.IsEmpty())
-			{
-				Message += TEXT("\n");
-			}
-			Message += FString::Printf(TEXT("[E] %s"), *IInteractable::Execute_GetInteractPrompt(Target, Pawn).ToString());
+			Message = FString::Printf(TEXT("[E] %s"), *IInteractable::Execute_GetInteractPrompt(Target, Pawn).ToString());
 		}
 	}
 	if (Message != LastPrompt)
