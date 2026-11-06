@@ -51,10 +51,7 @@ void UPlayerInteractionComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	EnsureInputSetup(PC);
 	UpdateFocus(PC);
 	UpdateHold(DeltaTime);
-	if (bShowDebugPrompt)
-	{
-		ShowDebugPrompt();
-	}
+	UpdatePrompt();
 }
 
 /*
@@ -259,15 +256,8 @@ void UPlayerInteractionComponent::CancelHold()
 	HoldElapsed = 0.0f;
 }
 
-/*
-DEBUG
-*/
-void UPlayerInteractionComponent::ShowDebugPrompt() const
+void UPlayerInteractionComponent::UpdatePrompt()
 {
-	if (!GEngine)
-	{
-		return;
-	}
 	FString Message;
 	for (const IInteractionExtension* Extension : GetExtensions())
 	{
@@ -293,9 +283,10 @@ void UPlayerInteractionComponent::ShowDebugPrompt() const
 			Message += FString::Printf(TEXT("[E] %s"), *IInteractable::Execute_GetInteractPrompt(Target, Pawn).ToString());
 		}
 	}
-	if (!Message.IsEmpty())
+	if (Message != LastPrompt)
 	{
-		GEngine->AddOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()), 0.0f, FColor::Yellow, Message);
+		LastPrompt = Message;
+		OnPromptChanged.Broadcast(FText::FromString(Message));
 	}
 }
 

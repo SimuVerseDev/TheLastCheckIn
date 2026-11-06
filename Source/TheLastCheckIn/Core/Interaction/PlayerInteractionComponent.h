@@ -10,6 +10,8 @@ class IInteractionExtension;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnUsed, AActor*, Target);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHKOnFocusChanged, AActor*, NewFocus, const FText&, Prompt);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnHoldProgress, float, Alpha);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnPromptChanged, const FText&, Prompt);
+
 UCLASS(ClassGroup=(Interaction), meta=(BlueprintSpawnableComponent))
 class THELASTCHECKIN_API UPlayerInteractionComponent : public UActorComponent
 {
@@ -21,6 +23,8 @@ public:
 	FHKOnFocusChanged OnFocusChanged;
 	UPROPERTY(BlueprintAssignable, Category="Interaction")
 	FHKOnHoldProgress OnHoldProgress;
+	UPROPERTY(BlueprintAssignable, Category="Interaction")
+	FHKOnPromptChanged OnPromptChanged;
 	
 	UPROPERTY(BlueprintAssignable, Category="Interaction")
 	FHKOnUsed OnUsed;
@@ -46,9 +50,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> UseAction;
-	
-	UPROPERTY(EditAnywhere, Category="Debug")
-	bool bShowDebugPrompt = true;
+
+	void UpdatePrompt();
+	// bool bShowDebugPrompt = true;
 	
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -82,4 +86,6 @@ private:
 	TWeakObjectPtr<AActor> HoldTarget;
 	float HoldElapsed = 0.0f;
 	float HoldDuration = 0.0f;
+	
+	FString LastPrompt;
 };
