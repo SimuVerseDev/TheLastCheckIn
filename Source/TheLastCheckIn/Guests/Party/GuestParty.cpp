@@ -349,6 +349,7 @@ bool UGuestParty::CanAssignRoom(const ARoomActor* Room) const
 {
     return CanCheckIn()
         && IsValid(Room)
+        && Room -> IsUnlocked()
         && Room->GetRoomState() == ERoomState::Available
         && Room->GetCapacity() > 0
         && IsValid(Room->GetArrivalTarget());
