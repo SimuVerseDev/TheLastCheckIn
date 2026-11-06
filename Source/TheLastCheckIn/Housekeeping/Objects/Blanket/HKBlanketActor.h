@@ -46,6 +46,9 @@ public:
 		return bMakingBed;
 	}
 
+	/*
+	Perf
+	*/
 	UFUNCTION(BlueprintCallable, Category="Housekeeping|Blanket")
 	void WakeUp();
 
@@ -137,6 +140,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm"))
 	float CollisionOffset = 2.0f;
 
+	/*
+	Perf
+	*/
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Performance", meta=(ClampMin=0.005, ClampMax=0.1, Units="s"))
 	float MaxSimDeltaTime = 1.0f / 30.0f;
 
@@ -172,6 +178,9 @@ private:
 	void SolveConstraints();
 	void SolveCollisions();
 	void SolveTether();
+	/*
+	Perf
+	*/
 	void UpdateSleep(float DeltaTime, float SubStep);
 	bool IsPlayerNearby() const;
 	float SleepTimer = 0.0f;
