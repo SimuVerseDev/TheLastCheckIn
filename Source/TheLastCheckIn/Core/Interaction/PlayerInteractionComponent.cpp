@@ -268,7 +268,12 @@ void UPlayerInteractionComponent::UpdatePrompt()
 			break;
 		}
 	}
-	if (AActor* Target = FocusedActor.Get(); !bBlocked && IsInteractable(Target))
+	AActor* Target = GetActiveInteraction();
+	if (!Target)
+	{
+		Target = FocusedActor.Get();
+	}
+	if (!bBlocked && IsInteractable(Target))
 	{
 		AActor* Pawn = GetOwner();
 		if (IInteractable::Execute_CanInteract(Target, Pawn))
