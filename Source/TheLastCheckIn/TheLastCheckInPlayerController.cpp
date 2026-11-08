@@ -9,11 +9,13 @@
 #include "Blueprint/UserWidget.h"
 #include "TheLastCheckIn.h"
 #include "Widgets/Input/SVirtualJoystick.h"
+#include "Night/NightFlowComponent.h"
 
 ATheLastCheckInPlayerController::ATheLastCheckInPlayerController()
 {
 	// set the player camera manager class
 	PlayerCameraManagerClass = ATheLastCheckInCameraManager::StaticClass();
+	NightFlow = CreateDefaultSubobject<UNightFlowComponent>(TEXT("NightFlow"));
 }
 
 void ATheLastCheckInPlayerController::BeginPlay()
