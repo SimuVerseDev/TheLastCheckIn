@@ -97,7 +97,7 @@ bool AGuestCharacter::NotifyDestinationReached(AActor* ReachedTarget)
 }
 
 bool AGuestCharacter::ActivateFromPool(const FVector& SpawnLocation, const FRotator& SpawnRotation,
-                                       AActor* CounterTarget, const FDataTableRowHandle& InGuestTypeRow)
+AActor* CounterTarget, const FDataTableRowHandle& InGuestTypeRow)
 {
 	// 대기 중인 손님만 꺼낼 수 있음
 	if (GuestState != EGuestState::Inactive ||
@@ -138,11 +138,17 @@ bool AGuestCharacter::ActivateFromPool(const FVector& SpawnLocation, const FRota
 	InitialMoveTarget = CounterTarget;
 	MoveTarget = CounterTarget;
 	GuestState = EGuestState::MovingToCounter;
+	
+	// 아직 숨겨진 상태에서 새 외형 적용
+	OnPrepareGuestAppearance();
 
 	SetActorHiddenInGame(false);
 	SetActorEnableCollision(true);
 
 	GetMesh()->SetComponentTickEnabled(true);
+	
+	// BP에서 추가할 외형 컴포넌트도 활성화
+	OnGuestAppearanceActiveChanged(true);
 
 	GetCharacterMovement()->SetComponentTickEnabled(true);
 	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
@@ -189,6 +195,9 @@ bool AGuestCharacter::DeactivateToPool()
 	GetCharacterMovement()->SetComponentTickEnabled(false);
 
 	GetMesh()->SetComponentTickEnabled(false);
+	
+	//BP에서 추가할 외형 컴포넌트도 비활성화
+	OnGuestAppearanceActiveChanged(false);
 
 	SetActorEnableCollision(false);
 	SetActorHiddenInGame(true);
