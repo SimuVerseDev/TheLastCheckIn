@@ -29,6 +29,17 @@ float UHKPlacementDirtComponent::EvaluateDirt() const
 void UHKPlacementDirtComponent::ApplyDirt(FRandomStream& Random)
 {
 	Super::ApplyDirt(Random);
+	/*
+	스냅 중이면 취소하고 물리 복구
+	*/
+	if (SnapTimer.IsValid())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(SnapTimer);
+		if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(GetOwner()->GetRootComponent()))
+		{
+			Prim->SetSimulatePhysics(true);
+		}
+	}
 	
 	AActor* Owner = GetOwner();
 	const FTransform& Home = GetHomeTransform();
@@ -61,5 +72,57 @@ void UHKPlacementDirtComponent::ApplyDirt(FRandomStream& Random)
 			Prim->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
 			Prim->WakeAllRigidBodies();
 		}
+	}
+}
+
+bool UHKPlacementDirtComponent::TrySnapHome()
+{
+	AActor* Owner = GetOwner();
+	UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(Owner->GetRootComponent());
+	if (!Prim || SnapTimer.IsValid())
+	{
+		return false;
+	}
+
+	const FTransform& Home = GetHomeTransform();
+	const FTransform Current = Owner->GetActorTransform();
+	const float Distance = FVector::Dist(Current.GetLocation(), Home.GetLocation());
+	const float Angle = FMath::RadiansToDegrees(Current.GetRotation().AngularDistance(Home.GetRotation()));
+	if (Distance > SnapDistance || Angle > SnapAngle)
+	{
+		return false;
+	}
+
+	/*
+	이동 중엔 물리 끄기 - 끝나면 다시 켬
+	*/
+	Prim->SetSimulatePhysics(false);
+	SnapStart = Current;
+	SnapStartTime = GetWorld()->GetTimeSeconds();
+	GetWorld()->GetTimerManager().SetTimer(SnapTimer, this, &UHKPlacementDirtComponent::TickSnap, 0.01f, true);
+	return true;
+}
+
+void UHKPlacementDirtComponent::TickSnap()
+{
+	AActor* Owner = GetOwner();
+	const FTransform& Home = GetHomeTransform();
+	const float Alpha = FMath::Clamp((GetWorld()->GetTimeSeconds() - SnapStartTime) / SnapDuration, 0.0f, 1.0f);
+	const float Eased = FMath::InterpEaseOut(0.0f, 1.0f, Alpha, 2.0f);
+
+	const FVector Location = FMath::Lerp(SnapStart.GetLocation(), Home.GetLocation(), Eased);
+	const FQuat Rotation = FQuat::Slerp(SnapStart.GetRotation(), Home.GetRotation(), Eased);
+	Owner->SetActorLocationAndRotation(Location, Rotation);
+
+	if (Alpha < 1.0f)
+	{
+		return;
+	}
+	GetWorld()->GetTimerManager().ClearTimer(SnapTimer);
+	if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(Owner->GetRootComponent()))
+	{
+		Prim->SetSimulatePhysics(true);
+		Prim->SetPhysicsLinearVelocity(FVector::ZeroVector);
+		Prim->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
 	}
 }

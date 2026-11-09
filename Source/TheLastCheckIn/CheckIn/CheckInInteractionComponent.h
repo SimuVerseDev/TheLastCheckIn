@@ -59,6 +59,17 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="CheckIn")
 	FCheckInRoomListChanged OnRoomListChanged;
 	
+	UFUNCTION(BlueprintPure, Category="CheckIn")
+	bool IsRoomUnlocked(int32 RoomNumber) const;
+	
+	
+	// 해금 후 열린 객실 목록을 갱신할 때 호출
+	UFUNCTION(BlueprintCallable, Category = "CheckIn")
+	void RefreshRoomList()
+	{
+		OnRoomListChanged.Broadcast();
+	}
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

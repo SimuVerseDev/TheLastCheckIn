@@ -49,6 +49,11 @@ float ARoomActor::GetBaseRoomRate() const
 
 bool ARoomActor::TryReserve(const FGuid& InStayId)
 {
+	if (!IsUnlocked())
+	{
+		return false;
+	}
+	
 	if (!InStayId.IsValid())
 	{
 		return false;

@@ -32,6 +32,13 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Game|Phase")
 	void ConfirmSettlement();
+
+	// Sleep is available from midnight until 05:00, before automatic settlement.
+	UFUNCTION(BlueprintPure, Category = "Game|Phase")
+	bool CanSleep() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Game|Phase")
+	void RequestSleepSettlement();
 	
 	UFUNCTION(BlueprintPure, Category = "Game|Phase")
 	EHotelPhase GetCurrentPhase() const
@@ -85,4 +92,5 @@ private:
 	int32 CurrentDay = 1;
 	
 	bool bRunActive = false;
+	bool bEnteringSettlement = false;
 };
