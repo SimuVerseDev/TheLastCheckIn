@@ -99,6 +99,14 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	
+	// 풀에서 꺼낼 때 새 외형을 준비하도록 BP에 알림
+	UFUNCTION(BlueprintImplementableEvent, Category = "Guests|Appearance")
+	void OnPrepareGuestAppearance();
+	
+	// 추가한 얼굴, 헤어 등의 업데이트를 켜거나 끄도록 BP에 알림
+	UFUNCTION(BlueprintImplementableEvent, Category = "Guests|Appearance")
+	void OnGuestAppearanceActiveChanged(bool bActive);
+	
 	UPROPERTY(EditAnywhere, Category="Guest|Data")
 	FDataTableRowHandle GuestTypeRow;
 	
