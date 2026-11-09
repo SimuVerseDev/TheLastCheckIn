@@ -73,7 +73,7 @@ void UHotelPhaseSubsystem::StartRun()
 
 void UHotelPhaseSubsystem::ConfirmSettlement()
 {
-	if (!bRunActive || CurrentPhase != EHotelPhase::Settlement)
+	if (!bRunActive || bEnteringSettlement || CurrentPhase != EHotelPhase::Settlement)
 	{
 		return;
 	}
@@ -91,6 +91,20 @@ void UHotelPhaseSubsystem::ConfirmSettlement()
 	StartDay();
 }
 
+bool UHotelPhaseSubsystem::CanSleep() const
+{
+	return bRunActive && !bEnteringSettlement && Clock && Clock->IsClockRunning()
+		&& CurrentPhase == EHotelPhase::Night && Clock->GetHour() < 5;
+}
+
+void UHotelPhaseSubsystem::RequestSleepSettlement()
+{
+	if (CanSleep())
+	{
+		EnterSettlement();
+	}
+}
+
 bool UHotelPhaseSubsystem::IsDayAnomalyAllowed() const
 {
 	return CurrentPhase == EHotelPhase::Day
@@ -100,7 +114,7 @@ bool UHotelPhaseSubsystem::IsDayAnomalyAllowed() const
 
 void UHotelPhaseSubsystem::HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds)
 {
-	if (!bRunActive || CurrentPhase == EHotelPhase::Settlement)
+	if (!bRunActive || bEnteringSettlement || CurrentPhase == EHotelPhase::Settlement)
 	{
 		return;
 	}
@@ -137,6 +151,12 @@ void UHotelPhaseSubsystem::StartDay()
 
 void UHotelPhaseSubsystem::EnterSettlement()
 {
+	if (!bRunActive || bEnteringSettlement || !Clock || CurrentPhase == EHotelPhase::Settlement)
+	{
+		return;
+	}
+	// StopClock can broadcast OnTimeAdvanced. Prevent re-entry before stopping it.
+	TGuardValue<bool> EnteringGuard(bEnteringSettlement, true);
 	SetDaySlot(EDaySlot::None);
 	
 	Clock->StopClock();
