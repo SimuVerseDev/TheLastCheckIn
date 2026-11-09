@@ -387,6 +387,12 @@ void UCheckInInteractionComponent::GetRoomStatus(
         && Party->CanAssignRoom(Room);
 }
 
+bool UCheckInInteractionComponent::IsRoomUnlocked(int32 RoomNumber) const
+{
+    const ARoomActor* Room = FindUniqueRoom(RoomNumber);
+    return IsValid(Room) && Room->IsUnlocked();
+}
+
 bool UCheckInInteractionComponent::TryAssignRoomNumber(int32 RoomNumber)
 {
     bool bRoomExists;

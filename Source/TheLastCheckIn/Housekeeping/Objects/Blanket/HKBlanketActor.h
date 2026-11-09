@@ -47,6 +47,12 @@ public:
 	}
 
 	/*
+	Perf
+	*/
+	UFUNCTION(BlueprintCallable, Category="Housekeeping|Blanket")
+	void WakeUp();
+
+	/*
 	IInteractable
 	*/
 	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
@@ -133,7 +139,27 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm"))
 	float CollisionOffset = 2.0f;
-	
+
+	/*
+	Perf
+	*/
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Performance", meta=(ClampMin=0.005, ClampMax=0.1, Units="s"))
+	float MaxSimDeltaTime = 1.0f / 30.0f;
+
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Performance", meta=(ClampMin=1, ClampMax=4))
+	int32 MaxSubSteps = 2;
+
+	// 0 = 항상 계산
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Performance", meta=(ClampMin=0, Units="cm"))
+	float SimulationDistance = 1500.0f;
+
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Performance", meta=(ClampMin=0, Units="cm/s"))
+	float SleepSpeed = 3.0f;
+
+	// 0 = 잠들지 않음
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Performance", meta=(ClampMin=0, Units="s"))
+	float SleepDelay = 1.0f;
+
 private:
 	struct FDistanceConstraint
 	{
@@ -152,7 +178,13 @@ private:
 	void SolveConstraints();
 	void SolveCollisions();
 	void SolveTether();
-	
+	/*
+	Perf
+	*/
+	void UpdateSleep(float DeltaTime, float SubStep);
+	bool IsPlayerNearby() const;
+	float SleepTimer = 0.0f;
+
 	FVector ResolvePush(const FVector& SurfacePoint, const FVector& Normal, const FVector& Target,
 		const FCollisionObjectQueryParams& ObjectParams, const FCollisionQueryParams& Params) const;
 	void BuildTriangles();

@@ -128,6 +128,7 @@ bool AGuestScheduleManager::HasAvailableRoom() const
     for (const TObjectPtr<ARoomActor>& Room : Rooms)
     {
         if (IsValid(Room.Get()) &&
+            Room->IsUnlocked() &&
             Room->GetRoomState() == ERoomState::Available &&
             Room->GetCapacity() > 0 &&
             IsValid(Room->GetArrivalTarget()))

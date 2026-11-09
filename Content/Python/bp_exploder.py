@@ -12,6 +12,11 @@ level down. Child actors of a plain engine class (StaticMeshActor, PointLight)
 carry no logic of their own, so those are taken apart as usual. Pass
 keep_blueprints=False to flatten nested Blueprints into meshes and lights too.
 
+Components under a *_SharedRoot scene component were one Blueprint before it was
+merged into the parent. The outermost such group comes out as that Blueprint,
+loaded from GROUP_BLUEPRINT_FOLDER by name (BP_Table_set_SharedRoot places
+BP_Table_set). If no such asset exists the group is taken apart with a warning.
+
 Usage from the Output Log console (Cmd: Python):
     import bp_exploder; bp_exploder.explode_selected()
     import bp_exploder; bp_exploder.explode_selected(delete_original=True)
@@ -73,6 +78,9 @@ LIGHT_PROPERTIES = (
 
 MAX_DEPTH = 8
 
+GROUP_ROOT_SUFFIX = "_SharedRoot"
+GROUP_BLUEPRINT_FOLDER = "/Game/Design/Blueprints"
+
 
 def _log(message):
     unreal.log(LOG_PREFIX + message)
@@ -122,6 +130,31 @@ def _is_blueprint_class(actor_class):
         return False
 
 
+def _group_label(group):
+    return group.get_name()[:-len(GROUP_ROOT_SUFFIX)]
+
+
+def _group_blueprint_class(group):
+    """The Blueprint a *_SharedRoot group was merged from, or None if it is gone."""
+    name = _group_label(group)
+    try:
+        return unreal.load_class(None, "%s/%s.%s_C" % (GROUP_BLUEPRINT_FOLDER, name, name))
+    except Exception:
+        return None
+
+
+def _outermost_group(component):
+    """The highest *_SharedRoot at or above a scene component, skipping the actor root."""
+    group = None
+    node = component
+    while node is not None:
+        parent = node.get_attach_parent()
+        if parent is not None and node.get_name().endswith(GROUP_ROOT_SUFFIX):
+            group = node
+        node = parent
+    return group
+
+
 class Source(object):
     """One spawnable thing found inside an actor, resolved to world space."""
 
@@ -137,7 +170,8 @@ def collect_sources(actor, include_instances=True, include_lights=True,
                     keep_blueprints=True, depth=0, prefix=""):
     """Return (meshes, lights, blueprints, skipped) for an actor.
 
-    Recurses into child actors, except the Blueprint ones kept whole.
+    Recurses into child actors, except the Blueprint ones kept whole. Everything
+    under a *_SharedRoot group with a Blueprint asset is covered by that Blueprint.
     """
     meshes = []
     lights = []
@@ -148,7 +182,30 @@ def collect_sources(actor, include_instances=True, include_lights=True,
         _warn("Max nesting depth reached at %s, stopping recursion." % actor.get_actor_label())
         return meshes, lights, blueprints, skipped
 
+    kept_groups = {}
+    if keep_blueprints:
+        for component in actor.get_components_by_class(unreal.SceneComponent):
+            group = _outermost_group(component)
+            if group is None or group.get_name() in kept_groups:
+                continue
+            group_class = _group_blueprint_class(group)
+            kept_groups[group.get_name()] = group_class is not None
+            if group_class is None:
+                _warn("No Blueprint asset for %s, taking it apart." % group.get_name())
+                continue
+            blueprints.append(Source(
+                "%s%s" % (prefix, _group_label(group)), group.get_world_transform(), group,
+                actor_class=group_class))
+
+    def in_kept_group(component):
+        if not isinstance(component, unreal.SceneComponent):
+            return False
+        group = _outermost_group(component)
+        return group is not None and kept_groups.get(group.get_name(), False)
+
     for component in actor.get_components_by_class(unreal.StaticMeshComponent):
+        if in_kept_group(component):
+            continue
         mesh = _get(component, "static_mesh")
         label = "%s%s" % (prefix, component.get_name())
 
@@ -169,6 +226,8 @@ def collect_sources(actor, include_instances=True, include_lights=True,
 
     if include_lights:
         for component in actor.get_components_by_class(unreal.LightComponent):
+            if in_kept_group(component):
+                continue
             label = "%s%s" % (prefix, component.get_name())
             if _light_actor_class(component) is None:
                 skipped.append("%s (%s, no matching light actor)"
@@ -178,6 +237,8 @@ def collect_sources(actor, include_instances=True, include_lights=True,
 
     # Nested Blueprints appear as Child Actor Components holding a separate actor.
     for child_component in actor.get_components_by_class(unreal.ChildActorComponent):
+        if in_kept_group(child_component):
+            continue
         child_actor = _get(child_component, "child_actor")
         label = "%s%s" % (prefix, child_component.get_name())
         child_class = _get(child_component, "child_actor_class")
@@ -208,6 +269,8 @@ def collect_sources(actor, include_instances=True, include_lights=True,
 
     # Anything that is not geometry or light is lost by this conversion - report it.
     for component in actor.get_components_by_class(unreal.ActorComponent):
+        if in_kept_group(component):
+            continue
         if isinstance(component, (unreal.StaticMeshComponent, unreal.ChildActorComponent)):
             continue
         if include_lights and isinstance(component, unreal.LightComponent):

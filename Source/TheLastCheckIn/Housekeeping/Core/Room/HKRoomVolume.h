@@ -4,6 +4,7 @@
 #include "HKRoomVolume.generated.h"
 class AHKRoomVolume;
 class AHKTrashActor;
+class AHKStainActor;
 class ARoomActor;
 class UBoxComponent;
 class UHKDirtComponent;
@@ -76,7 +77,7 @@ protected:
 	
 	UPROPERTY(EditInstanceOnly, Category="Housekeeping|Room|Trash")
 	TArray<TObjectPtr<AActor>> TrashSpawnPoints;
-	
+
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Room", meta=(ClampMin=0.05, Units="s"))
 	float EvaluateInterval = 0.25f;
 	
@@ -86,6 +87,27 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Debug")
 	bool bShowDebug = true;
 	
+	/*
+	걸레
+	*/
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Room|Stain")
+	TSubclassOf<AHKStainActor> StainClass;
+
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Room|Stain", meta=(ClampMin=0))
+	int32 MinStains = 1;
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Room|Stain", meta=(ClampMin=0))
+	int32 MaxStains = 3;
+
+	/*
+	바닥 찾기 실패 시 재시도 횟수
+	*/
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Room|Stain", meta=(ClampMin=1))
+	int32 StainSpawnAttempts = 8;
+
+	// 방에서 가장 낮은 면(바닥) 기준 이 높이 이내에만 얼룩 생성 - 가구 윗면 제외, 러그는 허용
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Room|Stain", meta=(ClampMin=0, Units="cm"))
+	float FloorHeightTolerance = 10.0f;
+
 private:
 	void CollectCandidates(TArray<UHKDirtComponent*>& OutCandidates) const;
 	void SpawnTrash(FRandomStream& Random);
@@ -94,13 +116,20 @@ private:
 	void Evaluate();
 	void FinishCleaning();
 	void SetCleanliness(float NewCleanliness);
+	void SpawnStains(FRandomStream& Random);
+	bool FindFloorPoint(FRandomStream& Random, float FloorZ, FHitResult& OutHit) const;
+	bool FindFloorZ(float& OutFloorZ) const;
+	bool TraceStainSurface(const FVector& LocalXY, FHitResult& OutHit) const;
 	
 	TArray<TWeakObjectPtr<UHKDirtComponent>> ActiveDirt;
-	
+
 	UFUNCTION()
 	void HandleRoomAssigned(ARoomActor* Room);
 	UFUNCTION()
 	void HandleRoomCheckedOut(ARoomActor* Room);
+	
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<AHKStainActor>> SpawnedStains;
 	
 	FTimerHandle EvaluateTimer;
 	float TotalWeight = 0.0f;
