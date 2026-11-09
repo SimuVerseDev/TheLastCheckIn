@@ -8,6 +8,7 @@
 
 class UInputMappingContext;
 class UUserWidget;
+class UNightFlowComponent;
 
 /**
  *  Simple first person Player Controller
@@ -25,6 +26,8 @@ public:
 	ATheLastCheckInPlayerController();
 
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night")
+	TObjectPtr<UNightFlowComponent> NightFlow;
 
 	/** Input Mapping Contexts */
 	UPROPERTY(EditAnywhere, Category="Input|Input Mappings")
