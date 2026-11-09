@@ -49,7 +49,7 @@ void UCCTVPadWidget::HandlePadAnimFinished()
 	{
 		OnPadCovered.Broadcast();
 		Image_Pad->SetVisibility(ESlateVisibility::Collapsed);
-		if (Anim_PadUp)
+		if (Anim_Static)
 		{
 			PlayAnimation(Anim_Static);
 		}

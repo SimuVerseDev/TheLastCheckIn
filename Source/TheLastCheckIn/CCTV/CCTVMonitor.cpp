@@ -72,7 +72,7 @@ void ACCTVMonitor::ClosePad()
 		return;
 	}
 	bPadOpen = false;
-	bTransitioning = false;
+	bTransitioning = true;
 	
 	PC->SetViewTargetWithBlend(PC->GetPawn(), 0.0f);
 	PadWidget->PlayPadDown();
@@ -93,8 +93,8 @@ void ACCTVMonitor::HandlePadLowered()
 	bTransitioning = false;
 	if (APlayerController* PC = ViewingPC.Get())
 	{
-		PC->SetIgnoreMoveInput(true);
-		PC->SetIgnoreLookInput(true);
+		PC->SetIgnoreMoveInput(false);
+		PC->SetIgnoreLookInput(false);
 	}
 	ViewingPC.Reset();
 }
