@@ -169,6 +169,9 @@ void ACCTVMonitor::SwitchCamera(int32 Direction)
 	}
 	for (int32 Step = 1; Step <= Num; ++Step)
 	{
+		/*
+		다음 인덱스 = ((현재 번호 + 방향 × 몇 칸째) ÷ 카메라 수의 나머지 + 카메라 수) ÷ 카메라 수의 나머지
+		*/
 		const int32 Index = ((CurrentCameraIndex + Direction * Step) % Num + Num) % Num;
 		if (Cameras[Index])
 		{
