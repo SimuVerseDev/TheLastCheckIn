@@ -56,6 +56,10 @@ void ACCTVMonitor::OpenPad(APlayerController* PC)
 	if (!PadWidget)
 	{
 		PadWidget = CreateWidget<UCCTVPadWidget>(PC, PadWidgetClass);
+		if (!PadWidget)
+		{
+			return;
+		}
 		PadWidget->OnPadCovered.AddDynamic(this, &ACCTVMonitor::HandlePadCovered);
 		PadWidget->OnPadLowered.AddDynamic(this, &ACCTVMonitor::HandlePadLowered);
 		PadWidget->AddToViewport();
