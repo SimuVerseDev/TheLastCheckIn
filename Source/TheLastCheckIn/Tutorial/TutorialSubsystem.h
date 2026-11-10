@@ -23,8 +23,8 @@ enum class ETutorialStep : uint8
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FTutorialStepChanged,
 	ETutorialStep, OldStep, ETutorialStep, NewStep);
 
-// Tracks first-day objectives. Gameplay actors report successful actions;
-// this subsystem does not perform those actions or advance the game clock.
+// Prepares the first-day rooms and tracks objectives. Gameplay actors report
+// successful actions; this subsystem does not advance the game clock.
 UCLASS()
 class THELASTCHECKIN_API UTutorialSubsystem : public UWorldSubsystem
 {
@@ -56,6 +56,7 @@ public:
 private:
 	UFUNCTION()
 	void HandleDayStarted(int32 Day);
+	void PrepareInitialRoomDirt();
 	void SetStep(ETutorialStep NewStep);
 
 	UPROPERTY(Transient)
