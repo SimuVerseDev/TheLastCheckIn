@@ -339,6 +339,15 @@ void UPlayerInteractionComponent::ExecuteInteraction(AActor* Target)
 
 void UPlayerInteractionComponent::HandleUseStarted()
 {
+	// 장착 도구부터 처리
+	for (IInteractionExtension* Extension : GetExtensions())
+	{
+		if (Extension->TryHandleUseStarted())
+		{
+			return;
+		}
+	}
+	
 	AActor* Pawn = GetOwner();
 	AActor* Target = FocusedActor.Get();
 	if (!IsInteractable(Target) || !IInteractable::Execute_CanUse(Target, Pawn))

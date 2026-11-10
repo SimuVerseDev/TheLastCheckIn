@@ -3,6 +3,7 @@
 #include "Guests/GuestCharacter.h"
 #include "UObject/UObjectGlobals.h"
 #include "Guests/GuestAIController.h"
+#include "Guests/Anomaly/GuestAnomalyComponent.h"
 #include "Rooms/RoomActor.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -452,6 +453,7 @@ void UGuestParty::MoveMembersToExit()
 bool UGuestParty::CanRequestCheckout() const
 {
     return State == EGuestPartyState::WaitingForCheckoutRequest
+        && !HasAnomalyParticipants()
         && IsValid(AssignedRoom.Get())
         && IsValid(LobbyTarget.Get());
 }
@@ -526,6 +528,7 @@ void UGuestParty::Advance(double CurrentSeconds)
     }
 
     if (State == EGuestPartyState::Staying &&
+        !HasAnomalyParticipants() && //사건 참여자가 있는 일행은 자동 퇴실을 보류
         CheckoutAtSeconds >= 0.0 &&
         CurrentSeconds >= CheckoutAtSeconds)
     {
@@ -562,4 +565,28 @@ void UGuestParty::Advance(double CurrentSeconds)
     {
         MoveMembersToExit();
     }
+}
+
+bool UGuestParty::CanParticipateInAnomaly() const
+{
+    return State == EGuestPartyState::Staying
+        && IsValid(AssignedRoom.Get())
+        && GetMembers().Num() == GetSize()
+        && AllMembersInState(EGuestState::Staying);
+}
+
+bool UGuestParty::HasAnomalyParticipants() const
+{
+    for (AGuestCharacter* Member : GetMembers())
+    {
+        const UGuestAnomalyComponent* Anomaly =
+            Member->GetAnomalyComponent();
+
+        if (IsValid(Anomaly) && Anomaly->IsBusy())
+        {
+            return true;
+        }
+    }
+
+    return false;
 }

@@ -5,6 +5,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Pool/GuestPoolManager.h"
 #include "Guests/Party/GuestParty.h"
+#include "Guests/Anomaly/GuestAnomalyComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/World.h"
@@ -12,6 +13,7 @@
 #include "CollisionQueryParams.h"
 #include "CollisionShape.h"
 #include "CheckIn/CheckInCounter.h"
+#include "Guests/Anomaly/GuestAnomalyComponent.h"
 
 AGuestCharacter::AGuestCharacter()
 {
@@ -19,6 +21,9 @@ AGuestCharacter::AGuestCharacter()
 	
 	AIControllerClass = AGuestAIController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+	
+	AnomalyComponent = CreateDefaultSubobject<UGuestAnomalyComponent>
+	(TEXT("AnomalyComponent"));
 }
 
 
@@ -173,6 +178,11 @@ bool AGuestCharacter::DeactivateToPool()
 	if (IsValid(Party.Get()) && Party->HasAssignedRoom())
 	{
 		return false;
+	}
+	
+	if (IsValid(AnomalyComponent))
+	{
+		AnomalyComponent->CancelAnomaly();
 	}
 	
 	ReleaseMoveLocation();
@@ -337,9 +347,7 @@ void AGuestCharacter::AbortVisitAndReturnToPool()
 	DeactivateToPool();
 }
 
-bool AGuestCharacter::BeginMoveTo(
-	AActor* Target,
-	EGuestState MovingState)
+bool AGuestCharacter::BeginMoveTo(AActor* Target, EGuestState MovingState)
 {
 	if (!IsValid(Target))
 	{
@@ -352,6 +360,11 @@ bool AGuestCharacter::BeginMoveTo(
 	if (!IsValid(GuestController))
 	{
 		return false;
+	}
+	
+	if (IsValid(AnomalyComponent))
+	{
+		AnomalyComponent->CancelAnomaly();
 	}
 
 	const EGuestState PreviousState = GuestState;

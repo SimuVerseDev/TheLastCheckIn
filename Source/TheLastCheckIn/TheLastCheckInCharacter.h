@@ -8,6 +8,7 @@
 #include "TheLastCheckInCharacter.generated.h"
 
 class UInputComponent;
+class UCrowbarCombatComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
 class UInputAction;
@@ -81,6 +82,8 @@ protected:
 	/** Set up input action bindings */
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	TObjectPtr<UCrowbarCombatComponent> CrowbarCombat;
 
 public:
 
@@ -89,6 +92,7 @@ public:
 
 	/** Returns first person camera component **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+
 
 };
 

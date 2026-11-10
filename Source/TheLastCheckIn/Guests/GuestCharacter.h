@@ -14,6 +14,7 @@
 class UBehaviorTree;
 class AGuestPoolManager;
 class UGuestParty;
+class UGuestAnomalyComponent;
 
 UCLASS()
 class THELASTCHECKIN_API AGuestCharacter : public ACharacter, public IInteractable
@@ -95,6 +96,12 @@ public:
 
 	// 행동 트리 Move To의 Acceptable Radius와 맞춰야 함
 	static constexpr float MoveAcceptanceRadius = 20.0f;
+	
+	UFUNCTION(BlueprintPure, Category = "Guests|Anomaly")
+	UGuestAnomalyComponent* GetAnomalyComponent() const
+	{
+		return AnomalyComponent.Get();
+	}
 
 protected:
 	virtual void BeginPlay() override;
@@ -151,5 +158,8 @@ protected:
 
 	UPROPERTY(Transient)
 	FVector ReservedMoveLocation = FVector::ZeroVector;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Guests|Anomaly")
+	TObjectPtr<UGuestAnomalyComponent> AnomalyComponent;
 
 };
