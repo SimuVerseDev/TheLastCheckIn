@@ -29,6 +29,8 @@ public:
 	virtual void Interact_Implementation(AActor* Interactor) override;
 	virtual bool IsInteractionActive_Implementation(AActor* Interactor) const override;
 	
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 protected:
 	UPROPERTY(VisibleAnywhere, Category="CCTV")
 	TObjectPtr<UStaticMeshComponent> Mesh;

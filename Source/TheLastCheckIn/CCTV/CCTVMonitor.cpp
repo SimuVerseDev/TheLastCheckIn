@@ -16,6 +16,7 @@ ACCTVMonitor::ACCTVMonitor()
 	SetRootComponent(Mesh);
 }
 
+
 bool ACCTVMonitor::CanInteract_Implementation(AActor* Interactor) const
 {
 	return PadWidgetClass && Cameras.Num() > 0 && !bTransitioning;
@@ -184,4 +185,32 @@ void ACCTVMonitor::SwitchCamera(int32 Direction)
 			return;
 		}
 	}
+}
+
+/*
+의도하지않은 경로로 모니터 액터가 파괴될 경우 크래시 방지
+*/
+void ACCTVMonitor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UnbindCCTVInput();
+	
+	if (APlayerController* PC = ViewingPC.Get())
+	{
+		PC->SetIgnoreMoveInput(false);
+		PC->SetIgnoreLookInput(false);
+		PC->SetViewTargetWithBlend(PC->GetPawn(), 0.0f);
+	}
+	ViewingPC.Reset();
+	
+	if (PadWidget)
+	{
+		PadWidget->OnPadCovered.RemoveAll(this);
+		PadWidget->OnPadLowered.RemoveAll(this);
+		PadWidget->RemoveFromParent();
+		PadWidget = nullptr;
+	}
+	
+	bPadOpen = false;
+	bTransitioning = false;
+	Super::EndPlay(EndPlayReason);
 }
