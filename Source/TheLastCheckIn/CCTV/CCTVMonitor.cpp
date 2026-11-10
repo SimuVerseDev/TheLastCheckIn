@@ -19,7 +19,17 @@ ACCTVMonitor::ACCTVMonitor()
 
 bool ACCTVMonitor::CanInteract_Implementation(AActor* Interactor) const
 {
-	return PadWidgetClass && Cameras.Num() > 0 && !bTransitioning;
+	if (bTransitioning)
+	{
+		return false;
+	}
+	if (bPadOpen)
+	{
+		return true;
+	}
+	const bool bHasValidCamera = Cameras.ContainsByPredicate(
+		[](const TObjectPtr<ACameraActor>& Camera) { return IsValid(Camera); });
+	return PadWidgetClass && bHasValidCamera;
 }
 
 FText ACCTVMonitor::GetInteractPrompt_Implementation(AActor* Interactor) const
@@ -92,7 +102,14 @@ void ACCTVMonitor::ClosePad()
 void ACCTVMonitor::HandlePadCovered()
 {
 	bTransitioning = false;
-	ApplyCurrentCamera();
+	if (Cameras.IsValidIndex(CurrentCameraIndex) && IsValid(Cameras[CurrentCameraIndex]))
+	{
+		ApplyCurrentCamera();
+	}
+	else
+	{
+		SwitchCamera(1);
+	}
 	if (APlayerController* PC = ViewingPC.Get())
 	{
 		BindCCTVInput(PC);
@@ -114,7 +131,7 @@ void ACCTVMonitor::HandlePadLowered()
 void ACCTVMonitor::ApplyCurrentCamera() const
 {
 	APlayerController* PC = ViewingPC.Get();
-	if (PC && Cameras.IsValidIndex(CurrentCameraIndex) && Cameras[CurrentCameraIndex])
+	if (PC && Cameras.IsValidIndex(CurrentCameraIndex) && IsValid(Cameras[CurrentCameraIndex]))
 	{
 		PC->SetViewTargetWithBlend(Cameras[CurrentCameraIndex], 0.0f);
 	}
@@ -178,7 +195,7 @@ void ACCTVMonitor::SwitchCamera(int32 Direction)
 		다음 인덱스 = ((현재 번호 + 방향 × 몇 칸째) ÷ 카메라 수의 나머지 + 카메라 수) ÷ 카메라 수의 나머지
 		*/
 		const int32 Index = ((CurrentCameraIndex + Direction * Step) % Num + Num) % Num;
-		if (Cameras[Index])
+		if (IsValid(Cameras[Index]))
 		{
 			CurrentCameraIndex = Index;
 			ApplyCurrentCamera();
