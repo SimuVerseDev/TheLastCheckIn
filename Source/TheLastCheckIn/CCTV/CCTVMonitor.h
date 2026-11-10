@@ -10,6 +10,11 @@ class APlayerController;
 class UCCTVPadWidget;
 class UStaticMeshComponent;
 
+class UInputAction;
+class UInputMappingContext;
+class UEnhancedInputComponent;
+struct FInputActionValue;
+
 UCLASS()
 class THELASTCHECKIN_API ACCTVMonitor : public AActor, public IInteractable
 {
@@ -33,9 +38,27 @@ protected:
 	UPROPERTY(EditInstanceOnly, Category="CCTV")
 	TArray<TObjectPtr<ACameraActor>> Cameras;
 	
+	UPROPERTY(EditDefaultsOnly, Category="CCTV|Input")
+	TObjectPtr<UInputMappingContext> CCTVMappingContext;
+
+	/*
+	Axis1D : → = +1(다음), ← = -1(이전) 
+	*/
+	UPROPERTY(EditDefaultsOnly, Category="CCTV|Input")
+	TObjectPtr<UInputAction> SwitchCameraAction;
+	
+	UPROPERTY(EditDefaultsOnly, Category="CCTV|Input")
+	int32 CCTVMappingPriority = 10;
+	
 private:
 	void OpenPad(APlayerController* PlayerController);
 	void ClosePad();
+	void BindCCTVInput(APlayerController* PC);
+	void UnbindCCTVInput();
+	void HandleSwitchCamera(const FInputActionValue& Value);
+	void SwitchCamera(int32 Direction);
+	void ApplyCurrentCamera() const;
+
 	
 	UFUNCTION()
 	void HandlePadCovered();
@@ -46,6 +69,10 @@ private:
 	UPROPERTY()
 	TObjectPtr<UCCTVPadWidget> PadWidget;
 	TWeakObjectPtr<APlayerController> ViewingPC;
+	
+	UPROPERTY()
+	TObjectPtr<UEnhancedInputComponent> CCTVInput;
+	TWeakObjectPtr<APlayerController> InputPC;
 	
 	int32 CurrentCameraIndex = 0;
 	bool bPadOpen = false;
