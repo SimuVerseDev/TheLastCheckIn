@@ -15,6 +15,10 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Game|Economy")
 	void AddIncome(float Amount);
+
+	// Purchases affect capital, not the day's gross lodging income.
+	UFUNCTION(BlueprintCallable, Category = "Game|Economy")
+	bool TrySpend(float Amount);
 	
 	UFUNCTION(BlueprintPure, Category = "Game|Economy")
 	float GetCapital() const

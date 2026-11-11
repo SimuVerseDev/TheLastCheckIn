@@ -34,6 +34,11 @@ public:
 	{
 		return FocusedActor.Get();
 	}
+	
+	bool HasActiveInteraction()
+	{
+		return GetActiveInteraction() != nullptr;
+	}
 
 protected:
 	UPROPERTY(EditAnywhere, Category="Interaction",  meta=(ClampMin=0, Units="cm"))

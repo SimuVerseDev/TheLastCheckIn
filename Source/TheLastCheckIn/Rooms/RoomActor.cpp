@@ -1,6 +1,8 @@
 ﻿#include "RoomActor.h"
 
 #include "Components/SceneComponent.h"
+#include "Core/Economy/HotelEconomySubsystem.h"
+#include "Engine/World.h"
 
 
 ARoomActor::ARoomActor()
@@ -129,7 +131,19 @@ bool ARoomActor::MarkOccupied(const FGuid& InStayId)
 	}
 
 	RoomState = ERoomState::Occupied;
+	OnOccupied.Broadcast(this, InStayId);
 
+	return true;
+}
+
+bool ARoomActor::TryPurchaseUnlock()
+{
+	if (bUnlocked || !GetWorld()) return false;
+	UHotelEconomySubsystem* Economy = GetWorld()->GetSubsystem<UHotelEconomySubsystem>();
+	if (!Economy || !Economy->TrySpend(UnlockPrice)) return false;
+	bPurchased = true;
+	UnlockRoom();
+	OnPurchased.Broadcast(this);
 	return true;
 }
 
