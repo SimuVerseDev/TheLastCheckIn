@@ -50,6 +50,7 @@ bool FNightSettlementFlowTest::RunTest(const FString& Parameters)
 	auto* Economy = Fixture.World->GetSubsystem<UHotelEconomySubsystem>();
 	auto* Settlement = Fixture.World->GetSubsystem<UDailySettlementSubsystem>();
 	Phase->StartRun();
+	const float StartingCapital = Economy->GetCapital();
 	Fixture.SetTime(86399.0);
 	TestFalse(TEXT("23:59:59 cannot sleep"), Phase->CanSleep());
 	Phase->RequestSleepSettlement();
@@ -85,7 +86,7 @@ bool FNightSettlementFlowTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Next morning clock running"), Clock->IsClockRunning());
 	TestEqual(TEXT("Today's income reset"), Economy->GetTodayIncome(), 0.0f);
 	TestEqual(TEXT("Previous snapshot retained"), Settlement->GetLastResult().Income, 150.0f);
-	TestEqual(TEXT("Income was not awarded twice"), Economy->GetCapital(), 150.0f);
+	TestEqual(TEXT("Income was not awarded twice"), Economy->GetCapital(), StartingCapital + 150.0f);
 	Fixture.SetTime(2 * 86400.0 + 5 * 3600);
 	TestFalse(TEXT("05:00 cannot sleep"), Phase->CanSleep());
 	TestEqual(TEXT("05:00 automatic settlement preserved"), Phase->GetCurrentPhase(), EHotelPhase::Settlement);

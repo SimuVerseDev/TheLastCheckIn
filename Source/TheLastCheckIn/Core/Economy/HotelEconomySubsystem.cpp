@@ -1,5 +1,6 @@
 ﻿#include "Core/Economy/HotelEconomySubsystem.h"
 #include "Core/GameFlow/HotelPhaseSubsystem.h"
+#include "Core/Economy/HotelEconomySettings.h"
 DEFINE_LOG_CATEGORY_STATIC(LogHotelEconomy, Log, All);
 
 void UHotelEconomySubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -23,7 +24,7 @@ void UHotelEconomySubsystem::Deinitialize()
 
 void UHotelEconomySubsystem::AddIncome(float Amount)
 {
-	if (Amount <= 0.0f)
+	if (!FMath::IsFinite(Amount) || Amount <= 0.0f)
 	{
 		return;
 	}
@@ -35,7 +36,19 @@ void UHotelEconomySubsystem::AddIncome(float Amount)
 
 void UHotelEconomySubsystem::HandleDayStarted(int32 Day)
 {
+	if (Day == 1)
+	{
+		const float Initial = GetDefault<UHotelEconomySettings>()->StartingCapital;
+		Capital = FMath::IsFinite(Initial) ? FMath::Max(0.0f, Initial) : 0.0f;
+	}
 	TodayIncome = 0.0f;
+}
+
+bool UHotelEconomySubsystem::TrySpend(float Amount)
+{
+	if (!FMath::IsFinite(Amount) || Amount <= 0.0f || Capital < Amount) return false;
+	Capital -= Amount;
+	return true;
 }
 
 

@@ -15,8 +15,10 @@ void UTutorialSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UTutorialSubsystem::Deinitialize()
 {
+	UnbindGameplayEvents();
 	if (Phase) Phase->OnDayStarted.RemoveAll(this);
 	OnStepChanged.Clear();
+	OnProgressChanged.Clear();
 	Phase = nullptr;
 	Super::Deinitialize();
 }
@@ -32,10 +34,31 @@ void UTutorialSubsystem::HandleDayStarted(int32 Day)
 {
 	if (Day == 1)
 	{
+		UnbindGameplayEvents();
+		CleanedRooms.Reset();
+		CheckedInStays.Reset();
+		bRoom205Purchased = false;
+		for (TActorIterator<ARoomActor> It(GetWorld()); It; ++It)
+		{
+			ARoomActor* Room = *It;
+			ObservedRooms.Add(Room);
+			Room->OnPurchased.AddUniqueDynamic(this, &ThisClass::HandleRoomPurchased);
+			Room->OnOccupied.AddUniqueDynamic(this, &ThisClass::HandleRoomOccupied);
+			if (Room->GetRoomNumber() == 205) bRoom205Purchased |= Room->WasPurchased();
+		}
 		// StartRun currently always creates a new run. Future load code must restore
 		// tutorial state separately instead of invoking this new-day initialization.
 		PrepareInitialRoomDirt();
 		SetStep(ETutorialStep::CleanRoom);
+		// Include rooms already meeting the quest threshold when observation began.
+		for (const auto& Weak : CleaningVolumes)
+		{
+			if (AHKRoomVolume* Volume = Weak.Get())
+			{
+				HandleRoomCleaned(Volume, Volume->GetCleanliness());
+			}
+		}
+		OnProgressChanged.Broadcast();
 	}
 	else if (!IsTutorialCompleted())
 	{
@@ -43,6 +66,7 @@ void UTutorialSubsystem::HandleDayStarted(int32 Day)
 		// Hide the unfinished objective without marking it successfully completed.
 		SetStep(ETutorialStep::NotStarted);
 	}
+	if (Day != 1) UnbindGameplayEvents();
 }
 
 void UTutorialSubsystem::PrepareInitialRoomDirt()
@@ -74,6 +98,8 @@ void UTutorialSubsystem::PrepareInitialRoomDirt()
 		else
 		{
 			UE_LOG(LogTutorial, Log, TEXT("Tutorial room %d is dirty (cleanliness %.0f)."), RoomNumber, Volume->GetCleanliness());
+			CleaningVolumes.Add(Volume);
+			Volume->OnCleanlinessChanged.AddUniqueDynamic(this, &ThisClass::HandleRoomCleaned);
 		}
 	}
 
@@ -90,6 +116,9 @@ void UTutorialSubsystem::PrepareInitialRoomDirt()
 bool UTutorialSubsystem::CompleteStep(ETutorialStep CompletedStep)
 {
 	if (!IsTutorialActive() || CompletedStep != CurrentStep) return false;
+	if (CompletedStep == ETutorialStep::CleanRoom && CleanedRooms.Num() != 4) return false;
+	if (CompletedStep == ETutorialStep::UnlockRoom205 && !bRoom205Purchased) return false;
+	if (CompletedStep == ETutorialStep::CheckInGuest && CheckedInStays.Num() < 5) return false;
 
 	ETutorialStep NextStep;
 	switch (CurrentStep)
@@ -116,4 +145,81 @@ void UTutorialSubsystem::SetStep(ETutorialStep NewStep)
 	UE_LOG(LogTutorial, Log, TEXT("Tutorial: %s -> %s"),
 		*UEnum::GetValueAsString(OldStep), *UEnum::GetValueAsString(NewStep));
 	OnStepChanged.Broadcast(OldStep, NewStep);
+}
+
+void UTutorialSubsystem::UnbindGameplayEvents()
+{
+	for (const auto& Weak : CleaningVolumes)
+		if (AHKRoomVolume* Volume = Weak.Get()) Volume->OnCleanlinessChanged.RemoveAll(this);
+	for (const auto& Weak : ObservedRooms)
+		if (ARoomActor* Room = Weak.Get())
+		{
+			Room->OnPurchased.RemoveAll(this);
+			Room->OnOccupied.RemoveAll(this);
+		}
+	CleaningVolumes.Reset();
+	ObservedRooms.Reset();
+}
+
+void UTutorialSubsystem::HandleRoomCleaned(AHKRoomVolume* Volume, float Cleanliness)
+{
+	// This threshold only completes the tutorial objective; remaining dirt stays.
+	constexpr float RequiredCleanliness = 50.0f;
+	if (!IsTutorialActive() || CurrentStep != ETutorialStep::CleanRoom || !IsValid(Volume)
+		|| !CleaningVolumes.Contains(Volume) || Cleanliness < RequiredCleanliness) return;
+	const ARoomActor* Room = Volume->GetLinkedRoom();
+	if (!IsValid(Room)) return;
+	const int32 Number = Room->GetRoomNumber();
+	if (Number < 201 || Number > 204 || CleanedRooms.Contains(Number)) return;
+	// If multiple volumes refer to a room, all must meet the quest threshold.
+	for (const auto& Weak : CleaningVolumes)
+		if (const AHKRoomVolume* Other = Weak.Get(); Other && Other->GetLinkedRoom() == Room
+			&& Other->GetCleanliness() < RequiredCleanliness) return;
+	CleanedRooms.Add(Number);
+	EvaluateObjectives();
+	OnProgressChanged.Broadcast();
+}
+
+void UTutorialSubsystem::HandleRoomPurchased(ARoomActor* Room)
+{
+	if (!IsTutorialActive() || !IsValid(Room) || Room->GetRoomNumber() != 205
+		|| !Room->IsUnlocked() || !Room->WasPurchased()) return;
+	bRoom205Purchased = true;
+	EvaluateObjectives();
+	OnProgressChanged.Broadcast();
+}
+
+void UTutorialSubsystem::HandleRoomOccupied(ARoomActor* Room, FGuid StayId)
+{
+	if (!IsTutorialActive() || !IsValid(Room) || Room->GetRoomState() != ERoomState::Occupied
+		|| !StayId.IsValid() || CheckedInStays.Contains(StayId) || CheckedInStays.Num() >= 5) return;
+	// Remember day-one successes even before the objective becomes visible.
+	// Otherwise early guests could occupy all five rooms without counting.
+	CheckedInStays.Add(StayId);
+	EvaluateObjectives();
+	OnProgressChanged.Broadcast();
+}
+
+void UTutorialSubsystem::EvaluateObjectives()
+{
+	if (CurrentStep == ETutorialStep::CleanRoom) CompleteStep(ETutorialStep::CleanRoom);
+	if (CurrentStep == ETutorialStep::UnlockRoom205) CompleteStep(ETutorialStep::UnlockRoom205);
+	if (CurrentStep == ETutorialStep::CheckInGuest) CompleteStep(ETutorialStep::CheckInGuest);
+}
+
+FText UTutorialSubsystem::GetObjectiveText() const
+{
+	switch (CurrentStep)
+	{
+	case ETutorialStep::CleanRoom:
+		return FText::Format(NSLOCTEXT("Tutorial", "CleanRooms", "2층 청소하기 ({0}/4)"), FText::AsNumber(CleanedRooms.Num()));
+	//case ETutorialStep::UnlockRoom205: return NSLOCTEXT("Tutorial", "Purchase205", "205호 해금하기");
+	case ETutorialStep::CheckInGuest:
+		return FText::Format(NSLOCTEXT("Tutorial", "CheckInTeams", "5팀의 손님 체크인 ({0}/5)"), FText::AsNumber(CheckedInStays.Num()));
+	case ETutorialStep::AnomalyPresentation: return NSLOCTEXT("Tutorial", "Anomaly", "주변의 이상현상 살펴보기");
+	case ETutorialStep::ReadBoardMemo: return NSLOCTEXT("Tutorial", "Memo", "보드 메모 확인하기");
+	case ETutorialStep::ViewCCTV: return NSLOCTEXT("Tutorial", "CCTV", "CCTV 확인하기");
+	case ETutorialStep::Sleep: return NSLOCTEXT("Tutorial", "Sleep", "침대에서 잠자기");
+	default: return FText::GetEmpty();
+	}
 }
