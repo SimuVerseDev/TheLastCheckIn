@@ -11,6 +11,8 @@ class USceneComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoomOnAssigned, ARoomActor*, Room);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoomOnCheckedOut, ARoomActor*, Room);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoomOnPurchased, ARoomActor*, Room);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRoomOnOccupied, ARoomActor*, Room, FGuid, StayId);
 
 UCLASS()
 class THELASTCHECKIN_API ARoomActor : public AActor
@@ -24,6 +26,17 @@ public:
 	FRoomOnAssigned OnAssigned;
 	UPROPERTY(BlueprintAssignable, Category = "Room")
 	FRoomOnCheckedOut OnCheckedOut;
+	UPROPERTY(BlueprintAssignable, Category = "Room")
+	FRoomOnPurchased OnPurchased;
+	UPROPERTY(BlueprintAssignable, Category = "Room")
+	FRoomOnOccupied OnOccupied;
+
+	UFUNCTION(BlueprintCallable, Category = "Room")
+	bool TryPurchaseUnlock();
+	UFUNCTION(BlueprintPure, Category = "Room")
+	float GetUnlockPrice() const { return UnlockPrice; }
+	UFUNCTION(BlueprintPure, Category = "Room")
+	bool WasPurchased() const { return bPurchased; }
 	
 	UFUNCTION(BlueprintPure, Category = "Room")
 	int32 GetRoomNumber() const
@@ -98,4 +111,10 @@ protected:
 	// 레벨에 배치된 객실마다 초기 해금 여부 설정
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Room")
 	bool bUnlocked = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Room", meta=(ClampMin="0.01"))
+	float UnlockPrice = 100.0f;
+
+private:
+	bool bPurchased = false;
 };

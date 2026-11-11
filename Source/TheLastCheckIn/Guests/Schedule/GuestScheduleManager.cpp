@@ -9,6 +9,7 @@
 #include "Guests/Pool/GuestPoolManager.h"
 #include "Guests/Party/GuestParty.h"
 #include "Rooms/RoomActor.h"
+#include "Tutorial/TutorialSubsystem.h"
 
 AGuestScheduleManager::AGuestScheduleManager()
 {
@@ -170,8 +171,20 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
         SecondsOfDay >= CheckInStartHour * 3600.0 &&
         SecondsOfDay < CheckInEndHour * 3600.0;
 
+    int32 EffectiveGuestLimit = DailyGuestLimit;
+    if (const UTutorialSubsystem* Tutorial = GetWorld()->GetSubsystem<UTutorialSubsystem>();
+        Tutorial && Tutorial->IsTutorialActive()
+        && (Tutorial->GetCurrentStep() == ETutorialStep::CleanRoom
+            || Tutorial->GetCurrentStep() == ETutorialStep::UnlockRoom205
+            || Tutorial->GetCurrentStep() == ETutorialStep::CheckInGuest)
+        && DailyGuestLimit > 0)
+    {
+        // DailyGuestLimit counts people; the tutorial requires five whole parties.
+        EffectiveGuestLimit = FMath::Max(DailyGuestLimit, 5 * FMath::Clamp(MaxPartySize, 1, 4));
+    }
+
     if (!bReceptionOpen ||
-        AdmittedToday >= DailyGuestLimit ||
+        AdmittedToday >= EffectiveGuestLimit ||
         CurrentSeconds < NextArrivalSeconds)
     {
         return;
@@ -194,7 +207,7 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
     const int32 MinSize = FMath::Clamp(MinPartySize, 1, 4);
     const int32 MaxSize = FMath::Clamp(MaxPartySize, MinSize, 4);
 
-    const int32 RemainingGuests = DailyGuestLimit - AdmittedToday;
+    const int32 RemainingGuests = EffectiveGuestLimit - AdmittedToday;
 
     // 남은 입장 가능 인원이 최소 일행 인원보다 적으면 종료
     if (RemainingGuests < MinSize)
