@@ -5,6 +5,8 @@
 #include "Core/Reputation/Enums/ReputationTypes.h"
 #include "ReputationSettings.generated.h"
 
+class UReputationHUDWidget;
+
 UCLASS(Config = Game, DefaultConfig, meta = (DisplayName = "Hotel Reputation"))
 class THELASTCHECKIN_API UReputationSettings : public UDeveloperSettings
 {
@@ -36,6 +38,12 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Guests", meta = (ClampMin = "0", ClampMax = "1"))
 	float ForcedCheckoutPenaltyChance = 0.5f;
+
+	/*
+	비워두면 C++ 기본 레이아웃 사용
+	*/
+	UPROPERTY(Config, EditAnywhere, Category = "UI")
+	TSoftClassPtr<UReputationHUDWidget> HUDWidgetClass;
 
 	UPROPERTY(Config, EditAnywhere, Category = "Deltas")
 	TMap<EReputationReason, int32> ReasonDeltas =
