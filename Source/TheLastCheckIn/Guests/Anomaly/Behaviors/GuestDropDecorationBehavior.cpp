@@ -39,11 +39,15 @@ void UGuestDropDecorationBehavior::OnStarted_Implementation()
         return;
     }
 
-    // 숙박 AI가 중단하면서 꺼진 군중 회피를 복구
+    // 대기용 장애물 등록을 해제한 뒤, 이동 가능한 에이전트로 다시 등록
     if (UCrowdFollowingComponent* Crowd =
         Cast<UCrowdFollowingComponent>(PathFollowing))
     {
+        Crowd->SetCrowdSimulationState(
+            ECrowdSimulationState::Disabled);
+
         Crowd->SuspendCrowdSteering(false);
+
         Crowd->SetCrowdSimulationState(
             ECrowdSimulationState::Enabled);
     }

@@ -103,6 +103,12 @@ public:
 		return AnomalyComponent.Get();
 	}
 
+	//이상현상을 취소하지 않고 배정 객실로 복귀
+	bool ReturnToAssignedRoomAfterAnomaly();
+
+	// 복귀가 취소됐을 때 이동 상태 정리
+	void ClearAnomalyReturnState();
+	
 protected:
 	virtual void BeginPlay() override;
 	

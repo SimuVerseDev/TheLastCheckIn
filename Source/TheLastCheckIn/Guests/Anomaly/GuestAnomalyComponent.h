@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "TimerManager.h"
 #include "GuestAnomalyComponent.generated.h"
 
 class UGuestAnomalyBehavior;
@@ -13,7 +14,8 @@ enum class EGuestAnomalyPhase : uint8
 {
     Idle, //사건에 참여하지 않음
     Active, //이상행동 진행 중
-    Resolved // 어떤 손님은 제압됐지만 사건 정리는 아직 진행 중
+    Resolved, // 어떤 손님은 제압됐지만 사건 정리는 아직 진행 중
+    ReturningToRoom, //객실로 돌려보냄
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
@@ -66,6 +68,18 @@ public:
     FGuestAnomalyEvent OnCancelled;
 
     void ResolveBehavior(UGuestAnomalyBehavior* Requester);
+    
+    // 실행 전 기본 조건 확인
+    bool CanStartFor(UGuestAnomalyDefinition* InDefinition, AActor* ContextActor) const;
+
+    // 마지막으로 발급한 참여 식별값
+    FGuid GetParticipationId() const
+    {
+        return ParticipationId;
+    }
+    
+    // GuestCharacter가 객실 도착 후 호출
+    void NotifyReturnedToRoom();
 
 protected:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -88,4 +102,18 @@ private:
     EGuestAnomalyPhase Phase = EGuestAnomalyPhase::Idle;
 
     bool bTransitioning = false;
+    
+    // 다음 참여가 시작될 때 새로 발급
+    UPROPERTY(Transient)
+    FGuid ParticipationId;
+    
+    void BeginReturnToRoom();
+    void HandleReturnTimeout();
+    void ClearReturnTimer();
+
+    FTimerHandle ReturnTimerHandle;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Anomaly|Return", 
+        meta = (ClampMin = "1.0"))
+    float ReturnTimeoutSeconds = 120.0f;
 };
