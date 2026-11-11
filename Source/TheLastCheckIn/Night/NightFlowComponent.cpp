@@ -5,6 +5,7 @@
 #include "Core/GameFlow/HotelPhaseSubsystem.h"
 #include "Core/GameFlow/HotelPhaseSettings.h"
 #include "Core/Time/GameClockSubsystem.h"
+#include "Tutorial/TutorialSubsystem.h"
 #include "Core/Interaction/PlayerInteractionComponent.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
@@ -164,6 +165,12 @@ void UNightFlowComponent::FinishBlackout()
 	}
 	if (Phase && Phase->GetCurrentPhase() == EHotelPhase::Settlement)
 	{
+		// Only a successful bed sleep completes this objective; automatic settlement
+		// reaches HandlePhaseChanged instead and must not count as interaction.
+		if (UTutorialSubsystem* Tutorial = GetWorld()->GetSubsystem<UTutorialSubsystem>())
+		{
+			Tutorial->CompleteStep(ETutorialStep::Sleep);
+		}
 		ShowSettlement();
 	}
 	else
