@@ -32,6 +32,7 @@ void UHotelEconomySubsystem::AddIncome(float Amount)
 	TodayIncome += Amount;
 	UE_LOG(LogHotelEconomy, Log, TEXT("Income +%.0f (today %.0f, capital %.0f)"),
 		Amount, TodayIncome, Capital);
+	OnCapitalChanged.Broadcast(Capital);
 }
 
 void UHotelEconomySubsystem::HandleDayStarted(int32 Day)
@@ -40,6 +41,7 @@ void UHotelEconomySubsystem::HandleDayStarted(int32 Day)
 	{
 		const float Initial = GetDefault<UHotelEconomySettings>()->StartingCapital;
 		Capital = FMath::IsFinite(Initial) ? FMath::Max(0.0f, Initial) : 0.0f;
+		OnCapitalChanged.Broadcast(Capital);
 	}
 	TodayIncome = 0.0f;
 }
@@ -48,6 +50,7 @@ bool UHotelEconomySubsystem::TrySpend(float Amount)
 {
 	if (!FMath::IsFinite(Amount) || Amount <= 0.0f || Capital < Amount) return false;
 	Capital -= Amount;
+	OnCapitalChanged.Broadcast(Capital);
 	return true;
 }
 

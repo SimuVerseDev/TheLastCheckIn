@@ -127,6 +127,19 @@ private:
 	void HandleRoomAssigned(ARoomActor* Room);
 	UFUNCTION()
 	void HandleRoomCheckedOut(ARoomActor* Room);
+	UFUNCTION()
+	void HandleGuestsDeparting(ARoomActor* Room);
+	UFUNCTION()
+	void HandleRoomOccupied(ARoomActor* Room, FGuid StayId);
+	UFUNCTION()
+	void HandleBoundsEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	
+	bool HasGuestInside(const AActor* Ignore = nullptr) const;
+	void ApplyDepartureDirt();
+	
+	bool bAwaitingDeparture = false;
+	bool bGuestStayed = false;
 	
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<AHKStainActor>> SpawnedStains;

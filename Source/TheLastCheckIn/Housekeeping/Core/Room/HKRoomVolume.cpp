@@ -3,8 +3,10 @@
 #include "Housekeeping/Objects/Trash/HKTrashActor.h"
 #include "Housekeeping/Objects/Trash/HKTrashDirtComponent.h"
 #include "Housekeeping/Objects/Trash/HKTrashPoolSubsystem.h"
+#include "Core/Reputation/HotelReputationSubsystem.h"
 #include "Housekeeping/Objects/Stain/HKStainActor.h"
 #include "Housekeeping/Objects/Stain/HKStainDirtComponent.h"
+#include "Guests/GuestCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
@@ -22,7 +24,10 @@ AHKRoomVolume::AHKRoomVolume()
 	박스 크기, 충돌 설정, 시각화 색상의 기본값은 생성자에서 세팅한다.
 	*/
 	Bounds->SetBoxExtent(FVector(300.0f, 300.0f, 150.f));
-	Bounds->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Bounds->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	Bounds->SetCollisionResponseToAllChannels(ECR_Ignore);
+	Bounds->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	Bounds->SetGenerateOverlapEvents(true);
 	Bounds->ShapeColor = FColor(80, 200, 255);
 
 	static ConstructorHelpers::FClassFinder<AHKStainActor> StainFinder(TEXT("/Game/HouseKeeping/Blueprints/BP_HK_Stain"));
@@ -39,7 +44,10 @@ void AHKRoomVolume::BeginPlay()
 	{
 		LinkedRoom->OnAssigned.AddDynamic(this, &AHKRoomVolume::HandleRoomAssigned);
 		LinkedRoom->OnCheckedOut.AddDynamic(this, &AHKRoomVolume::HandleRoomCheckedOut);
+		LinkedRoom->OnGuestsDeparting.AddDynamic(this, &AHKRoomVolume::HandleGuestsDeparting);
+		LinkedRoom->OnOccupied.AddDynamic(this, &AHKRoomVolume::HandleRoomOccupied);
 	}
+	Bounds->OnComponentEndOverlap.AddDynamic(this, &AHKRoomVolume::HandleBoundsEndOverlap);
 	if (bDirtyOnBeginPlay)
 	{
 		GetWorldTimerManager().SetTimerForNextTick(this, &AHKRoomVolume::ApplyRandomDirt);
@@ -364,15 +372,72 @@ void AHKRoomVolume::SetCleanliness(float NewCleanliness)
 
 void AHKRoomVolume::HandleRoomAssigned(ARoomActor* Room)
 {
+	if (UHotelReputationSubsystem* Reputation = GetWorld()->GetSubsystem<UHotelReputationSubsystem>())
+	{
+		Reputation->ApplyRoomCleanliness(Cleanliness);
+	}
 	if (bDirty)
 	{
-		// TODO: 평판 시스템 연결 - 청결도에 따라 평판 하락
 		UE_LOG(LogTemp, Warning, TEXT("[%s] 미청소 객실 %d 배정 (청결도 %.0f)"),
 			*GetActorNameOrLabel(), Room->GetRoomNumber(), Cleanliness);
 	}
 }
 
+void AHKRoomVolume::HandleGuestsDeparting(ARoomActor* Room)
+{
+	bAwaitingDeparture = true;
+	/*
+	이미 다 나가 있으면 바로 오염
+	*/
+	if (!HasGuestInside())
+	{
+		ApplyDepartureDirt();
+	}
+}
+
+void AHKRoomVolume::HandleBoundsEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	if (!bAwaitingDeparture || !Cast<AGuestCharacter>(OtherActor))
+	{
+		return;
+	}
+	if (!HasGuestInside(OtherActor))
+	{
+		ApplyDepartureDirt();
+	}
+}
+
+bool AHKRoomVolume::HasGuestInside(const AActor* Ignore) const
+{
+	TArray<AActor*> Guests;
+	Bounds->GetOverlappingActors(Guests, AGuestCharacter::StaticClass());
+	for (const AActor* Guest : Guests)
+	{
+		if (Guest != Ignore)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void AHKRoomVolume::ApplyDepartureDirt()
+{
+	bAwaitingDeparture = false;
+	bGuestStayed = false;
+	ApplyRandomDirt();
+}
+
+void AHKRoomVolume::HandleRoomOccupied(ARoomActor* Room, FGuid StayId)
+{
+	bGuestStayed = true;
+}
+
 void AHKRoomVolume::HandleRoomCheckedOut(ARoomActor* Room)
 {
-	ApplyRandomDirt();
+	if (bGuestStayed)
+	{
+		ApplyDepartureDirt();
+	}
 }

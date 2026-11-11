@@ -13,6 +13,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoomOnAssigned, ARoomActor*, Room);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoomOnCheckedOut, ARoomActor*, Room);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoomOnPurchased, ARoomActor*, Room);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRoomOnOccupied, ARoomActor*, Room, FGuid, StayId);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoomOnGuestsDeparting, ARoomActor*, Room);
 
 UCLASS()
 class THELASTCHECKIN_API ARoomActor : public AActor
@@ -30,6 +31,8 @@ public:
 	FRoomOnPurchased OnPurchased;
 	UPROPERTY(BlueprintAssignable, Category = "Room")
 	FRoomOnOccupied OnOccupied;
+	UPROPERTY(BlueprintAssignable, Category = "Room")
+	FRoomOnGuestsDeparting OnGuestsDeparting;
 
 	UFUNCTION(BlueprintCallable, Category = "Room")
 	bool TryPurchaseUnlock();
@@ -71,6 +74,9 @@ public:
 	// 배정된 숙박 입실 완료 처리
 	bool MarkOccupied(const FGuid& InStayId);
 	
+	// 투숙객이 객실을 떠나기 시작함 (방 반납은 TryEndStay에서)
+	bool NotifyGuestsDeparting(const FGuid& InStayId);
+
 	//객실 사용 종료 후 다시 배정 가능한 상태로 변경
 	UFUNCTION(BlueprintCallable, Category = "Room")
 	bool TryEndStay(const FGuid& InStayId);

@@ -136,6 +136,18 @@ bool ARoomActor::MarkOccupied(const FGuid& InStayId)
 	return true;
 }
 
+bool ARoomActor::NotifyGuestsDeparting(const FGuid& InStayId)
+{
+	if (!InStayId.IsValid() ||
+		CurrentStayId != InStayId ||
+		RoomState != ERoomState::Occupied)
+	{
+		return false;
+	}
+	OnGuestsDeparting.Broadcast(this);
+	return true;
+}
+
 bool ARoomActor::TryPurchaseUnlock()
 {
 	if (bUnlocked || !GetWorld()) return false;

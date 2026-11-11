@@ -86,9 +86,15 @@ bool UHKPlacementDirtComponent::TrySnapHome()
 
 	const FTransform& Home = GetHomeTransform();
 	const FTransform Current = Owner->GetActorTransform();
-	const float Distance = FVector::Dist(Current.GetLocation(), Home.GetLocation());
-	const float Angle = FMath::RadiansToDegrees(Current.GetRotation().AngularDistance(Home.GetRotation()));
-	if (Distance > SnapDistance || Angle > SnapAngle)
+	/*
+	들고 있는 높이·시선 방향과 무관하게 - 수평 거리와 기울기만 검사
+	*/
+	const FVector Delta = Current.GetLocation() - Home.GetLocation();
+	const float Distance = Delta.Size2D();
+	const float Height = FMath::Abs(Delta.Z);
+	const float Tilt = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(
+		FVector::DotProduct(Current.GetRotation().GetUpVector(), Home.GetRotation().GetUpVector()), -1.0f, 1.0f)));
+	if (Distance > SnapDistance || Height > SnapHeight || Tilt > SnapAngle)
 	{
 		return false;
 	}

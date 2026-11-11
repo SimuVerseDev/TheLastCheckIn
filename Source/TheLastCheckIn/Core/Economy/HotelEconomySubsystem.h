@@ -5,6 +5,8 @@
 
 class UHotelPhaseSubsystem;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCapitalChanged, float, NewCapital);
+
 UCLASS()
 class THELASTCHECKIN_API UHotelEconomySubsystem : public UWorldSubsystem
 {
@@ -31,6 +33,9 @@ public:
 	{
 		return TodayIncome;
 	}
+
+	UPROPERTY(BlueprintAssignable, Category = "Game|Economy")
+	FCapitalChanged OnCapitalChanged;
 private:
 	UPROPERTY()
 	TObjectPtr<UHotelPhaseSubsystem> Phase;
