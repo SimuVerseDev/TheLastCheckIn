@@ -5,6 +5,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Pool/GuestPoolManager.h"
 #include "Guests/Party/GuestParty.h"
+#include "Guests/Anomaly/GuestAnomalyComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/World.h"
@@ -12,6 +13,8 @@
 #include "CollisionQueryParams.h"
 #include "CollisionShape.h"
 #include "CheckIn/CheckInCounter.h"
+#include "Guests/Anomaly/GuestAnomalyComponent.h"
+#include "Rooms/RoomActor.h"
 
 AGuestCharacter::AGuestCharacter()
 {
@@ -19,6 +22,9 @@ AGuestCharacter::AGuestCharacter()
 	
 	AIControllerClass = AGuestAIController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+	
+	AnomalyComponent = CreateDefaultSubobject<UGuestAnomalyComponent>
+	(TEXT("AnomalyComponent"));
 }
 
 
@@ -93,6 +99,16 @@ bool AGuestCharacter::NotifyDestinationReached(AActor* ReachedTarget)
 
 
 	MoveTarget = nullptr;
+
+	// 기존 switch에서 MovingToRoom -> Staying 전환이 끝난 뒤 알림
+	if (GuestState == EGuestState::Staying &&
+		IsValid(AnomalyComponent) &&
+		AnomalyComponent->GetPhase() ==
+			EGuestAnomalyPhase::ReturningToRoom)
+	{
+		AnomalyComponent->NotifyReturnedToRoom();
+	}
+
 	return true;
 }
 
@@ -173,6 +189,11 @@ bool AGuestCharacter::DeactivateToPool()
 	if (IsValid(Party.Get()) && Party->HasAssignedRoom())
 	{
 		return false;
+	}
+	
+	if (IsValid(AnomalyComponent))
+	{
+		AnomalyComponent->CancelAnomaly();
 	}
 	
 	ReleaseMoveLocation();
@@ -337,9 +358,7 @@ void AGuestCharacter::AbortVisitAndReturnToPool()
 	DeactivateToPool();
 }
 
-bool AGuestCharacter::BeginMoveTo(
-	AActor* Target,
-	EGuestState MovingState)
+bool AGuestCharacter::BeginMoveTo(AActor* Target, EGuestState MovingState)
 {
 	if (!IsValid(Target))
 	{
@@ -352,6 +371,11 @@ bool AGuestCharacter::BeginMoveTo(
 	if (!IsValid(GuestController))
 	{
 		return false;
+	}
+	
+	if (IsValid(AnomalyComponent))
+	{
+		AnomalyComponent->CancelAnomaly();
 	}
 
 	const EGuestState PreviousState = GuestState;
@@ -530,4 +554,61 @@ void AGuestCharacter::ReleaseMoveLocation()
 {
     bHasReservedMoveLocation = false;
     ReservedMoveLocation = FVector::ZeroVector;
+}
+
+bool AGuestCharacter::ReturnToAssignedRoomAfterAnomaly()
+{
+	if (!IsValid(AnomalyComponent) ||
+		AnomalyComponent->GetPhase() !=
+			EGuestAnomalyPhase::ReturningToRoom ||
+		GuestState != EGuestState::Staying ||
+		!IsValid(Party))
+	{
+		return false;
+	}
+
+	ARoomActor* Room = Party->GetAssignedRoom();
+
+	AActor* Target = IsValid(Room)
+		? Room->GetArrivalTarget()
+		: nullptr;
+
+	AGuestAIController* GuestController =
+		Cast<AGuestAIController>(GetController());
+
+	if (!IsValid(Target) || !IsValid(GuestController))
+	{
+		return false;
+	}
+
+	const EGuestState PreviousState = GuestState;
+	AActor* PreviousTarget = MoveTarget.Get();
+
+	GuestState = EGuestState::MovingToRoom;
+	MoveTarget = Target;
+
+	// BeginMoveTo()를 호출하면 사건이 취소되므로
+	// 상태와 목적지를 설정한 뒤 AI를 직접 시작
+	if (!GuestController->StartGuestAI(Target))
+	{
+		GuestState = PreviousState;
+		MoveTarget = PreviousTarget;
+		return false;
+	}
+
+	return true;
+}
+
+void AGuestCharacter::ClearAnomalyReturnState()
+{
+	if (!IsValid(AnomalyComponent) ||
+		AnomalyComponent->GetPhase() !=
+			EGuestAnomalyPhase::ReturningToRoom ||
+		GuestState != EGuestState::MovingToRoom)
+	{
+		return;
+	}
+	
+	GuestState = EGuestState::Staying;
+	MoveTarget = nullptr;
 }

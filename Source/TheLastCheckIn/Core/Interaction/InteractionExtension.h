@@ -43,4 +43,9 @@ public:
 	{
 		
 	}
+	
+	virtual bool TryHandleUseStarted()
+	{
+		return false;
+	}
 };

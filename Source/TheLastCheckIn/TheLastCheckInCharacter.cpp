@@ -5,6 +5,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Combat/CrowbarCombatComponent.h"
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -12,6 +13,8 @@
 
 ATheLastCheckInCharacter::ATheLastCheckInCharacter()
 {
+	CrowbarCombat = CreateDefaultSubobject<UCrowbarCombatComponent>(TEXT("CrowbarCombat"));
+	
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
 	
@@ -42,6 +45,8 @@ ATheLastCheckInCharacter::ATheLastCheckInCharacter()
 	// Configure character movement
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 	GetCharacterMovement()->AirControl = 0.5f;
+	
+	
 }
 
 void ATheLastCheckInCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
