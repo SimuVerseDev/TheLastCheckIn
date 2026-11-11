@@ -32,6 +32,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|Snap", meta=(ClampMin=0, Units="cm"))
 	float SnapDistance = 30.0f;
 
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|Snap", meta=(ClampMin=0, Units="cm"))
+	float SnapHeight = 150.0f;
+
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|Snap", meta=(ClampMin=0, ClampMax=180, Units="deg"))
 	float SnapAngle = 25.0f;
 
