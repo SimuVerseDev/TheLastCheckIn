@@ -5,6 +5,7 @@
 
 #include "Core/Time/GameClockSubsystem.h"
 #include "Core/Economy/HotelEconomySubsystem.h"
+#include "Core/Reputation/HotelReputationSubsystem.h"
 #include "Guests/GuestCharacter.h"
 #include "Guests/Pool/GuestPoolManager.h"
 #include "Guests/Party/GuestParty.h"
@@ -338,9 +339,11 @@ void AGuestScheduleManager::HandlePartyCheckedIn(UGuestParty* Party)
         GetWorld()->GetSubsystem<UHotelEconomySubsystem>();
     if (IsValid(Room) && IsValid(Economy))
     {
+        const UHotelReputationSubsystem* Reputation = GetWorld()->GetSubsystem<UHotelReputationSubsystem>();
+        const float Multiplier = Reputation ? Reputation->GetRoomRateMultiplier() : 1.0f;
         /*
-        인당 부과
+        인당 부과 * 성급 배율
         */
-        Economy->AddIncome(Room->GetBaseRoomRate() * Party->GetSize());
+        Economy->AddIncome(Room->GetBaseRoomRate() * Party->GetSize() * Multiplier);
     }
 }

@@ -3,6 +3,7 @@
 #include "Housekeeping/Objects/Trash/HKTrashActor.h"
 #include "Housekeeping/Objects/Trash/HKTrashDirtComponent.h"
 #include "Housekeeping/Objects/Trash/HKTrashPoolSubsystem.h"
+#include "Core/Reputation/HotelReputationSubsystem.h"
 #include "Housekeeping/Objects/Stain/HKStainActor.h"
 #include "Housekeeping/Objects/Stain/HKStainDirtComponent.h"
 #include "Components/BoxComponent.h"
@@ -364,9 +365,12 @@ void AHKRoomVolume::SetCleanliness(float NewCleanliness)
 
 void AHKRoomVolume::HandleRoomAssigned(ARoomActor* Room)
 {
+	if (UHotelReputationSubsystem* Reputation = GetWorld()->GetSubsystem<UHotelReputationSubsystem>())
+	{
+		Reputation->ApplyRoomCleanliness(Cleanliness);
+	}
 	if (bDirty)
 	{
-		// TODO: 평판 시스템 연결 - 청결도에 따라 평판 하락
 		UE_LOG(LogTemp, Warning, TEXT("[%s] 미청소 객실 %d 배정 (청결도 %.0f)"),
 			*GetActorNameOrLabel(), Room->GetRoomNumber(), Cleanliness);
 	}
