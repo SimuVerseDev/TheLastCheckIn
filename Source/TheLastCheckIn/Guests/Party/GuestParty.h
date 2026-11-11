@@ -116,6 +116,12 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Guests|Party")
     FGuestPartyCheckedIn OnCheckedIn;
 
+    //일행 전체의 입실 완료 여부를 검사
+    bool CanParticipateInAnomaly() const;
+    
+    //아직 사건에 묶여 있는 손님이 있는지 검사
+    bool HasAnomalyParticipants() const;
+    
 private:
     bool AllMembersInState(EGuestState RequiredState) const;
 
