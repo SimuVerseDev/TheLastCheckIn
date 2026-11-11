@@ -466,6 +466,7 @@ bool UGuestParty::RequestCheckout()
     }
 
     State = EGuestPartyState::MovingToLobby;
+    AssignedRoom->NotifyGuestsDeparting(StayId);
     MoveMembersToLobby();
 
     return true;
@@ -545,6 +546,7 @@ void UGuestParty::Advance(double CurrentSeconds)
         else
         {
             State = EGuestPartyState::MovingToLobby;
+            AssignedRoom->NotifyGuestsDeparting(StayId);
         }
     }
 
