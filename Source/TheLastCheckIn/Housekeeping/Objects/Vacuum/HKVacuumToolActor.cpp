@@ -81,6 +81,7 @@ void AHKVacuumToolActor::Equip(AActor* Interactor)
 	
 	AttachToComponent(Camera, FAttachmentTransformRules::KeepRelativeTransform);
 	SetActorRelativeTransform(HeldOffset);
+	SetActorScale3D(WorldScale);
 }
 
 void AHKVacuumToolActor::Unequip()
