@@ -39,6 +39,11 @@ private:
 	UFUNCTION() void HandlePhaseChanged(EHotelPhase OldPhase, EHotelPhase NewPhase);
 	void RecordResult(const AAnomalyBase* Anomaly);
 	void FailRunningAnomalies();
+	
+	UFUNCTION() void HandleDayStarted(int32 Day);
+	double GetNightSeconds(int32 Day, int32 Hour) const;
+
+	TMap<TWeakObjectPtr<AAnomalyBase>, double> PlannedStartSeconds;
 
 	UPROPERTY() TObjectPtr<UGameClockSubsystem> Clock;
 	UPROPERTY() TObjectPtr<UHotelPhaseSubsystem> Phase;
