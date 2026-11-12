@@ -2,6 +2,8 @@
 #include "Night/Anomaly/AnomalyBase.h"
 #include "Night/Settlement/DailySettlementSubsystem.h"
 #include "Core/GameFlow/HotelPhaseSubsystem.h"
+#include "Core/GameFlow/HotelPhaseSettings.h"
+#include "Night/Anomaly/UI/AnomalyNoticeWidget.h"
 #include "Core/Time/GameClockSubsystem.h"
 #include "EngineUtils.h"
 
@@ -13,6 +15,7 @@ void UAnomalyManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	Settlement = Collection.InitializeDependency<UDailySettlementSubsystem>();
 	Clock->OnTimeAdvanced.AddDynamic(this, &ThisClass::HandleTimeAdvanced);
 	Phase->OnPhaseChanged.AddDynamic(this, &ThisClass::HandlePhaseChanged);
+	Phase->OnDayStarted.AddDynamic(this, &ThisClass::HandleDayStarted);
 }
 
 void UAnomalyManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
@@ -43,6 +46,7 @@ void UAnomalyManagerSubsystem::Deinitialize()
 	}
 	Anomalies.Reset();
 	StartSeconds.Reset();
+	PlannedStartSeconds.Reset();
 	Super::Deinitialize();
 }
 
@@ -123,10 +127,41 @@ void UAnomalyManagerSubsystem::HandleAnomalyStateChanged(AAnomalyBase* Anomaly, 
 		StartSeconds.Remove(Anomaly);
 	}
 	RecordResult(Anomaly);
+	if (NewState == EAnomalyState::Resolved)
+	{
+		UAnomalyNoticeWidget::Show(this,
+			FText::Format(NSLOCTEXT("Anomaly", "ResolvedNotice", "{0} 해결"), Anomaly->DisplayName));
+	}
 }
 
 void UAnomalyManagerSubsystem::HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds)
 {
+	/*
+	예약 시각이 지난 이상현상 시작
+	*/
+	TArray<AAnomalyBase*> ToStart;
+	for (auto It = PlannedStartSeconds.CreateIterator(); It; ++It)
+	{
+		AAnomalyBase* Anomaly = It.Key().Get();
+		if (!Anomaly)
+		{
+			It.RemoveCurrent();
+			continue;
+		}
+		if (CurrentSeconds >= It.Value())
+		{
+			ToStart.Add(Anomaly);
+			It.RemoveCurrent();
+		}
+	}
+	for (AAnomalyBase* Anomaly : ToStart)
+	{
+		Anomaly->StartAnomaly();
+	}
+
+	/*
+	방치된 이상현상 악화
+	*/
 	TArray<AAnomalyBase*> ToEscalate;
 	for (auto It = StartSeconds.CreateIterator(); It; ++It)
 	{
@@ -152,6 +187,7 @@ void UAnomalyManagerSubsystem::HandlePhaseChanged(EHotelPhase OldPhase, EHotelPh
 	if (NewPhase == EHotelPhase::Settlement)
 	{
 		FailRunningAnomalies();
+		PlannedStartSeconds.Reset();
 	}
 }
 
@@ -176,4 +212,38 @@ void UAnomalyManagerSubsystem::FailRunningAnomalies()
 	{
 		Anomaly->Fail();
 	}
+}
+
+void UAnomalyManagerSubsystem::HandleDayStarted(int32 Day)
+{
+	PlannedStartSeconds.Reset();
+	if (Day < UHotelPhaseSettings::Get()->FirstAnomalyDay)
+	{
+		return;
+	}
+	for (const TWeakObjectPtr<AAnomalyBase>& Weak : Anomalies)
+	{
+		AAnomalyBase* Anomaly = Weak.Get();
+		if (!Anomaly || !Anomaly->bAutoSchedule || FMath::FRand() > Anomaly->SpawnChance)
+		{
+			continue;
+		}
+		const double Earliest = GetNightSeconds(Day, Anomaly->EarliestStartHour);
+		const double Latest = GetNightSeconds(Day, Anomaly->LatestStartHour);
+		if (Latest < Earliest)
+		{
+			continue;
+		}
+		PlannedStartSeconds.Add(Anomaly, FMath::FRandRange(Earliest, Latest));
+	}
+}
+
+/*
+22시 → 당일 22:00, 3시 → 다음 날 03:00
+*/
+double UAnomalyManagerSubsystem::GetNightSeconds(int32 Day, int32 Hour) const
+{
+	const int32 DayStartHour = UHotelPhaseSettings::Get()->DayStartHour;
+	const int32 AdjustedHour = Hour < DayStartHour ? Hour + 24 : Hour;
+	return (Day - 1) * 86400.0 + AdjustedHour * 3600.0;
 }

@@ -55,6 +55,18 @@ public:
 	*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Anomaly", meta=(ClampMin="1"))
 	int32 EscalateAfterMinutes = 60;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Anomaly|Schedule")
+	bool bAutoSchedule = true;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Anomaly|Schedule", meta=(ClampMin="0", ClampMax="23"))
+	int32 EarliestStartHour = 22; // if rest, 20
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Anomaly|Schedule", meta=(ClampMin="0", ClampMax="23"))
+	int32 LatestStartHour = 4;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Anomaly|Schedule", meta=(ClampMin="0", ClampMax="1"))
+	float SpawnChance = 1.0f;
 
 protected:
 	UFUNCTION(BlueprintImplementableEvent, Category="Night|Anomaly")
