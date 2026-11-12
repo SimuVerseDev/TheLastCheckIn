@@ -75,6 +75,10 @@ void AHKVacuumToolActor::Equip(AActor* Interactor)
 	Holder = Interactor;
 	Mesh->SetSimulatePhysics(false);
 	SetActorEnableCollision(false);
+	
+	// 배치된 크기 유지
+	const FVector WorldScale = GetActorScale3D();
+	
 	AttachToComponent(Camera, FAttachmentTransformRules::KeepRelativeTransform);
 	SetActorRelativeTransform(HeldOffset);
 }
