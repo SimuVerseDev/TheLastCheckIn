@@ -1,5 +1,5 @@
 ﻿#include "Night/Anomaly/Shadow/ShadowFigureActor.h"
-#include "Night/Anomaly/Shadow/VacuumToolActor.h"
+#include "Housekeeping/Objects/Vacuum/HKVacuumToolActor.h"
 #include "Components/StaticMeshComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -61,7 +61,7 @@ bool AShadowFigureActor::CanInteract_Implementation(AActor* Interactor) const
 
 bool AShadowFigureActor::CanUse_Implementation(AActor* Interactor) const
 {
-	return bPresent && !bAbsorbing && AVacuumToolActor::FindHeldBy(Interactor) != nullptr;
+	return bPresent && !bAbsorbing && AHKVacuumToolActor::FindHeldBy(Interactor) != nullptr;
 }
 
 FText AShadowFigureActor::GetUsePrompt_Implementation(AActor* Interactor) const
@@ -75,7 +75,7 @@ bool AShadowFigureActor::Use_Implementation(AActor* Interactor)
 	{
 		return false;
 	}
-	const AVacuumToolActor* Vacuum = AVacuumToolActor::FindHeldBy(Interactor);
+	const AHKVacuumToolActor* Vacuum = AHKVacuumToolActor::FindHeldBy(Interactor);
 	AbsorbTarget = Vacuum->GetNozzle();
 	AbsorbStartLocation = GetActorLocation();
 	AbsorbStartScale = GetActorScale3D();

@@ -1,11 +1,11 @@
-﻿#include "Night/Anomaly/Shadow/VacuumToolActor.h"
+﻿#include "Housekeeping/Objects/Vacuum/HKVacuumToolActor.h"
 #include "Camera/CameraComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 
-AVacuumToolActor::AVacuumToolActor()
+AHKVacuumToolActor::AHKVacuumToolActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -21,14 +21,14 @@ AVacuumToolActor::AVacuumToolActor()
 	DropPrompt = NSLOCTEXT("Anomaly", "VacuumDrop", "청소기 내려놓기");
 }
 
-AVacuumToolActor* AVacuumToolActor::FindHeldBy(const AActor* Interactor)
+AHKVacuumToolActor* AHKVacuumToolActor::FindHeldBy(const AActor* Interactor)
 {
 	UWorld* World = Interactor ? Interactor->GetWorld() : nullptr;
 	if (!World)
 	{
 		return nullptr;
 	}
-	for (TActorIterator<AVacuumToolActor> It(World); It; ++It)
+	for (TActorIterator<AHKVacuumToolActor> It(World); It; ++It)
 	{
 		if (It->Holder.Get() == Interactor)
 		{
@@ -38,17 +38,17 @@ AVacuumToolActor* AVacuumToolActor::FindHeldBy(const AActor* Interactor)
 	return nullptr;
 }
 
-bool AVacuumToolActor::CanInteract_Implementation(AActor* Interactor) const
+bool AHKVacuumToolActor::CanInteract_Implementation(AActor* Interactor) const
 {
 	return !Holder.IsValid() || Holder.Get() == Interactor;
 }
 
-FText AVacuumToolActor::GetInteractPrompt_Implementation(AActor* Interactor) const
+FText AHKVacuumToolActor::GetInteractPrompt_Implementation(AActor* Interactor) const
 {
 	return Holder.Get() == Interactor ? DropPrompt : PickupPrompt;
 }
 
-void AVacuumToolActor::Interact_Implementation(AActor* Interactor)
+void AHKVacuumToolActor::Interact_Implementation(AActor* Interactor)
 {
 	if (Holder.Get() == Interactor)
 	{
@@ -60,12 +60,12 @@ void AVacuumToolActor::Interact_Implementation(AActor* Interactor)
 	}
 }
 
-bool AVacuumToolActor::IsInteractionActive_Implementation(AActor* Interactor) const
+bool AHKVacuumToolActor::IsInteractionActive_Implementation(AActor* Interactor) const
 {
 	return Holder.Get() == Interactor;
 }
 
-void AVacuumToolActor::Equip(AActor* Interactor)
+void AHKVacuumToolActor::Equip(AActor* Interactor)
 {
 	UCameraComponent* Camera = Interactor ? Interactor->FindComponentByClass<UCameraComponent>() : nullptr;
 	if (!Camera)
@@ -79,7 +79,7 @@ void AVacuumToolActor::Equip(AActor* Interactor)
 	SetActorRelativeTransform(HeldOffset);
 }
 
-void AVacuumToolActor::Unequip()
+void AHKVacuumToolActor::Unequip()
 {
 	AActor* OldHolder = Holder.Get();
 	Holder.Reset();
