@@ -71,29 +71,33 @@ bool AShadowAnomaly::Escalate()
 		return false;
 	}
 
-	int32 ComplainingRoom = INDEX_NONE;
+	/*
+	투숙 중인 객실 중 한 곳만 문고리에 연기 + 컴플레인
+	*/
+	TArray<const FShadowDoorFigure*> Occupied;
 	for (const FShadowDoorFigure& Door : DoorFigures)
 	{
 		if (Door.Figure && Door.Room && Door.Room->GetRoomState() == ERoomState::Occupied)
 		{
-			ShowFigure(Door.Figure);
-			if (ComplainingRoom == INDEX_NONE)
-			{
-				ComplainingRoom = Door.Room->GetRoomNumber();
-			}
+			Occupied.Add(&Door);
 		}
 	}
 
 	// 투숙객이 없으면 컴플레인도 없음
-	if (ComplainingRoom != INDEX_NONE)
+	if (Occupied.IsEmpty())
 	{
-		const FText RoomText = FText::AsNumber(ComplainingRoom, &FNumberFormattingOptions::DefaultNoGrouping());
-		UAnomalyNoticeWidget::Show(this, FText::FormatNamed(ComplaintMessage, TEXT("Room"), RoomText), 5.0f);
+		return true;
+	}
 
-		if (UHotelReputationSubsystem* Reputation = GetWorld()->GetSubsystem<UHotelReputationSubsystem>())
-		{
-			Reputation->AddReputation(EReputationReason::Complaint);
-		}
+	const FShadowDoorFigure* Picked = Occupied[FMath::RandRange(0, Occupied.Num() - 1)];
+	ShowFigure(Picked->Figure);
+
+	const FText RoomText = FText::AsNumber(Picked->Room->GetRoomNumber(), &FNumberFormattingOptions::DefaultNoGrouping());
+	UAnomalyNoticeWidget::Show(this, FText::FormatNamed(ComplaintMessage, TEXT("Room"), RoomText), 5.0f);
+
+	if (UHotelReputationSubsystem* Reputation = GetWorld()->GetSubsystem<UHotelReputationSubsystem>())
+	{
+		Reputation->AddReputation(EReputationReason::Complaint);
 	}
 	return true;
 }

@@ -1,6 +1,9 @@
 ﻿#include "Night/Anomaly/Shadow/ShadowFigureActor.h"
 #include "Housekeeping/Objects/Vacuum/HKVacuumToolActor.h"
 #include "Components/StaticMeshComponent.h"
+#include "Camera/CameraActor.h"
+#include "Camera/PlayerCameraManager.h"
+#include "GameFramework/PlayerController.h"
 #include "UObject/ConstructorHelpers.h"
 
 AShadowFigureActor::AShadowFigureActor()
@@ -43,6 +46,12 @@ void AShadowFigureActor::Appear()
 	SetActorEnableCollision(true);
 	bPresent = true;
 	bAbsorbing = false;
+
+	if (bCCTVOnly)
+	{
+		UpdateCCTVVisibility();
+		SetActorTickEnabled(true);
+	}
 }
 
 void AShadowFigureActor::Disappear()
@@ -89,6 +98,10 @@ bool AShadowFigureActor::Use_Implementation(AActor* Interactor)
 void AShadowFigureActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (bPresent && bCCTVOnly && !bAbsorbing)
+	{
+		UpdateCCTVVisibility();
+	}
 	if (!bAbsorbing)
 	{
 		return;
@@ -103,5 +116,25 @@ void AShadowFigureActor::Tick(float DeltaSeconds)
 	{
 		Disappear();
 		OnAbsorbed.Broadcast(this);
+	}
+}
+
+/*
+CCTV는 플레이어 시점을 카메라 액터로 옮기는 방식 - 시점이 카메라일 때만 연기 표시
+*/
+void AShadowFigureActor::UpdateCCTVVisibility()
+{
+	const APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	const AActor* ViewTarget = PC && PC->PlayerCameraManager ? PC->PlayerCameraManager->GetViewTarget() : nullptr;
+	const bool bOnCCTV = ViewTarget && ViewTarget->IsA<ACameraActor>();
+
+	// 조준용 Mesh는 그대로 두고 연기 카드만 숨김
+	TInlineComponentArray<UPrimitiveComponent*> Prims(this);
+	for (UPrimitiveComponent* Prim : Prims)
+	{
+		if (Prim != Mesh)
+		{
+			Prim->SetHiddenInGame(!bOnCCTV);
+		}
 	}
 }

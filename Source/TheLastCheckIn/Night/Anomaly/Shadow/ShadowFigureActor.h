@@ -53,7 +53,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Night|Shadow")
 	FText AbsorbPrompt;
 
+	// 맨눈으로는 안 보이고 CCTV 화면에서만 보임 (흡입 조준은 가능)
+	UPROPERTY(EditAnywhere, Category="Night|Shadow")
+	bool bCCTVOnly = false;
+
 private:
+	void UpdateCCTVVisibility();
+
+
 	FTransform HomeTransform;
 	TWeakObjectPtr<USceneComponent> AbsorbTarget;
 	FVector AbsorbStartLocation = FVector::ZeroVector;
