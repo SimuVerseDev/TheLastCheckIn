@@ -7,7 +7,8 @@
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 
-namespace
+// 유니티 빌드에서 다른 cpp의 익명 네임스페이스 상수와 겹치지 않도록 이름 분리
+namespace ShadowAnomalyTime
 {
 	constexpr double SecondsPerHour = 3600.0;
 	constexpr double SecondsPerDay = 86400.0;
@@ -86,11 +87,11 @@ bool AShadowAnomaly::StartAnomaly()
 	지금부터 RevealUntilHour(다음 날 새벽)까지 남은 시간
 	*/
 	const double Now = Clock->GetTotalGameSeconds();
-	const double TimeOfDay = FMath::Fmod(Now, SecondsPerDay);
-	double Until = RevealUntilHour * SecondsPerHour;
+	const double TimeOfDay = FMath::Fmod(Now, ShadowAnomalyTime::SecondsPerDay);
+	double Until = RevealUntilHour * ShadowAnomalyTime::SecondsPerHour;
 	if (Until <= TimeOfDay)
 	{
-		Until += SecondsPerDay;
+		Until += ShadowAnomalyTime::SecondsPerDay;
 	}
 	const double Window = Until - TimeOfDay;
 
@@ -138,10 +139,6 @@ void AShadowAnomaly::HandleTimeAdvanced(double PreviousSeconds, double CurrentSe
 	}
 }
 
-/*
-문고리 형체 등장 - 투숙 중인 객실 중 한 곳에 생기고 컴플레인 전화
-투숙 객실이 없으면 아무 일도 없음
-*/
 bool AShadowAnomaly::Escalate()
 {
 	TArray<const FShadowDoorFigure*> Occupied;

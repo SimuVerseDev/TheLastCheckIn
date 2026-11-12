@@ -44,8 +44,7 @@ protected:
 	// 0이면 전부
 	UPROPERTY(EditAnywhere, Category="Night|Shadow", meta=(ClampMin="0"))
 	int32 DecorFigureCount = 3;
-
-	// 이 시각(다음 날 새벽)까지 모든 형체가 나타남
+	
 	UPROPERTY(EditAnywhere, Category="Night|Shadow", meta=(ClampMin="0", ClampMax="23"))
 	int32 RevealUntilHour = 4;
 
@@ -54,8 +53,7 @@ protected:
 	*/
 	UPROPERTY(EditInstanceOnly, Category="Night|Shadow")
 	TArray<FShadowDoorFigure> DoorFigures;
-
-	// 밤마다 문고리 형체가 나타날 확률
+	
 	UPROPERTY(EditAnywhere, Category="Night|Shadow", meta=(ClampMin="0", ClampMax="1"))
 	float DoorFigureChance = 0.5f;
 
