@@ -101,17 +101,16 @@ void UNightFlowComponent::BeginPlay()
 	}
 }
 
-void UNightFlowComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UNightFlowComponent::TickComponent(
+	float DeltaTime,
+	ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	APlayerController* PC = GetPlayerController();
-	APawn* Pawn = PC ? PC->GetPawn() : nullptr;
-	const UPlayerInteractionComponent* Interaction = Pawn ? Pawn->FindComponentByClass<UPlayerInteractionComponent>() : nullptr;
-	AActor* Focused = Interaction ? Interaction->GetFocusedActor() : nullptr;
-	const bool bShow = CanShowSleepPrompt() && Interaction && Interaction->IsComponentTickEnabled()
-		&& IsValid(Focused) && Focused->IsA<ANightBedActor>()
-		&& IInteractable::Execute_CanInteract(Focused, Pawn);
-	SetSleepPromptVisible(bShow);
+
+	// 잠자기 안내는 공통 상호작용 UI에서 표시합니다.
+	// 검은 배경의 침대 전용 안내는 표시하지 않습니다.
+	SetSleepPromptVisible(false);
 }
 
 void UNightFlowComponent::SetSleepPromptVisible(bool bVisible)
