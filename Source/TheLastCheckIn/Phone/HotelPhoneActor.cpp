@@ -23,8 +23,8 @@ void AHotelPhoneActor::StartRinging(const FText& InSubtitle)
 	bRinging = true;
 	if (RingSound)
 	{
-		RingSound->SetSound(RingSound);
-		RingSound->Play();
+		RingAudio->SetSound(RingSound);
+		RingAudio->Play();
 	}
 }
 
