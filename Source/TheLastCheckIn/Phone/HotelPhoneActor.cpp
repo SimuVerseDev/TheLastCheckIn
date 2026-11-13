@@ -76,6 +76,13 @@ void AHotelPhoneActor::Interact_Implementation(AActor* Interactor)
 	GetWorldTimerManager().SetTimer(CallTimer, this, &ThisClass::EndCall, CallDuration, false);
 }
 
+void AHotelPhoneActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearTimer(CallTimer);
+	EndCall();
+	Super::EndPlay(EndPlayReason);
+}
+
 /*
 통화 끝 - 플레이어 시점으로 돌아가고 조작 복구
 */

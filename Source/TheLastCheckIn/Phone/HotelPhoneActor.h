@@ -37,6 +37,8 @@ public:
 	virtual void Interact_Implementation(AActor* Interactor) override;
 	
 protected:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	/*
 	Fixed viewpoint
 	*/
