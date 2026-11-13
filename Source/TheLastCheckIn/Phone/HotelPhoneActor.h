@@ -51,7 +51,18 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Phone")
 	FText AnswerPrompt;
 	
+	UPROPERTY(EditAnywhere, Category="Phone", meta=(ClampMin="0.1", Units="s"))
+	float CallDuration = 5.0f;
+	
+	UPROPERTY(EditAnywhere, Category="Phone", meta=(ClampMin="0.1", Units="s"))
+	float CameraBlendTime = 0.5f;
+	
 private:
+	void EndCall();
+	
+	TWeakObjectPtr<APlayerController> CallerPC;
+	FTimerHandle CallTimer;
+	
 	FText PendingSubtitle;
 	bool bRinging = false;
 };

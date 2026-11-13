@@ -2,6 +2,9 @@
 #include "Camera/CameraComponent.h"
 #include "Components/AudioComponent.h"
 #include "Components/SceneComponent.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
+#include "TimerManager.h"
 
 AHotelPhoneActor::AHotelPhoneActor()
 {
@@ -46,10 +49,34 @@ FText AHotelPhoneActor::GetInteractPrompt_Implementation(AActor* Interactor) con
 
 void AHotelPhoneActor::Interact_Implementation(AActor* Interactor)
 {
-	if (!bRinging)
+	const APawn* Pawn = Cast<APawn>(Interactor);
+	APlayerController* PC = Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr;
+	if (!bRinging || PC)
 	{
 		return;
 	}
 	StopRinging();
-	// TODO : 3단계 - 카메라 고정 + 조작 막기
+	CallerPC = PC;
+	
+	PC->SetIgnoreMoveInput(true);
+	PC->SetIgnoreLookInput(true);
+	PC->SetViewTargetWithBlend(this, CameraBlendTime, VTBlend_EaseInOut, 2.0f);
+	
+	GetWorldTimerManager().SetTimer(CallTimer, this, &ThisClass::EndCall, CallDuration, false);
+}
+
+/*
+통화 끝 - 플레이어 시점으로 돌아가고 조작 복구
+*/
+void AHotelPhoneActor::EndCall()
+{
+	APlayerController* PC = CallerPC.Get();
+	CallerPC.Reset();
+	if (!PC)
+	{
+		return;
+	}
+	PC->SetViewTargetWithBlend(PC->GetPawn(), CameraBlendTime, VTBlend_EaseInOut, 2.0f);
+	PC->SetIgnoreMoveInput(false);
+	PC->SetIgnoreLookInput(false);
 }
