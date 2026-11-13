@@ -1,4 +1,5 @@
 ﻿#include "Phone/HotelPhoneActor.h"
+#include "Phone/UI/PhoneSubtitleWidget.h"
 #include "Camera/CameraComponent.h"
 #include "Components/AudioComponent.h"
 #include "Components/SceneComponent.h"
@@ -62,6 +63,16 @@ void AHotelPhoneActor::Interact_Implementation(AActor* Interactor)
 	PC->SetIgnoreLookInput(true);
 	PC->SetViewTargetWithBlend(this, CameraBlendTime, VTBlend_EaseInOut, 2.0f);
 	
+	/*
+	UI
+	*/
+	SubtitleWidget = CreateWidget<UPhoneSubtitleWidget>(PC, UPhoneSubtitleWidget::StaticClass());
+	if (SubtitleWidget)
+	{
+		SubtitleWidget->SetSubtitle(PendingSubtitle);
+		SubtitleWidget->AddToViewport(60);
+	}
+	
 	GetWorldTimerManager().SetTimer(CallTimer, this, &ThisClass::EndCall, CallDuration, false);
 }
 
@@ -70,6 +81,15 @@ void AHotelPhoneActor::Interact_Implementation(AActor* Interactor)
 */
 void AHotelPhoneActor::EndCall()
 {
+	/*
+	UI
+	*/
+	if (SubtitleWidget)
+	{
+		SubtitleWidget->RemoveFromParent();
+		SubtitleWidget = nullptr;
+	}
+	
 	APlayerController* PC = CallerPC.Get();
 	CallerPC.Reset();
 	if (!PC)

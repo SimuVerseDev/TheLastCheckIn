@@ -8,6 +8,7 @@
 class UCameraComponent;
 class UAudioComponent;
 class USoundBase;
+class UPhoneSubtitleWidget;
 
 UCLASS()
 class THELASTCHECKIN_API AHotelPhoneActor : public AActor, public IInteractable
@@ -62,6 +63,12 @@ private:
 	
 	TWeakObjectPtr<APlayerController> CallerPC;
 	FTimerHandle CallTimer;
+	
+	/*
+	UI
+	*/
+	UPROPERTY(Transient)
+	TObjectPtr<UPhoneSubtitleWidget> SubtitleWidget;
 	
 	FText PendingSubtitle;
 	bool bRinging = false;
