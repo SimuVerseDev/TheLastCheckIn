@@ -40,7 +40,7 @@ void AHotelPhoneActor::StopRinging()
 
 bool AHotelPhoneActor::CanInteract_Implementation(AActor* Interactor) const
 {
-	return bRinging;
+	return bRinging && !CallerPC.IsValid();
 }
 
 FText AHotelPhoneActor::GetInteractPrompt_Implementation(AActor* Interactor) const
@@ -52,7 +52,7 @@ void AHotelPhoneActor::Interact_Implementation(AActor* Interactor)
 {
 	const APawn* Pawn = Cast<APawn>(Interactor);
 	APlayerController* PC = Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr;
-	if (!bRinging || !PC)
+	if (!bRinging || !PC || CallerPC.IsValid())
 	{
 		return;
 	}
