@@ -46,7 +46,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Phone")
 	TObjectPtr<UAudioComponent> RingAudio;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Phone")
+	UPROPERTY(EditAnywhere, Category="Phone")
 	TObjectPtr<USoundBase> RingSound;
 	
 	UPROPERTY(EditAnywhere, Category="Phone")
