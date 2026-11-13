@@ -81,6 +81,9 @@ public:
     // GuestCharacter가 객실 도착 후 호출
     void NotifyReturnedToRoom();
 
+    // 정산으로 끝난 사건: 해결 알림 없이 객실 도착 후 참여 상태를 정리한다.
+    void ReturnToRoomAfterIncidentEnd();
+
 protected:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
@@ -102,6 +105,8 @@ private:
     EGuestAnomalyPhase Phase = EGuestAnomalyPhase::Idle;
 
     bool bTransitioning = false;
+
+    bool bFinishIncidentOnReturn = false;
     
     // 다음 참여가 시작될 때 새로 발급
     UPROPERTY(Transient)
