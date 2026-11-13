@@ -196,7 +196,7 @@ void AShadowFigureActor::TickAbsorb(float DeltaSeconds)
 	}
 }
 
-void AShadowFigureActor::SetCardsHidden(bool bHidden)
+void AShadowFigureActor::SetCardsHidden(bool bHideCards)
 {
 	// 조준용 Mesh는 그대로 두고 연기 카드만
 	TInlineComponentArray<UPrimitiveComponent*> Prims(this);
@@ -204,7 +204,7 @@ void AShadowFigureActor::SetCardsHidden(bool bHidden)
 	{
 		if (Prim != Mesh)
 		{
-			Prim->SetHiddenInGame(bHidden);
+			Prim->SetHiddenInGame(bHideCards);
 		}
 	}
 }

@@ -14,7 +14,7 @@ class THELASTCHECKIN_API UHKVacuumShakeModifier : public UCameraModifier
 	GENERATED_BODY()
 
 public:
-	static void Play(const APlayerController* PC, float Duration, float Strength);
+	static void Play(const APlayerController* PC, float InDuration, float InStrength);
 
 	virtual bool ModifyCamera(float DeltaTime, struct FMinimalViewInfo& InOutPOV) override;
 

@@ -80,7 +80,7 @@ private:
 	void UpdateCCTVVisibility();
 	bool IsViewedOnCCTV() const;
 	void TickAbsorb(float DeltaSeconds);
-	void SetCardsHidden(bool bHidden);
+	void SetCardsHidden(bool bHideCards);
 	void SetGlitch(float Value);
 	void RestoreMaterials();
 
