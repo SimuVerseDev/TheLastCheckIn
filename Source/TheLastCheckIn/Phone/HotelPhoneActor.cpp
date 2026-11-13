@@ -52,7 +52,7 @@ void AHotelPhoneActor::Interact_Implementation(AActor* Interactor)
 {
 	const APawn* Pawn = Cast<APawn>(Interactor);
 	APlayerController* PC = Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr;
-	if (!bRinging || PC)
+	if (!bRinging || !PC)
 	{
 		return;
 	}
