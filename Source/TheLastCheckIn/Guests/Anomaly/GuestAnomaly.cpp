@@ -563,6 +563,13 @@ void AGuestAnomaly::CleanupParticipants(bool bResolved)
 {
     ClearEvaluation();
 
+    const UHotelPhaseSubsystem* HotelPhase = GetWorld()
+        ? GetWorld()->GetSubsystem<UHotelPhaseSubsystem>()
+        : nullptr;
+    const bool bReturnAfterSettlement = !bResolved && !bEndingPlay
+        && HotelPhase
+        && HotelPhase->GetCurrentPhase() == EHotelPhase::Settlement;
+
     TArray<FGuestAnomalyParticipant> OldParticipants =
         MoveTemp(Participants);
 
@@ -590,7 +597,12 @@ void AGuestAnomaly::CleanupParticipants(bool bResolved)
             continue;
         }
 
-        if (bResolved &&
+        if (bReturnAfterSettlement)
+        {
+            // 사건은 실패로 끝내되, 손님의 객실 복귀는 계속 진행한다.
+            Component->ReturnToRoomAfterIncidentEnd();
+        }
+        else if (bResolved &&
             Component->GetPhase() == EGuestAnomalyPhase::Resolved)
         {
             Component->FinishIncident();
