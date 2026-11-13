@@ -50,7 +50,8 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Guests|Anomaly")
     TObjectPtr<UGuestAnomalyDefinition> Definition;
 
-    // 같은 사건 안에서는 중복 배정하지 않음
+    // 행동 대상 액터. 장식물 행동은 ThrowableDecoration을 직접 등록한다.
+    // 같은 사건 안에서는 중복 배정하지 않음.
     UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Guests|Anomaly")
     TArray<TObjectPtr<AActor>> ActionPoints;
 

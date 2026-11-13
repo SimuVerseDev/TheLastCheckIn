@@ -33,6 +33,10 @@ public:
 		meta = (ClampMin = "1"))
 	int32 RequiredSignals = 1;
 
+	// 이상행동 시작 시 한 번 재생할 애니메이션
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Anomaly|Animation")
+	TObjectPtr<UAnimMontage> InitialMontage;
+	
 	// 행동 중 재생할 애니메이션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Anomaly|Animation")
 	TObjectPtr<UAnimMontage> ActionMontage;

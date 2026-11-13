@@ -54,6 +54,7 @@ bool UGuestAnomalyComponent::StartAnomaly(UGuestAnomalyDefinition* InDefinition,
     const FGuid NewParticipationId = FGuid::NewGuid();
 
     ParticipationId = NewParticipationId;
+    bFinishIncidentOnReturn = false;
     CurrentDefinition = InDefinition;
     ActiveBehavior = NewBehavior;
     Phase = EGuestAnomalyPhase::Active;
@@ -201,10 +202,48 @@ bool UGuestAnomalyComponent::FinishIncident()
 
     CurrentDefinition = nullptr;
     Phase = EGuestAnomalyPhase::Idle;
+    bFinishIncidentOnReturn = false;
 
     bTransitioning = false;
 
     return true;
+}
+
+void UGuestAnomalyComponent::ReturnToRoomAfterIncidentEnd()
+{
+    if (bTransitioning || !IsBusy())
+    {
+        return;
+    }
+
+    if (Phase == EGuestAnomalyPhase::Resolved)
+    {
+        FinishIncident();
+        return;
+    }
+
+    bFinishIncidentOnReturn = true;
+
+    // 기존 복귀 이동이나 해결 모션 이후의 복귀 예약을 취소하지 않는다.
+    if (Phase == EGuestAnomalyPhase::ReturningToRoom)
+    {
+        return;
+    }
+
+    bTransitioning = true;
+    Phase = EGuestAnomalyPhase::ReturningToRoom;
+
+    DestroyBehavior();
+    StopGuestMovement();
+    ClearReturnTimer();
+
+    bTransitioning = false;
+
+    UE_LOG(LogTemp, Log,
+        TEXT("Anomaly guest returning after settlement: %s"),
+        *GetNameSafe(GetOwner()));
+
+    BeginReturnToRoom();
 }
 
 void UGuestAnomalyComponent::CancelAnomaly()
@@ -239,6 +278,7 @@ void UGuestAnomalyComponent::CancelAnomaly()
 
     CurrentDefinition = nullptr;
     Phase = EGuestAnomalyPhase::Idle;
+    bFinishIncidentOnReturn = false;
 
     bTransitioning = false;
 
@@ -355,6 +395,12 @@ void UGuestAnomalyComponent::NotifyReturnedToRoom()
     UE_LOG(LogTemp, Log,
         TEXT("Anomaly guest returned to room: %s"),
         *GetNameSafe(Guest));
+
+    if (bFinishIncidentOnReturn)
+    {
+        FinishIncident();
+        return;
+    }
 
     OnResolved.Broadcast(this);
 }
