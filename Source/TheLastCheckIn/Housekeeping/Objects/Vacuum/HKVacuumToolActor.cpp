@@ -107,7 +107,8 @@ void AHKVacuumToolActor::Equip(AActor* Interactor)
 		LastControlRotation = Pawn->GetControlRotation();
 	}
 
-	SetFirstPersonRender(bInHand);
+	// 들고 있는 동안은 1인칭 FOV/스케일로 그려서 벽에 파묻히지 않게 함
+	SetFirstPersonRender(true);
 	SetActorTickEnabled(true);
 }
 
@@ -123,19 +124,23 @@ void AHKVacuumToolActor::Unequip()
 
 	/*
 	들고 있던 위치 바로 아래 바닥에 세워 둠
+	메시 피벗이 모델 중심과 어긋나 있을 수 있어서, 세운 뒤 모델 바닥 중앙이 바닥에 닿도록 맞춤
 	*/
+	SetActorRotation(FRotator(0.0f, GetActorRotation().Yaw, 0.0f));
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(VacuumDrop), false, this);
 	if (OldHolder)
 	{
 		Params.AddIgnoredActor(OldHolder);
 	}
-	const FVector Start = GetActorLocation();
+	const FBox Bounds = Mesh->Bounds.GetBox();
+	const FVector BottomCenter(Bounds.GetCenter().X, Bounds.GetCenter().Y, Bounds.Min.Z);
+	const FVector PivotFromBottom = GetActorLocation() - BottomCenter;
+	const FVector Start(BottomCenter.X, BottomCenter.Y, Bounds.Max.Z);
 	FHitResult Hit;
 	if (GetWorld()->LineTraceSingleByChannel(Hit, Start, Start - FVector(0.0f, 0.0f, 500.0f), ECC_Visibility, Params))
 	{
-		SetActorLocation(Hit.ImpactPoint);
+		SetActorLocation(Hit.ImpactPoint + PivotFromBottom);
 	}
-	SetActorRotation(FRotator(0.0f, GetActorRotation().Yaw, 0.0f));
 	SetActorEnableCollision(true);
 }
 
@@ -228,7 +233,7 @@ FVector AHKVacuumToolActor::GetSuckTargetLocation() const
 {
 	const FVector NozzleLocation = Nozzle->GetComponentLocation();
 	const UCameraComponent* Camera = HolderCamera.Get();
-	if (!bInHand || !Camera)
+	if (!Camera)
 	{
 		return NozzleLocation;
 	}
