@@ -39,9 +39,12 @@ void UTutorialQuestWidget::RefreshQuest()
 {
 	if (IsDesignTime()) return;
 	const bool bActive = Tutorial && Tutorial->IsTutorialActive();
-	SetVisibility(bActive ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
-	if (!bActive) return;
-	if (Text_Title) Text_Title->SetText(NSLOCTEXT("Tutorial", "DayOneTitle", "튜토리얼 1일차"));
+	const bool bCompletionNotice = Tutorial && Tutorial->ShouldShowCompletionNotice();
+	SetVisibility(bActive || bCompletionNotice ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	if (!bActive && !bCompletionNotice) return;
+	if (Text_Title) Text_Title->SetText(bCompletionNotice
+		? NSLOCTEXT("Tutorial", "CompletedTitle", "튜토리얼 완료")
+		: NSLOCTEXT("Tutorial", "DayOneTitle", "튜토리얼 1일차"));
 	if (Text_Objective) Text_Objective->SetText(Tutorial->GetObjectiveText());
 	if (VerticalBox_RoomList)
 		VerticalBox_RoomList->SetVisibility(Tutorial->GetCurrentStep() == ETutorialStep::CleanRoom
