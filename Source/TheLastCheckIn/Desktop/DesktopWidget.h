@@ -1,12 +1,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Desktop/DesktopSurfaceWidget.h"
 #include "DesktopWidget.generated.h"
 
 /** Base for WBP_Desktop. Owns input only while the desktop is on screen. */
 UCLASS()
-class THELASTCHECKIN_API UDesktopWidget : public UUserWidget
+class THELASTCHECKIN_API UDesktopWidget : public UDesktopSurfaceWidget
 {
 	GENERATED_BODY()
 public:
