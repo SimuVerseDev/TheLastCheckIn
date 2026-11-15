@@ -3,6 +3,8 @@
 #include "Housekeeping/Core/Room/HKRoomVolume.h"
 #include "Rooms/RoomActor.h"
 #include "EngineUtils.h"
+#include "CCTV/CCTVMonitor.h"
+#include "Core/Time/GameClockSubsystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTutorial, Log, All);
 
@@ -10,12 +12,16 @@ void UTutorialSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	Phase = Collection.InitializeDependency<UHotelPhaseSubsystem>();
+	Clock = Collection.InitializeDependency<UGameClockSubsystem>();
+	Clock->OnTimeAdvanced.AddDynamic(this, &ThisClass::HandleTimeAdvanced);
 	Phase->OnDayStarted.AddDynamic(this, &ThisClass::HandleDayStarted);
 }
 
 void UTutorialSubsystem::Deinitialize()
 {
 	UnbindGameplayEvents();
+	if (Clock) Clock->OnTimeAdvanced.RemoveAll(this);
+	Clock = nullptr;
 	if (Phase) Phase->OnDayStarted.RemoveAll(this);
 	OnStepChanged.Clear();
 	OnProgressChanged.Clear();
@@ -30,8 +36,24 @@ bool UTutorialSubsystem::IsTutorialActive() const
 		&& CurrentStep != ETutorialStep::Completed;
 }
 
+bool UTutorialSubsystem::ShouldShowCompletionNotice() const
+{
+	return bCompletionNoticeVisible && IsTutorialCompleted()
+		&& Phase && Phase->GetCurrentDay() == 1;
+}
+
+void UTutorialSubsystem::HideCompletionNotice()
+{
+	bCompletionNoticeVisible = false;
+	OnProgressChanged.Broadcast();
+}
+
 void UTutorialSubsystem::HandleDayStarted(int32 Day)
 {
+	// Refresh even when Completed remains unchanged on day two.
+	HideCompletionNotice();
+	ViewingMonitor.Reset();
+	ResetCCTVProgress();
 	if (Day == 1)
 	{
 		UnbindGameplayEvents();
@@ -119,16 +141,17 @@ bool UTutorialSubsystem::CompleteStep(ETutorialStep CompletedStep)
 	if (CompletedStep == ETutorialStep::CleanRoom && CleanedRooms.Num() != 4) return false;
 	if (CompletedStep == ETutorialStep::UnlockRoom205 && !bRoom205Purchased) return false;
 	if (CompletedStep == ETutorialStep::CheckInGuest && CheckedInStays.Num() < 5) return false;
+	if (CompletedStep == ETutorialStep::ViewCCTV && CCTVViewingSeconds < 3600.0) return false;
 
 	ETutorialStep NextStep;
 	switch (CurrentStep)
 	{
 	case ETutorialStep::CleanRoom: NextStep = ETutorialStep::UnlockRoom205; break;
 	case ETutorialStep::UnlockRoom205: NextStep = ETutorialStep::CheckInGuest; break;
-	case ETutorialStep::CheckInGuest: NextStep = ETutorialStep::AnomalyPresentation; break;
+	case ETutorialStep::CheckInGuest: NextStep = ETutorialStep::ViewCCTV; break;
 	case ETutorialStep::AnomalyPresentation: NextStep = ETutorialStep::ReadBoardMemo; break;
 	case ETutorialStep::ReadBoardMemo: NextStep = ETutorialStep::ViewCCTV; break;
-	case ETutorialStep::ViewCCTV: NextStep = ETutorialStep::Sleep; break;
+	case ETutorialStep::ViewCCTV: NextStep = ETutorialStep::Completed; break;
 	case ETutorialStep::Sleep: NextStep = ETutorialStep::Completed; break;
 	default: return false;
 	}
@@ -142,9 +165,62 @@ void UTutorialSubsystem::SetStep(ETutorialStep NewStep)
 	if (CurrentStep == NewStep) return;
 	const ETutorialStep OldStep = CurrentStep;
 	CurrentStep = NewStep;
+	// Keep the sleep instruction visible through day one; day start hides it.
+	bCompletionNoticeVisible = NewStep == ETutorialStep::Completed;
+	ResetCCTVProgress();
+	if (NewStep == ETutorialStep::ViewCCTV)
+	{
+		// Viewing before this objective appears never grants retroactive progress.
+		for (TActorIterator<ACCTVMonitor> It(GetWorld()); It; ++It)
+		{
+			if (It->IsViewingCCTV()) { BeginCCTVViewing(*It); break; }
+		}
+	}
 	UE_LOG(LogTutorial, Log, TEXT("Tutorial: %s -> %s"),
 		*UEnum::GetValueAsString(OldStep), *UEnum::GetValueAsString(NewStep));
 	OnStepChanged.Broadcast(OldStep, NewStep);
+}
+
+void UTutorialSubsystem::ResetCCTVProgress()
+{
+	CCTVViewingSeconds = 0.0;
+	CCTVStartSeconds = Clock ? Clock->GetTotalGameSeconds() : 0.0;
+}
+
+void UTutorialSubsystem::BeginCCTVViewing(ACCTVMonitor* Monitor)
+{
+	if (!IsValid(Monitor) || !Monitor->IsViewingCCTV()) return;
+	// Switching cameras on the same monitor does not interrupt a viewing session.
+	if (ViewingMonitor.Get() == Monitor) return;
+	ViewingMonitor = Monitor;
+	ResetCCTVProgress();
+	OnProgressChanged.Broadcast();
+}
+
+void UTutorialSubsystem::EndCCTVViewing(ACCTVMonitor* Monitor)
+{
+	if (ViewingMonitor.Get() != Monitor) return;
+	ViewingMonitor.Reset();
+	ResetCCTVProgress();
+	OnProgressChanged.Broadcast();
+}
+
+void UTutorialSubsystem::HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds)
+{
+	if (!IsTutorialActive() || CurrentStep != ETutorialStep::ViewCCTV) return;
+	const ACCTVMonitor* Monitor = ViewingMonitor.Get();
+	if (!Monitor || !Monitor->IsViewingCCTV() || CurrentSeconds < PreviousSeconds)
+	{
+		ViewingMonitor.Reset();
+		ResetCCTVProgress();
+		OnProgressChanged.Broadcast();
+		return;
+	}
+	const int32 OldMinutes = FMath::FloorToInt(CCTVViewingSeconds / 60.0);
+	CCTVViewingSeconds = FMath::Min(3600.0, CCTVViewingSeconds
+		+ FMath::Max(0.0, CurrentSeconds - FMath::Max(PreviousSeconds, CCTVStartSeconds)));
+	if (CCTVViewingSeconds >= 3600.0) CompleteStep(ETutorialStep::ViewCCTV);
+	else if (FMath::FloorToInt(CCTVViewingSeconds / 60.0) != OldMinutes) OnProgressChanged.Broadcast();
 }
 
 void UTutorialSubsystem::UnbindGameplayEvents()
@@ -218,8 +294,11 @@ FText UTutorialSubsystem::GetObjectiveText() const
 		return FText::Format(NSLOCTEXT("Tutorial", "CheckInTeams", "5팀의 손님 체크인 ({0}/5)"), FText::AsNumber(CheckedInStays.Num()));
 	case ETutorialStep::AnomalyPresentation: return NSLOCTEXT("Tutorial", "Anomaly", "주변의 이상현상 살펴보기");
 	case ETutorialStep::ReadBoardMemo: return NSLOCTEXT("Tutorial", "Memo", "보드 메모 확인하기");
-	case ETutorialStep::ViewCCTV: return NSLOCTEXT("Tutorial", "CCTV", "CCTV 확인하기");
-	case ETutorialStep::Sleep: return NSLOCTEXT("Tutorial", "Sleep", "침대에서 잠자기");
+	case ETutorialStep::ViewCCTV:
+		return FText::Format(NSLOCTEXT("Tutorial", "CCTVContinuousHour", "CCTV 연속 1시간 시청하기 ({0}/60분)"),
+			FText::AsNumber(FMath::FloorToInt(CCTVViewingSeconds / 60.0)));
+	case ETutorialStep::Completed:
+		return NSLOCTEXT("Tutorial", "CompletionSleepHint", "자정 이후 침대에서 잠을 자면\n다음 날로 넘어갑니다.");
 	default: return FText::GetEmpty();
 	}
 }
