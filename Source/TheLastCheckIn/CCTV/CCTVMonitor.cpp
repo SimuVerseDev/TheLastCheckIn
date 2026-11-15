@@ -8,6 +8,8 @@
 #include "InputAction.h"
 #include "InputActionValue.h"
 #include "Engine/LocalPlayer.h"
+#include "Tutorial/TutorialSubsystem.h"
+#include "Engine/World.h"
 
 ACCTVMonitor::ACCTVMonitor()
 {
@@ -62,6 +64,14 @@ bool ACCTVMonitor::IsInteractionActive_Implementation(AActor* Interactor) const
 	return bPadOpen;
 }
 
+bool ACCTVMonitor::IsViewingCCTV() const
+{
+	const APlayerController* PC = ViewingPC.Get();
+	return bPadOpen && !bTransitioning && PC && PC->IsLocalController()
+		&& Cameras.IsValidIndex(CurrentCameraIndex) && IsValid(Cameras[CurrentCameraIndex])
+		&& PC->GetViewTarget() == Cameras[CurrentCameraIndex];
+}
+
 void ACCTVMonitor::OpenPad(APlayerController* PC)
 {
 	if (!PadWidget)
@@ -86,6 +96,8 @@ void ACCTVMonitor::OpenPad(APlayerController* PC)
 
 void ACCTVMonitor::ClosePad()
 {
+	if (UTutorialSubsystem* Tutorial = GetWorld()->GetSubsystem<UTutorialSubsystem>())
+		Tutorial->EndCCTVViewing(this);
 	APlayerController* PC = ViewingPC.Get();
 	if (!PC || !PadWidget)
 	{
@@ -134,6 +146,8 @@ void ACCTVMonitor::ApplyCurrentCamera() const
 	if (PC && Cameras.IsValidIndex(CurrentCameraIndex) && IsValid(Cameras[CurrentCameraIndex]))
 	{
 		PC->SetViewTargetWithBlend(Cameras[CurrentCameraIndex], 0.0f);
+		if (UTutorialSubsystem* Tutorial = GetWorld()->GetSubsystem<UTutorialSubsystem>())
+			Tutorial->BeginCCTVViewing(const_cast<ACCTVMonitor*>(this));
 	}
 }
 
@@ -209,6 +223,8 @@ void ACCTVMonitor::SwitchCamera(int32 Direction)
 */
 void ACCTVMonitor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (UTutorialSubsystem* Tutorial = GetWorld()->GetSubsystem<UTutorialSubsystem>())
+		Tutorial->EndCCTVViewing(this);
 	UnbindCCTVInput();
 	
 	if (APlayerController* PC = ViewingPC.Get())

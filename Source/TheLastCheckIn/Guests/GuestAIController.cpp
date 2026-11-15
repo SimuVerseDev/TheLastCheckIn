@@ -9,6 +9,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Engine/World.h"
 #include "GuestCharacter.h"
+#include "Guests/GuestCrowdFollowingComponent.h"
 #include "Navigation/CrowdFollowingComponent.h"
 #include "NavigationSystem.h"
 #include "TimerManager.h"
@@ -22,7 +23,7 @@ namespace
 
 AGuestAIController::AGuestAIController(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<
-		UCrowdFollowingComponent>(TEXT("PathFollowingComponent")))
+		UGuestCrowdFollowingComponent>(TEXT("PathFollowingComponent")))
 {
 }
 

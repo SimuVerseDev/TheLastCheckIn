@@ -7,6 +7,8 @@
 class UHotelPhaseSubsystem;
 class AHKRoomVolume;
 class ARoomActor;
+class ACCTVMonitor;
+class UGameClockSubsystem;
 
 UENUM(BlueprintType)
 enum class ETutorialStep : uint8
@@ -18,7 +20,7 @@ enum class ETutorialStep : uint8
 	AnomalyPresentation,
 	ReadBoardMemo,
 	ViewCCTV,
-	Sleep,
+	Sleep, // Reserved for existing Blueprint enum values; no longer a quest requirement.
 	Completed
 };
 
@@ -45,6 +47,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Tutorial")
 	bool IsTutorialCompleted() const { return CurrentStep == ETutorialStep::Completed; }
+	UFUNCTION(BlueprintPure, Category = "Tutorial")
+	bool ShouldShowCompletionNotice() const;
 
 	// Call only after the intended tutorial action succeeds (including target checks).
 	// Passing the completed step prevents duplicate or out-of-order notifications
@@ -59,6 +63,11 @@ public:
 	int32 GetCheckedInTeamCount() const { return CheckedInStays.Num(); }
 	UFUNCTION(BlueprintPure, Category="Tutorial")
 	FText GetObjectiveText() const;
+	// Called by the monitor only after a camera becomes visible, and on closing.
+	void BeginCCTVViewing(ACCTVMonitor* Monitor);
+	void EndCCTVViewing(ACCTVMonitor* Monitor);
+	UFUNCTION(BlueprintPure, Category="Tutorial")
+	float GetCCTVViewingMinutes() const { return static_cast<float>(CCTVViewingSeconds / 60.0); }
 	UPROPERTY(BlueprintAssignable, Category="Tutorial")
 	FTutorialProgressChanged OnProgressChanged;
 
@@ -76,6 +85,14 @@ private:
 	UFUNCTION() void HandleRoomPurchased(ARoomActor* Room);
 	UFUNCTION() void HandleRoomOccupied(ARoomActor* Room, FGuid StayId);
 	void SetStep(ETutorialStep NewStep);
+	UFUNCTION() void HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds);
+	void ResetCCTVProgress();
+	void HideCompletionNotice();
+	bool bCompletionNoticeVisible = false;
+	UPROPERTY(Transient) TObjectPtr<UGameClockSubsystem> Clock;
+	TWeakObjectPtr<ACCTVMonitor> ViewingMonitor;
+	double CCTVViewingSeconds = 0.0;
+	double CCTVStartSeconds = 0.0;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UHotelPhaseSubsystem> Phase;

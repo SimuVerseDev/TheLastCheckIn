@@ -83,6 +83,9 @@ public:
 
     // 정산으로 끝난 사건: 해결 알림 없이 객실 도착 후 참여 상태를 정리한다.
     void ReturnToRoomAfterIncidentEnd();
+    
+    // 행동 실패를 알리고 객실로 복귀한다.
+    void CancelBehaviorAndReturnToRoom(UGuestAnomalyBehavior* Requester);
 
 protected:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

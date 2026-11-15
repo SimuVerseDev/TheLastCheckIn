@@ -21,6 +21,7 @@ class THELASTCHECKIN_API ACCTVMonitor : public AActor, public IInteractable
 	GENERATED_BODY()
 public:
 	ACCTVMonitor();
+	bool IsViewingCCTV() const;
 	/*
 	Interactable override
 	*/
@@ -53,6 +54,7 @@ protected:
 	int32 CCTVMappingPriority = 10;
 	
 private:
+	friend class FTutorialProgressionTest;
 	void OpenPad(APlayerController* PlayerController);
 	void ClosePad();
 	void BindCCTVInput(APlayerController* PC);
