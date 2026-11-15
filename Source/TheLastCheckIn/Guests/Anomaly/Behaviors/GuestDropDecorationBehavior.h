@@ -71,7 +71,7 @@ private:
 
 	void HandleMoveTimeout();
 	void BeginActing();
-	//행동 애니메이션 반복 
+	// 던지기 애니메이션 시작
 	void PerformAction();
 
 	UPROPERTY(Transient)
@@ -86,5 +86,5 @@ private:
 	bool bActing = false;
 
 	static constexpr float MoveTimeoutSeconds = 30.0f;
-	static constexpr float AcceptanceRadius = 5.0f;
+	static constexpr float AcceptanceRadius = 20.0f;
 };

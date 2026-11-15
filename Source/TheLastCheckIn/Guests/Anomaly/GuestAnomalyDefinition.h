@@ -44,12 +44,4 @@ public:
 	// 해결됐을 때 재생할 애니메이션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Anomaly|Animation")
 	TObjectPtr<UAnimMontage> ResolvedMontage;
-
-	// 행동을 반복하는 최소 간격.
-	UPROPERTY(
-		EditAnywhere,
-		BlueprintReadOnly,
-		Category = "Anomaly|Timing",
-		meta = (ClampMin = "0.1"))
-	float ActionIntervalSeconds = 3.0f;
 };

@@ -246,6 +246,36 @@ void UGuestAnomalyComponent::ReturnToRoomAfterIncidentEnd()
     BeginReturnToRoom();
 }
 
+void UGuestAnomalyComponent::CancelBehaviorAndReturnToRoom(UGuestAnomalyBehavior* Requester)
+{
+    if (bTransitioning ||
+    Phase != EGuestAnomalyPhase::Active ||
+    Requester != ActiveBehavior.Get())
+    {
+        return;
+    }
+
+    bTransitioning = true;
+
+    // Idle로 지우지 않고 복귀 상태를 유지
+    Phase = EGuestAnomalyPhase::ReturningToRoom;
+    bFinishIncidentOnReturn = true;
+
+    DestroyBehavior();
+    StopGuestMovement();
+    ClearReturnTimer();
+
+    // 사건에는 실패를 알림
+    // 현재 수신 함수는 다음 틱에 사건 실패 처리를 예약
+    // 알림 도중 상태 전환이 재진입하지 않도록 잠금을 유지
+    OnCancelled.Broadcast(this);
+
+    bTransitioning = false;
+
+    // 객실 도착 후 FinishIncident()로 참여 상태를 정리
+    BeginReturnToRoom();
+}
+
 void UGuestAnomalyComponent::CancelAnomaly()
 {
     if (bTransitioning || !IsBusy())

@@ -113,6 +113,6 @@ void UGuestAnomalyBehavior::RequestCancelled()
 {
     if (bRunning && IsValid(Host))
     {
-        Host->CancelAnomaly();
+        Host->CancelBehaviorAndReturnToRoom(this);
     }
 }

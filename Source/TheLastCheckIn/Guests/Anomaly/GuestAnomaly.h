@@ -34,12 +34,6 @@ public:
     virtual bool Resolve() override;
     virtual bool Fail() override;
 
-    UFUNCTION(BlueprintPure, Category = "Guests|Anomaly")
-    int32 GetParticipantCount() const;
-
-    UFUNCTION(BlueprintPure, Category = "Guests|Anomaly")
-    int32 GetResolvedParticipantCount() const;
-
 protected:
     virtual void BeginPlay() override;
 
