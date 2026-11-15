@@ -5,6 +5,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Guests/GuestCharacter.h"
 #include "Guests/GuestAIController.h"
+#include "Guests/GuestCrowdFollowingComponent.h"
 #include "Animation/AnimMontage.h"
 #include "Navigation/CrowdFollowingComponent.h"
 #include "Engine/World.h"
@@ -79,8 +80,8 @@ void UGuestDropDecorationBehavior::OnStarted_Implementation()
     }
 
     // 대기용 장애물 등록을 해제한 뒤, 이동 가능한 에이전트로 다시 등록
-    if (UCrowdFollowingComponent* Crowd =
-        Cast<UCrowdFollowingComponent>(PathFollowing))
+    if (UGuestCrowdFollowingComponent* Crowd =
+        Cast<UGuestCrowdFollowingComponent>(PathFollowing))
     {
         Crowd->SetCrowdSimulationState(
             ECrowdSimulationState::Disabled);
@@ -89,6 +90,8 @@ void UGuestDropDecorationBehavior::OnStarted_Implementation()
 
         Crowd->SetCrowdSimulationState(
             ECrowdSimulationState::Enabled);
+
+        Crowd->SetRequireActualArrival(true);
     }
 
     MoveFinishedHandle =
@@ -201,8 +204,29 @@ void UGuestDropDecorationBehavior::BeginActing()
 
     const FRotator FacingRotation = ActionTransform.Rotator();
 
-    // 도착 오차를 반영해 실제 발밑을 기준으로 집기 위치를 고정
-    const FVector ArrivalOffset = Guest->GetNavAgentLocation() - ActionTransform.GetLocation();
+    // 이동 Success가 전달돼도 실제 목적지에 도착했는지 확인한다.
+    const FVector ArrivalOffset =
+        Guest->GetNavAgentLocation() - ActionTransform.GetLocation();
+
+    // 단위: cm. 애니메이션과 실제 도착 오차를 보면서 조정한다.
+    constexpr double MaxArrivalDistance = AcceptanceRadius;
+    constexpr double MaxArrivalHeight = 20.0;
+
+    const bool bTooFar =
+        ArrivalOffset.SizeSquared2D() >
+        FMath::Square(MaxArrivalDistance);
+
+    const bool bWrongHeight =
+        FMath::Abs(ArrivalOffset.Z) > MaxArrivalHeight;
+
+    if (ArrivalOffset.ContainsNaN() || bTooFar || bWrongHeight)
+    {
+        CancelPropAction(TEXT(
+            "Move reported success before reaching the decoration."));
+        return;
+    }
+
+    // 가까이 도착한 경우에만 작은 위치 오차를 보정한다.
     PickupTransform.AddToTranslation(ArrivalOffset);
 
     Guest->SetActorRotation(FacingRotation);
@@ -295,6 +319,14 @@ void UGuestDropDecorationBehavior::OnStopped_Implementation()
         }
 
         GuestController->StopMovement();
+
+        if (UGuestCrowdFollowingComponent* Crowd =
+            Cast<UGuestCrowdFollowingComponent>(
+                GuestController->GetPathFollowingComponent()))
+        {
+            Crowd->SetRequireActualArrival(false);
+        }
+
         GuestController->UseWaitingAvoidance();
     }
 

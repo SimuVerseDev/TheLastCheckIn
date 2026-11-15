@@ -13,7 +13,6 @@
 #include "CollisionQueryParams.h"
 #include "CollisionShape.h"
 #include "CheckIn/CheckInCounter.h"
-#include "Guests/Anomaly/GuestAnomalyComponent.h"
 #include "Rooms/RoomActor.h"
 
 AGuestCharacter::AGuestCharacter()

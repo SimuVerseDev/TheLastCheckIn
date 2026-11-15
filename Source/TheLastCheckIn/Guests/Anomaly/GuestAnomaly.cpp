@@ -452,28 +452,6 @@ bool AGuestAnomaly::AreAllParticipantsResolved() const
     return true;
 }
 
-int32 AGuestAnomaly::GetParticipantCount() const
-{
-    return Participants.Num();
-}
-
-int32 AGuestAnomaly::GetResolvedParticipantCount() const
-{
-    int32 Count = 0;
-
-    for (const FGuestAnomalyParticipant& Participant : Participants)
-    {
-        if (IsSameParticipation(Participant) &&
-            Participant.Component->GetPhase() ==
-                EGuestAnomalyPhase::Resolved)
-        {
-            ++Count;
-        }
-    }
-
-    return Count;
-}
-
 void AGuestAnomaly::HandleParticipantResolved(UGuestAnomalyComponent* Component)
 {
     QueueEvaluation();
@@ -563,19 +541,16 @@ void AGuestAnomaly::CleanupParticipants(bool bResolved)
 {
     ClearEvaluation();
 
-    const UHotelPhaseSubsystem* HotelPhase = GetWorld()
-        ? GetWorld()->GetSubsystem<UHotelPhaseSubsystem>()
-        : nullptr;
-    const bool bReturnAfterSettlement = !bResolved && !bEndingPlay
-        && HotelPhase
-        && HotelPhase->GetCurrentPhase() == EHotelPhase::Settlement;
+    // 정산 전 실패도 복귀시킨다.
+    // 액터/게임 종료 중에는 이동을 새로 시작하지 않는다.
+    const bool bReturnToRoom = !bResolved && !bEndingPlay;
 
     TArray<FGuestAnomalyParticipant> OldParticipants =
         MoveTemp(Participants);
 
     Participants.Reset();
 
-    // 정리로 발생하는 취소 이벤트는 받지 않음
+    // 정리 중 발생하는 취소 이벤트는 다시 받지 않는다.
     for (const FGuestAnomalyParticipant& Participant : OldParticipants)
     {
         UnbindParticipant(Participant);
@@ -583,7 +558,6 @@ void AGuestAnomaly::CleanupParticipants(bool bResolved)
 
     for (const FGuestAnomalyParticipant& Participant : OldParticipants)
     {
-        // 다른 사건으로 바뀐 손님은 건드리지 않음
         if (!IsSameParticipation(Participant))
         {
             continue;
@@ -592,14 +566,14 @@ void AGuestAnomaly::CleanupParticipants(bool bResolved)
         UGuestAnomalyComponent* Component =
             Participant.Component.Get();
 
-        if (!Component->IsBusy())
+        if (!IsValid(Component) || !Component->IsBusy())
         {
             continue;
         }
 
-        if (bReturnAfterSettlement)
+        if (bReturnToRoom)
         {
-            // 사건은 실패로 끝내되, 손님의 객실 복귀는 계속 진행한다.
+            // 이미 복귀 중인 손님은 기존 복귀를 계속한다.
             Component->ReturnToRoomAfterIncidentEnd();
         }
         else if (bResolved &&
