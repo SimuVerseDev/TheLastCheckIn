@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include "Night/Anomaly/Knock/HorseshoeActor.h"
 #include "CoreMinimal.h"
 #include "Housekeeping/Core/Carry/HKPhysicsPickupActor.h"
 #include "HorseshoeActor.generated.h"

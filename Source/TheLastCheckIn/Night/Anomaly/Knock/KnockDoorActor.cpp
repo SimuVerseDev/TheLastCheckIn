@@ -1,4 +1,5 @@
 ﻿#include "Night/Anomaly/Knock/KnockDoorActor.h"
+#include "Night/Anomaly/Knock/HorseshoeActor.h"
 #include "Components/AudioComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Rooms/RoomActor.h"
