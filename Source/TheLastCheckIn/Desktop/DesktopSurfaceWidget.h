@@ -58,6 +58,7 @@ protected:
 private:
 	void BuildLayout();
 	void BuildPage();
+	void BuildShopPage();
 	void BindButtons();
 	UCheckInInteractionComponent* CheckIn() const;
 	UImage* Picture(UCanvasPanel* Parent, const TCHAR* Asset, float X, float Y, float W, float H);
@@ -75,6 +76,11 @@ private:
 	TArray<TObjectPtr<UDesktopActionButton>> MenuButtons;
 	UPROPERTY(Transient)
 	TMap<int32, TObjectPtr<UImage>> RoomDoors;
+	UPROPERTY(Transient)
+	TObjectPtr<class UDataTable> ShopTable;
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> ShopMessage;
+	TArray<FName> ShopProductIds;
 	int32 SelectedMenu = 0, SelectedSub = 0, UnlockTab = 0;
 	FTimerHandle RefreshTimer;
 };

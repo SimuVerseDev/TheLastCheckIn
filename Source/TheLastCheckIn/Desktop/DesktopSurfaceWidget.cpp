@@ -26,6 +26,8 @@
 #include "Core/Time/GameClockSubsystem.h"
 #include "TimerManager.h"
 #include "InputCoreTypes.h"
+#include "Shop/ShopProduct.h"
+#include "Shop/ShopPlacementComponent.h"
 #if WITH_EDITOR
 #include "WidgetBlueprint.h"
 #include "Editor.h"
@@ -141,6 +143,15 @@ void UDesktopSurfaceWidget::BuildLayout()
 	}
 	auto* Root = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(),TEXT("DesktopRoot"));
 	WidgetTree->RootWidget = Root;
+	if (LayoutMode == 0)
+	{
+		auto* Background = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DesktopBlackBackground"));
+		Background->SetBrushColor(FLinearColor::Black);
+		auto* BackgroundSlot = Root->AddChildToCanvas(Background);
+		BackgroundSlot->SetAnchors(FAnchors(0, 0, 1, 1));
+		BackgroundSlot->SetOffsets(FMargin(0));
+		BackgroundSlot->SetZOrder(-100);
+	}
 	auto* Scale = WidgetTree->ConstructWidget<UScaleBox>();
 	auto* SS = Root->AddChildToCanvas(Scale);
 	SS->SetAnchors(FAnchors(0, 0, LayoutMode == 2 ? 0.f : 1.f, 1));
@@ -192,6 +203,9 @@ void UDesktopSurfaceWidget::BuildPage()
 	if (!Page) return;
 	Page->ClearChildren();
 	RoomDoors.Reset();
+	ShopProductIds.Reset();
+	ShopMessage = nullptr;
+	ShopTable = nullptr;
 	if (LayoutMode == 0)
 	{
 		for (int32 I = 0; I < MenuButtons.Num(); ++I)
@@ -225,6 +239,11 @@ void UDesktopSurfaceWidget::BuildPage()
 			Place(Page, RoomsWidget, 0, 0, 1850, 695);
 			return;
 		}
+	}
+	if (LayoutMode == 0 && SelectedMenu == 1)
+	{
+		BuildShopPage();
+		return;
 	}
 	float Top = 0;
 	if (LayoutMode == 0 && SelectedMenu == 3)
@@ -260,7 +279,7 @@ void UDesktopSurfaceWidget::BuildPage()
 	for (int32 I = 0; I < Count;)
 	{
 		auto* Row = WidgetTree->ConstructWidget<UHorizontalBox>();
-		Rows->AddChildToVerticalBox(Row)->SetPadding(FMargin(10, 20, 10, 5));
+		Rows->AddChildToVerticalBox(Row)->SetPadding(FMargin(10, Guests && I == 0 ? 28 : 20, 10, 5));
 		for (int32 Col = 0; Col < Cols && I < Count; ++Col, ++I)
 		{
 			const float W = Guests ? 1800 : 600;
@@ -295,7 +314,15 @@ void UDesktopSurfaceWidget::BuildPage()
 				auto* L = Label(Card,TEXT("이름"), 365, 35, 260, 60, 36);
 				Underline(Card, L, 353, 112);
 				Label(Card,TEXT("룸이름"), 710, 35, 400, 60, 36);
-				Picture(Card,TEXT("Satisfaction"), 1360, 45, 191, 61);
+				// Reference layout: star, copper bar, then a dark inset behind the label.
+				Picture(Card,TEXT("SatisfactionStar"), 1280, 32, 81, 78);
+				Picture(Card,TEXT("SatisfactionBar"), 1365, 43, 264, 61);
+				auto* SatisfactionInset = WidgetTree->ConstructWidget<UBorder>();
+				SatisfactionInset->SetBrushColor(FLinearColor::FromSRGBColor(FColor(25, 29, 13)));
+				SatisfactionInset->SetVisibility(ESlateVisibility::HitTestInvisible);
+				Place(Card, SatisfactionInset, 1370, 48, 185, 50);
+				auto* SatisfactionText = Label(Card,TEXT("만족도"), 1370, 45, 185, 61, 36);
+				SatisfactionText->SetJustification(ETextJustify::Center);
 			}
 			else if (UnlockPage)
 			{
@@ -329,6 +356,52 @@ void UDesktopSurfaceWidget::BuildPage()
 				Label(Card, SelectedSub == 0 ? TEXT("가구 이름") : TEXT("도구 이름"), 245, 245, 250, 50, 30);
 				Label(Card,TEXT("G —"), 105, 295, 300, 45, 26);
 			}
+		}
+	}
+}
+
+void UDesktopSurfaceWidget::BuildShopPage()
+{
+	ShopTable = GetDefault<UShopSettings>()->ProductTable.LoadSynchronous();
+	const EShopProductCategory Category = SelectedSub == 0 ? EShopProductCategory::Furniture : EShopProductCategory::Tool;
+	if (ShopTable && ShopTable->GetRowStruct() == FShopProductRow::StaticStruct())
+	{
+		for (const FName Id : ShopTable->GetRowNames())
+		{
+			const auto* Product = ShopTable->FindRow<FShopProductRow>(Id, TEXT("Shop"));
+			if (Product && Product->bAvailable && Product->Category == Category) ShopProductIds.Add(Id);
+		}
+		ShopProductIds.Sort([this](FName A, FName B)
+		{
+			const auto* Left = ShopTable->FindRow<FShopProductRow>(A, TEXT("Shop"));
+			const auto* Right = ShopTable->FindRow<FShopProductRow>(B, TEXT("Shop"));
+			return Left->SortOrder == Right->SortOrder ? A.LexicalLess(B) : Left->SortOrder < Right->SortOrder;
+		});
+	}
+	ShopMessage = Label(Page, ShopProductIds.IsEmpty() ? TEXT("등록된 상품이 없습니다") : TEXT("상품 선택 → 배치 확정 / Esc 취소·환불"), 60, 5, 1700, 45, 25);
+	auto* Scroll = WidgetTree->ConstructWidget<UScrollBox>();
+	Place(Page, Scroll, 0, 55, 1850, 640);
+	auto* Rows = WidgetTree->ConstructWidget<UVerticalBox>();
+	Scroll->AddChild(Rows);
+	for (int32 I = 0; I < ShopProductIds.Num();)
+	{
+		auto* Row = WidgetTree->ConstructWidget<UHorizontalBox>();
+		Rows->AddChildToVerticalBox(Row)->SetPadding(FMargin(10, 20, 10, 5));
+		for (int32 Col = 0; Col < 3 && I < ShopProductIds.Num(); ++Col, ++I)
+		{
+			const auto* Product = ShopTable->FindRow<FShopProductRow>(ShopProductIds[I], TEXT("Shop"));
+			auto* Size = WidgetTree->ConstructWidget<USizeBox>();
+			Size->SetWidthOverride(600);
+			Size->SetHeightOverride(370);
+			Row->AddChild(Size);
+			auto* Card = WidgetTree->ConstructWidget<UCanvasPanel>();
+			Size->AddChild(Card);
+			auto* Buy = Button(Card, TEXT(""), TEXT("PurchaseCard"), 3000 + I, 50, 0, 473, 355);
+			Buy->SetToolTipText(NSLOCTEXT("Shop", "BuyTooltip", "구매 후 배치를 확정하세요. Esc로 취소하면 전액 환불됩니다."));
+			auto* Icon = Picture(Card, TEXT("PurchaseImage"), 105, 40, 361, 199);
+			if (auto* Texture = Product->Icon.LoadSynchronous()) Icon->SetBrushFromTexture(Texture);
+			Label(Card, Product->DisplayName.IsEmpty() ? ShopProductIds[I].ToString() : Product->DisplayName.ToString(), 105, 245, 360, 50, 30);
+			Label(Card, FString::Printf(TEXT("G %d"), Product->Price), 105, 295, 300, 45, 26);
 		}
 	}
 }
@@ -470,7 +543,17 @@ void UDesktopSurfaceWidget::HandleAction(int32 A)
 		if (auto* CI = CheckIn())CI->TryAssignRoomNumber(A - 1000);
 		return;
 	}
-	if (A >= 2000 && GetWorld())
+	if (A >= 3000)
+	{
+		if (SelectedMenu != 1 || !ShopProductIds.IsValidIndex(A - 3000)) return;
+		auto* PC = GetOwningPlayer();
+		auto* Placement = PC ? PC->FindComponentByClass<UShopPlacementComponent>() : nullptr;
+		FText Error = NSLOCTEXT("Shop", "NoPlacementComponent", "구매 기능을 사용할 수 없습니다.");
+		if (!Placement || !Placement->PurchaseAndPlace(ShopTable, ShopProductIds[A - 3000], this, Error))
+			if (ShopMessage) ShopMessage->SetText(Error);
+		return;
+	}
+	if (A >= 2000 && A < 3000 && GetWorld())
 	{
 		ARoomActor* TargetRoom = nullptr;
 		int32 Matches = 0;
@@ -504,6 +587,28 @@ bool UDesktopSurfaceWidget::InstallLayout(UObject* Object, int32 Mode)
 	auto* BP = Cast<UWidgetBlueprint>(Object);
 	if (!BP)return false;
 	BP->Modify();
+	if (Mode == 0 && BP->WidgetTree && BP->WidgetTree->FindWidget(TEXT("PageContent")))
+	{
+		// Upgrade the existing designer tree without replacing graphs or authored controls.
+		auto* Root = Cast<UCanvasPanel>(BP->WidgetTree->RootWidget);
+		if (!Root) return false;
+		auto* Background = Cast<UBorder>(BP->WidgetTree->FindWidget(TEXT("DesktopBlackBackground")));
+		if (!Background)
+		{
+			Background = BP->WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DesktopBlackBackground"));
+			Root->AddChildToCanvas(Background);
+			BP->OnVariableAdded(Background->GetFName());
+		}
+		Background->SetBrushColor(FLinearColor::Black);
+		auto* BackgroundSlot = CastChecked<UCanvasPanelSlot>(Background->Slot);
+		BackgroundSlot->SetAnchors(FAnchors(0, 0, 1, 1));
+		BackgroundSlot->SetOffsets(FMargin(0));
+		BackgroundSlot->SetZOrder(-100);
+		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+		FKismetEditorUtilities::CompileBlueprint(BP);
+		(void)BP->MarkPackageDirty();
+		return BP->Status != BS_Error;
+	}
 	if (Mode >= 2)
 	{
 		// Keep every check-in graph, room number, binding, and original sidebar anchor.

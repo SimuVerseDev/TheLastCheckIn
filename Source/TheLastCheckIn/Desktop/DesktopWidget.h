@@ -19,7 +19,9 @@ protected:
 	virtual FReply NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 
 private:
+	void ReleaseDesktopInput();
 	TWeakObjectPtr<APlayerController> InputOwner;
 	bool bInputCaptured = false;
 	bool bPreviousCursor = false;
+	bool bPreviousDebugMessages = false;
 };

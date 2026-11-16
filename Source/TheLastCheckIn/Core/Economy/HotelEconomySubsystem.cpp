@@ -54,4 +54,11 @@ bool UHotelEconomySubsystem::TrySpend(float Amount)
 	return true;
 }
 
+void UHotelEconomySubsystem::RefundPurchase(float Amount)
+{
+	if (!FMath::IsFinite(Amount) || Amount <= 0.0f) return;
+	Capital += Amount;
+	OnCapitalChanged.Broadcast(Capital);
+}
+
 
