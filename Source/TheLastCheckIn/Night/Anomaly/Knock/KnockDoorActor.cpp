@@ -6,54 +6,31 @@
 
 AKnockDoorActor::AKnockDoorActor()
 {
-	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.bStartWithTickEnabled = false;
-	
+	PrimaryActorTick.bCanEverTick = false;
+
 	SetRootComponent(CreateDefaultSubobject<USceneComponent>(TEXT("Root")));
-	Hinge = CreateDefaultSubobject<USceneComponent>(TEXT("Hinge"));
-	DoorMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DoorMesh"));
 	KnockAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("KnockAudio"));
 	DropPoint = CreateDefaultSubobject<USceneComponent>(TEXT("DropPoint"));
-	DropPoint->SetupAttachment(GetRootComponent());
-	
-	Hinge->SetupAttachment(GetRootComponent());
-	DoorMesh->SetupAttachment(Hinge);
+
 	KnockAudio->SetupAttachment(GetRootComponent());
 	KnockAudio->bAutoActivate = false;
-
-	OpenPrompt = NSLOCTEXT("Knock", "Open", "문 열기");
-	ClosePrompt = NSLOCTEXT("Knock", "Close", "문 닫기");
+	DropPoint->SetupAttachment(GetRootComponent());
 }
 
-void AKnockDoorActor::Tick(float DeltaSeconds)
+bool AKnockDoorActor::IsOpen() const
 {
-	Super::Tick(DeltaSeconds);
-
-	const float TargetYaw = bOpen ? OpenYaw : 0.0f;
-	CurrentYaw = FMath::FInterpConstantTo
-	(
-	CurrentYaw,
-	TargetYaw,
-	DeltaSeconds,
-	OpenSpeed
-	);
-	Hinge->SetRelativeRotation(FRotator(0.0f, CurrentYaw, 0.0f)); // 계산한 회전각(여기선 z축)을 실제 언리얼 컴포넌트에 적용
-
-	if (FMath::IsNearlyEqual(CurrentYaw, TargetYaw))
+	if (!LinkedDoor)
 	{
-		SetActorTickEnabled(false); // 문이 이미 다 열렸거나 닫혔다면 회전계산 중단
+		return false;
 	}
-}
-
-void AKnockDoorActor::SetOpen(bool bInOpen) // 문열기 : SetOpen(true) 호출 | 문닫기 : SetOpen(false) 호출
-{
-	if (!bCanOpen || bOpen == bInOpen)
+	/*
+	BP_Door의 bIsOpen 변수를 이름으로 찾아서 읽음 (리플렉션)
+	*/
+	if (const FBoolProperty* Prop = FindFProperty<FBoolProperty>(LinkedDoor->GetClass(), TEXT("bIsOpen")))
 	{
-		return;
+		return Prop->GetPropertyValue_InContainer(LinkedDoor);
 	}
-	bOpen = bInOpen;
-	SetActorTickEnabled(true); // Tick활성화
-	OnOpenChanged.Broadcast(this, bOpen);
+	return false;
 }
 
 void AKnockDoorActor::PlayKnock()
@@ -91,23 +68,4 @@ bool AKnockDoorActor::TryPlaceHorseshoe(AHorseshoeActor* Horseshoe)
 	StopKnock();
 	OnHorseshoePlaced.Broadcast(this);
 	return true;
-}
-
-
-/*
-Interactable
-*/
-bool AKnockDoorActor::CanInteract_Implementation(AActor* Interactor) const
-{
-	return bCanOpen;
-}
-
-FText AKnockDoorActor::GetInteractPrompt_Implementation(AActor* Interactor) const
-{
-	return bOpen ? ClosePrompt : OpenPrompt;
-}
-
-void AKnockDoorActor::Interact_Implementation(AActor* Interactor)
-{
-	SetOpen(!bOpen);
 }
