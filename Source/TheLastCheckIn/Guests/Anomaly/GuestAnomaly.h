@@ -48,6 +48,11 @@ protected:
     // 같은 사건 안에서는 중복 배정하지 않음.
     UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Guests|Anomaly")
     TArray<TObjectPtr<AActor>> ActionPoints;
+    
+    // true: 구역을 먼저 뽑고, 해당 구역의 행동 지점을 선택한다. (소음 사건)
+    // false: 등록된 행동 대상 전체에서 바로 선택한다. (기존 장식물 사건)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Guests|Anomaly")
+    bool bSelectZoneFirst = false;
 
     // 제압된 손님도 포함한 전체 참여 인원
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Guests|Anomaly",
@@ -115,6 +120,8 @@ private:
     void CleanupParticipants(bool bResolved);
     void ScheduleNextStart();
     void ScheduleNextSpread();
+    
+    void SelectRandomZone(TArray<AActor*>& Points) const;
 
     UFUNCTION()
     void HandleParticipantResolved(UGuestAnomalyComponent* Component);
