@@ -13,6 +13,7 @@ public:
 	void MarkUsed()
 	{
 		bUsed = true;
+		bCanBePickedUp = false;
 	}
 
 	UFUNCTION(BlueprintPure, Category="Night|Knock")
