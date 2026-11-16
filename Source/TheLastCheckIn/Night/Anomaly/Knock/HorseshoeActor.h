@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Night/Anomaly/Knock/HorseshoeActor.h"
 #include "CoreMinimal.h"
 #include "Housekeeping/Core/Carry/HKPhysicsPickupActor.h"
 #include "HorseshoeActor.generated.h"
@@ -25,6 +26,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void NotifyReleased(bool bThrown) override;
 
 private:
 	UFUNCTION()

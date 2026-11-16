@@ -12,6 +12,8 @@ AKnockDoorActor::AKnockDoorActor()
 	Hinge = CreateDefaultSubobject<USceneComponent>(TEXT("Hinge"));
 	DoorMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DoorMesh"));
 	KnockAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("KnockAudio"));
+	DropPoint = CreateDefaultSubobject<USceneComponent>(TEXT("DropPoint"));
+	DropPoint->SetupAttachment(GetRootComponent());
 	
 	Hinge->SetupAttachment(GetRootComponent());
 	DoorMesh->SetupAttachment(Hinge);
@@ -65,6 +67,29 @@ void AKnockDoorActor::PlayKnock()
 void AKnockDoorActor::StopKnock()
 {
 	KnockAudio->Stop();
+}
+
+bool AKnockDoorActor::TryPlaceHorseshoe(AHorseshoeActor* Horseshoe)
+{
+	if (!bAwaitingHorseshoe || !IsValid(Horseshoe) || Horseshoe->IsUsed())
+	{
+		return false;
+	}
+	const float DistSq = FVector::DistSquared(Horseshoe->GetActorLocation(), DropPoint->GetComponentLocation());
+	if (DistSq > FMath::Square(DropRadius))
+	{
+		return false;
+	}
+
+	// fix
+	Horseshoe->GetMesh()->SetSimulatePhysics(false);
+	Horseshoe->SetActorLocationAndRotation(DropPoint->GetComponentLocation(), DropPoint->GetComponentRotation());
+	Horseshoe->MarkUsed();
+
+	bAwaitingHorseshoe = false;
+	StopKnock();
+	OnHorseshoePlaced.Broadcast(this);
+	return true;
 }
 
 

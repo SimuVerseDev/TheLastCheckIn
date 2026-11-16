@@ -10,7 +10,9 @@ class UAudioComponent;
 class USoundBase;
 class ARoomActor;
 class AKnockDoorActor;
+class AHorseshoeActor;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FKnockDoorHorseshoePlaced, AKnockDoorActor*, Door); // 말발굽 놓기 감지
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FKnockDoorOpenChanged, AKnockDoorActor*, Door, bool, bOpen);
 
 UCLASS()
@@ -42,9 +44,19 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Night|Knock")
 	void StopKnock();
-
+	
+	UFUNCTION(BlueprintCallable, Category="Night|Knock")
+	void SetAwaitingHorseshoe(bool bInAwaiting)
+	{
+		bAwaitingHorseshoe = bInAwaiting;
+	}
+		
+	bool TryPlaceHorseshoe(AHorseshoeActor* Horseshoe);
+	
 	UPROPERTY(BlueprintAssignable, Category="Night|Knock")
 	FKnockDoorOpenChanged OnOpenChanged;
+	UPROPERTY(BlueprintAssignable, Category="Night|Knock")
+	FKnockDoorHorseshoePlaced OnHorseshoePlaced;
 	
 	/*
 	Interactable
@@ -92,6 +104,14 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category="Night|Knock")
 	FText ClosePrompt;
+	
+	bool bAwaitingHorseshoe = false;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<USceneComponent> DropPoint;
+	
+	UPROPERTY(EditAnywhere, Category="Night|Knock", meta=(ClampMin="10", Units="cm"))
+	float DropRadius = 100.0f;
 	
 private:
 	bool bOpen = false;
