@@ -4,6 +4,7 @@
 #include "GameFramework/PawnMovementComponent.h"
 #include "Input/Reply.h"
 #include "InputCoreTypes.h"
+#include "Engine/Engine.h"
 
 void UDesktopWidget::NativeConstruct()
 {
@@ -13,6 +14,11 @@ void UDesktopWidget::NativeConstruct()
 	InputOwner = PC;
 	bInputCaptured = true;
 	bPreviousCursor = PC->bShowMouseCursor;
+	if (GEngine)
+	{
+		bPreviousDebugMessages = GEngine->bEnableOnScreenDebugMessagesDisplay;
+		GEngine->bEnableOnScreenDebugMessagesDisplay = false;
+	}
 	PC->SetIgnoreMoveInput(true);
 	PC->SetIgnoreLookInput(true);
 	if (APawn* Pawn = PC->GetPawn())
@@ -29,6 +35,12 @@ void UDesktopWidget::NativeConstruct()
 
 void UDesktopWidget::NativeDestruct()
 {
+	ReleaseDesktopInput();
+	Super::NativeDestruct();
+}
+
+void UDesktopWidget::ReleaseDesktopInput()
+{
 	if (bInputCaptured)
 	{
 		if (APlayerController* PC = InputOwner.Get())
@@ -39,13 +51,15 @@ void UDesktopWidget::NativeDestruct()
 			PC->bShowMouseCursor = bPreviousCursor;
 		}
 		bInputCaptured = false;
+		if (GEngine) GEngine->bEnableOnScreenDebugMessagesDisplay = bPreviousDebugMessages;
 		InputOwner.Reset();
 	}
-	Super::NativeDestruct();
 }
 
 void UDesktopWidget::CloseDesktop()
 {
+	// Release synchronously: Slate may retain the clicked widget until the event finishes.
+	ReleaseDesktopInput();
 	RemoveFromParent();
 }
 

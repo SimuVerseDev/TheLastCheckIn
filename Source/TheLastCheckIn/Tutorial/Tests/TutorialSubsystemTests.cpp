@@ -96,10 +96,12 @@ bool FTutorialProgressionTest::RunTest(const FString& Parameters)
         TestEqual(TEXT("Full cleaning does not count twice"), Tutorial->GetCleanedRoomCount(), I + 1);
     }
     TestEqual(TEXT("Four rooms reveal paid unlock objective"), Tutorial->GetCurrentStep(), ETutorialStep::UnlockRoom205);
+    TestFalse(TEXT("Paid unlock objective has a visible instruction"), Tutorial->GetObjectiveText().IsEmpty());
     TestFalse(TEXT("Cannot bypass payment"), Tutorial->CompleteStep(ETutorialStep::UnlockRoom205));
     TestTrue(TEXT("Spend initial capital"), Economy->TrySpend(100.0f));
     TestFalse(TEXT("Insufficient funds cannot unlock"), Rooms[4]->TryPurchaseUnlock());
     TestFalse(TEXT("Failed purchase leaves room locked"), Rooms[4]->IsUnlocked());
+    TestEqual(TEXT("Failed purchase keeps the unlock objective active"), Tutorial->GetCurrentStep(), ETutorialStep::UnlockRoom205);
     Economy->AddIncome(100.0f);
     TestTrue(TEXT("Purchase succeeds"), Rooms[4]->TryPurchaseUnlock());
     TestEqual(TEXT("Purchase deducted capital"), Economy->GetCapital(), 0.0f);

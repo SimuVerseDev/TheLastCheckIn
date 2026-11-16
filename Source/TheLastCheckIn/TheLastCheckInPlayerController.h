@@ -9,6 +9,7 @@
 class UInputMappingContext;
 class UUserWidget;
 class UNightFlowComponent;
+class UShopPlacementComponent;
 
 /**
  *  Simple first person Player Controller
@@ -26,6 +27,9 @@ public:
 	ATheLastCheckInPlayerController();
 
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Shop")
+	TObjectPtr<UShopPlacementComponent> ShopPlacement;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night")
 	TObjectPtr<UNightFlowComponent> NightFlow;
 
