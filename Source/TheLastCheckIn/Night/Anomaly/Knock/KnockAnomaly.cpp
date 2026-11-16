@@ -57,7 +57,6 @@ bool AKnockAnomaly::StartAnomaly()
 	}
 	else if (!ComplaintMessages.IsEmpty())
 	{
-		// 객실: 컴플레인 전화
 		const FText RoomText = FText::AsNumber(ActiveDoor->GetRoom()->GetRoomNumber(), &FNumberFormattingOptions::DefaultNoGrouping());
 		const FText Message = FText::FormatNamed(ComplaintMessages[ComplaintIndex], TEXT("Room"), RoomText);
 		ComplaintIndex = (ComplaintIndex + 1) % ComplaintMessages.Num();
