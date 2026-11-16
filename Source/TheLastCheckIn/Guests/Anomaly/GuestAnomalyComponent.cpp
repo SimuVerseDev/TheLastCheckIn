@@ -265,8 +265,6 @@ void UGuestAnomalyComponent::CancelBehaviorAndReturnToRoom(UGuestAnomalyBehavior
     StopGuestMovement();
     ClearReturnTimer();
 
-    // 사건에는 실패를 알림
-    // 현재 수신 함수는 다음 틱에 사건 실패 처리를 예약
     // 알림 도중 상태 전환이 재진입하지 않도록 잠금을 유지
     OnCancelled.Broadcast(this);
 

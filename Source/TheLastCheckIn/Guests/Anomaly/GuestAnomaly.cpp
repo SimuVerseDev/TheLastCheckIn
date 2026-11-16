@@ -372,6 +372,8 @@ bool AGuestAnomaly::StartAnomaly()
 
     ClearEvaluation();
 
+    bHadParticipantFailure = false;
+
     // 첫 참여자의 실행이 성공해야 사건 활성화
     if (!TryAddParticipant())
     {
@@ -459,7 +461,31 @@ void AGuestAnomaly::HandleParticipantResolved(UGuestAnomalyComponent* Component)
 
 void AGuestAnomaly::HandleParticipantCancelled(UGuestAnomalyComponent* Component)
 {
-    QueueEvaluation(true);
+    if (bEndingPlay || !IsValid(Component))
+    {
+        return;
+    }
+
+    const int32 Index = Participants.IndexOfByPredicate(
+        [Component](const FGuestAnomalyParticipant& Participant)
+        {
+            return Participant.Component.Get() == Component
+                && Participant.ParticipationId
+                    == Component->GetParticipationId();
+        });
+
+    if (Index == INDEX_NONE)
+    {
+        return;
+    }
+
+    // 실패한 손님만 사건에서 분리한다.
+    UnbindParticipant(Participants[Index]);
+    Participants.RemoveAt(Index);
+    bHadParticipantFailure = true;
+
+    // 콜백이 끝난 뒤 남은 참여자 상태를 평가한다.
+    QueueEvaluation();
 }
 
 void AGuestAnomaly::HandleParticipantActorEndPlay(AActor* Actor,EEndPlayReason::Type EndPlayReason)
@@ -521,7 +547,14 @@ void AGuestAnomaly::EvaluateIncident()
 
     if (AreAllParticipantsResolved())
     {
-        Resolve();
+        if (bHadParticipantFailure)
+        {
+            Fail();
+        }
+        else
+        {
+            Resolve();
+        }
     }
 }
 

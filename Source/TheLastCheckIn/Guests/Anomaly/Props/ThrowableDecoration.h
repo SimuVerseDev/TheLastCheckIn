@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Housekeeping/Core/Carry/HKPhysicsPickupActor.h"
 #include "ThrowableDecoration.generated.h"
 
 class USkeletalMeshComponent;
@@ -10,15 +11,12 @@ class UArrowComponent;
 class APawn;
 
 UCLASS(Blueprintable)
-class THELASTCHECKIN_API AThrowableDecoration : public AActor
+class THELASTCHECKIN_API AThrowableDecoration : public AHKPhysicsPickupActor
 {
     GENERATED_BODY()
 
 public:
     AThrowableDecoration();
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Decoration")
-    TObjectPtr<UStaticMeshComponent> PropMesh;
 
     // 손님이 물건을 바라볼 방향. 물건마다 별도의 타겟포인트를 배치하지 않는다.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Decoration|Approach")
@@ -85,6 +83,9 @@ public:
 
     // 원래 위치로 복귀시키지 않고 물건 사용만 종료
     void EndInteraction(UObject* Requester);
+    
+    virtual bool CanUse_Implementation(AActor* Interactor) const override;
+    virtual bool Use_Implementation(AActor* Interactor) override;
 
 private:
     bool EnablePhysics();

@@ -143,4 +143,5 @@ private:
     bool bEndingPlay = false;
     bool bEvaluationQueued = false;
     bool bFailureRequested = false;
+    bool bHadParticipantFailure = false;
 };
