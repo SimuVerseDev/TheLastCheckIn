@@ -21,7 +21,8 @@ void ADesktopActor::Interact_Implementation(AActor* Interactor)
 	if (!CanInteract_Implementation(Interactor)) return;
 	APlayerController* PC = Cast<APlayerController>(CastChecked<APawn>(Interactor)->GetController());
 	OpenWidget = CreateWidget<UDesktopWidget>(PC, DesktopWidgetClass);
-	if (OpenWidget) OpenWidget->AddToPlayerScreen(200);
+	// Use the viewport layer so viewport HUDs (including tutorial quests) stay behind it.
+	if (OpenWidget) OpenWidget->AddToViewport(9000);
 }
 
 void ADesktopActor::EndPlay(const EEndPlayReason::Type EndPlayReason)

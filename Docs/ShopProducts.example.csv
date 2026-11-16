@@ -1,0 +1,3 @@
+Name,DisplayName,Category,Price,Icon,PreviewMesh,ActorClass,Scale,bAvailable,SortOrder
+Furniture_Sample,"샘플 가구 (설정 필요)",Furniture,25,None,/Engine/BasicShapes/Cube.Cube,None,1.0,False,0
+Tool_Sample,"샘플 도구 (설정 필요)",Tool,10,None,/Engine/BasicShapes/Cube.Cube,None,0.25,False,1

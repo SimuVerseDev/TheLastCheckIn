@@ -21,6 +21,8 @@ public:
 	// Purchases affect capital, not the day's gross lodging income.
 	UFUNCTION(BlueprintCallable, Category = "Game|Economy")
 	bool TrySpend(float Amount);
+	// A cancelled purchase restores capital without counting as lodging income.
+	void RefundPurchase(float Amount);
 	
 	UFUNCTION(BlueprintPure, Category = "Game|Economy")
 	float GetCapital() const
