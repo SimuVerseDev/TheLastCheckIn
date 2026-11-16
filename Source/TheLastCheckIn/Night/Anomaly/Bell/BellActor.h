@@ -8,7 +8,7 @@
 class UStaticMeshComponent;
 class UStaticMesh;
 class UAudioComponent;
-class UTextRenderComponent;
+class UBoxComponent;
 class USoundBase;
 class ABellActor;
 
@@ -24,7 +24,7 @@ enum class EBellState : uint8
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBellEvent, ABellActor*, Bell);
 
 /*
-로비 BP_bell_set에 걸린 객실 호출 종 하나 - RoomNumber 객실과 연결
+로비 종 판(BP_RoomBellSet)에 걸린 객실 호출 종 하나 - RoomNumber 객실과 연결
 울리는 중 E: 부수기 / 부서진 뒤 E: 치우기
 */
 UCLASS()
@@ -99,11 +99,11 @@ protected:
 	/*
 	Root
 	├ Hanger      종 걸이 (bell01) - 고정, 치워도 남음
-	├ NameTag     이름표 - 고정, 치워도 남음
-	│ └ RoomNumberText
+	├ NameTag     이름표 - 고정, 치워도 남음, RoomNumber를 Custom Primitive Data[0]로 표시
 	└ SwingPivot  매달린 지점 - 울릴 때 이것이 회전
 	  ├ Mesh      종 몸체 (bell03)
-	  └ Clapper   추 (bell02)
+	  ├ Clapper   추 (bell02)
+	  └ InteractBox  E 상호작용 조준 영역
 	치울 때 SwingPivot 아래 전부 숨김 - 이름표 등 남길 컴포넌트는 Root에 붙일 것
 	*/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night|Bell")
@@ -118,24 +118,30 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night|Bell")
 	TObjectPtr<UStaticMeshComponent> Clapper;
 
+	// 상호작용 시선 트레이스용 - 메시 콜리전 유무와 상관없이 종 몸체를 조준하면 잡힘
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night|Bell")
+	TObjectPtr<UBoxComponent> InteractBox;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night|Bell")
 	TObjectPtr<UAudioComponent> RingAudio;
 
-	// 이름표 (bell_nameTag) - Root에 붙어 있어 종을 치워도 남음
+	/*
+	이름표 (bell_nameTag) - Root에 붙어 있어 종을 치워도 남음
+	M_NameTagDigits가 Custom Primitive Data[0] 값을 숫자로 그림 - RoomNumber가 자동으로 들어감
+	*/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night|Bell")
 	TObjectPtr<UStaticMeshComponent> NameTag;
 
-	// 이름표에 RoomNumber 자동 표시 - NameTag 기준으로 위치 조정
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night|Bell")
-	TObjectPtr<UTextRenderComponent> RoomNumberText;
-
-	// 연결된 객실 번호
+	// 연결된 객실 번호 - 이름표에 표시됨
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Bell")
 	int32 RoomNumber = 0;
 
-	// {Room}이 방 번호로 바뀜 (예: "{Room}호")
-	UPROPERTY(EditAnywhere, Category="Night|Bell")
-	FText RoomNumberFormat;
+	/*
+	종을 좌우 반전 (판 왼쪽 절반처럼 몸체가 반대쪽에 매달린 종)
+	걸이와 흔들리는 부품만 반전하고, 이름표는 위치만 옮겨 숫자가 뒤집히지 않음
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Bell")
+	bool bMirrored = false;
 
 	// 비워 두면 RingAudio 컴포넌트에 지정된 사운드 사용 - 울리는 동안 끝날 때마다 다시 재생
 	UPROPERTY(EditAnywhere, Category="Night|Bell|Sound")
@@ -185,7 +191,8 @@ private:
 	void Break();
 	void Remove();
 	void SetSwingPartsPresent(bool bPresent);
-	void UpdateRoomNumberText();
+	void UpdateNameTag();
+	void ApplyMirror();
 	void PlayRingSound();
 	void PlayOverlapRing();
 	void StopRingSound();

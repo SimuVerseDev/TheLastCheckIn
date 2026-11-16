@@ -1,8 +1,8 @@
 #include "Night/Anomaly/Bell/BellActor.h"
 #include "Components/AudioComponent.h"
+#include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "Components/TextRenderComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -12,6 +12,9 @@ namespace BellActorDefaults
 	antique_brass_bell 메시는 세 개 모두 걸이 바닥이 원점 - 종 몸체 윗부분(걸이에 매달린 곳)을 흔들림 축으로
 	*/
 	const FVector PivotLocation(-19.6f, 0.0f, 45.0f);
+
+	// 종 몸체(bell03) 바운드 중심
+	const FVector BodyCenter(-19.6f, 0.0f, 27.8f);
 }
 
 ABellActor::ABellActor()
@@ -43,6 +46,18 @@ ABellActor::ABellActor()
 	Clapper->SetMobility(EComponentMobility::Movable);
 	Clapper->SetRelativeLocation(-BellActorDefaults::PivotLocation);
 
+	/*
+	상호작용 트레이스(Visibility)만 막고 이동이나 물리에는 관여하지 않음
+	피벗 아래에 있어 같이 흔들리고, 종을 치우면 다른 부품과 함께 꺼짐
+	*/
+	InteractBox = CreateDefaultSubobject<UBoxComponent>(TEXT("InteractBox"));
+	InteractBox->SetupAttachment(SwingPivot);
+	InteractBox->SetRelativeLocation(BellActorDefaults::BodyCenter - BellActorDefaults::PivotLocation);
+	InteractBox->SetBoxExtent(FVector(18.0f, 18.0f, 18.0f));
+	InteractBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	InteractBox->SetCollisionResponseToAllChannels(ECR_Ignore);
+	InteractBox->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+
 	RingAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("RingAudio"));
 	RingAudio->SetupAttachment(Root);
 	RingAudio->bAutoActivate = false;
@@ -50,43 +65,68 @@ ABellActor::ABellActor()
 	NameTag = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("NameTag"));
 	NameTag->SetupAttachment(Root);
 
-	RoomNumberText = CreateDefaultSubobject<UTextRenderComponent>(TEXT("RoomNumberText"));
-	RoomNumberText->SetupAttachment(NameTag);
-	RoomNumberText->SetHorizontalAlignment(EHTA_Center);
-	RoomNumberText->SetVerticalAlignment(EVRTA_TextCenter);
-	RoomNumberText->SetWorldSize(4.0f);
-	RoomNumberText->SetTextRenderColor(FColor(30, 22, 12));
-	RoomNumberText->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-	RoomNumberFormat = NSLOCTEXT("Anomaly", "BellRoomNumber", "{Room}");
 	BreakPrompt = NSLOCTEXT("Anomaly", "BellBreak", "종 부수기");
 	RemovePrompt = NSLOCTEXT("Anomaly", "BellRemove", "부서진 종 치우기");
 }
 
 /*
-에디터에서 RoomNumber를 바꾸면 바로 이름표에 반영
+에디터에서 RoomNumber, bMirrored를 바꾸면 바로 반영
 */
 void ABellActor::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-	UpdateRoomNumberText();
+	ApplyMirror();
+	UpdateNameTag();
 }
 
-void ABellActor::UpdateRoomNumberText()
+/*
+기본값(에디터, 컴포넌트 재등록 시 이 값으로 초기화됨)과 런타임 값을 모두 갱신
+*/
+void ABellActor::UpdateNameTag()
 {
-	if (RoomNumber <= 0)
+	const float Value = static_cast<float>(RoomNumber);
+	NameTag->SetDefaultCustomPrimitiveDataFloat(0, Value);
+	NameTag->SetCustomPrimitiveDataFloat(0, Value);
+}
+
+/*
+클래스 기본값(BP 설정 포함)을 기준으로 다시 계산 - 여러 번 호출돼도 누적되지 않음
+걸이와 피벗은 로컬 X로 뒤집고, 이름표와 소리는 위치만 옮김
+*/
+void ABellActor::ApplyMirror()
+{
+	const ABellActor* Defaults = GetClass()->GetDefaultObject<ABellActor>();
+	if (!Defaults || Defaults == this)
 	{
-		RoomNumberText->SetText(FText::GetEmpty());
 		return;
 	}
-	const FText RoomText = FText::AsNumber(RoomNumber, &FNumberFormattingOptions::DefaultNoGrouping());
-	RoomNumberText->SetText(FText::FormatNamed(RoomNumberFormat, TEXT("Room"), RoomText));
+	const float Sign = bMirrored ? -1.0f : 1.0f;
+	const auto MirrorFrom = [Sign](USceneComponent* Target, const USceneComponent* Source, bool bFlipScale)
+	{
+		if (!Target || !Source)
+		{
+			return;
+		}
+		FVector Location = Source->GetRelativeLocation();
+		Location.X *= Sign;
+		Target->SetRelativeLocation(Location);
+		if (bFlipScale)
+		{
+			FVector Scale = Source->GetRelativeScale3D();
+			Scale.X *= Sign;
+			Target->SetRelativeScale3D(Scale);
+		}
+	};
+	MirrorFrom(Hanger, Defaults->Hanger, true);
+	MirrorFrom(SwingPivot, Defaults->SwingPivot, true);
+	MirrorFrom(NameTag, Defaults->NameTag, false);
+	MirrorFrom(RingAudio, Defaults->RingAudio, false);
 }
 
 void ABellActor::BeginPlay()
 {
 	Super::BeginPlay();
-	UpdateRoomNumberText();
+	UpdateNameTag();
 	RingAudio->OnAudioFinished.AddUniqueDynamic(this, &ThisClass::HandleRingSoundFinished);
 	OriginalMesh = Mesh->GetStaticMesh();
 	PivotHomeRotation = SwingPivot->GetRelativeRotation();
