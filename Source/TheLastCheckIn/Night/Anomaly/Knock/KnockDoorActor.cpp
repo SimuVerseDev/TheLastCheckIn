@@ -23,9 +23,7 @@ bool AKnockDoorActor::IsOpen() const
 	{
 		return false;
 	}
-	/*
-	BP_Door의 bIsOpen 변수를 이름으로 찾아서 읽음 (리플렉션)
-	*/
+
 	if (const FBoolProperty* Prop = FindFProperty<FBoolProperty>(LinkedDoor->GetClass(), TEXT("bIsOpen")))
 	{
 		return Prop->GetPropertyValue_InContainer(LinkedDoor);

@@ -71,16 +71,10 @@ protected:
 	*/
 	UPROPERTY(EditInstanceOnly, Category="Night|Knock")
 	bool bCanOpen = true;
-
-	/*
-	CCTV실·직원실일 때 레벨의 BP_Door 지정
-	*/
+	
 	UPROPERTY(EditInstanceOnly, Category="Night|Knock", meta=(EditCondition="bCanOpen"))
 	TObjectPtr<AActor> LinkedDoor;
-
-	/*
-	객실 문일 때만 지정
-	*/
+	
 	UPROPERTY(EditInstanceOnly, Category="Night|Knock", meta=(EditCondition="!bCanOpen"))
 	TObjectPtr<ARoomActor> Room;
 
