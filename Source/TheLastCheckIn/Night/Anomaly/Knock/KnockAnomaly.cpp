@@ -79,8 +79,14 @@ void AKnockAnomaly::TickKnock()
 	{
 		return;
 	}
-	const bool bViewing = CCTVMonitor && CCTVMonitor->IsViewingCCTV();
-	if (bViewing && !ActiveDoor->IsOpen())
+	/*
+	첫 노크는 CCTV를 보고 있을 때만, 그 뒤로는 해결할 때까지 계속 (문이 열려 있으면 멈춤)
+	*/
+	if (!bKnockRevealed && CCTVMonitor && CCTVMonitor->IsViewingCCTV())
+	{
+		bKnockRevealed = true;
+	}
+	if (bKnockRevealed && !ActiveDoor->IsOpen())
 	{
 		ActiveDoor->PlayKnock();
 	}
@@ -130,6 +136,7 @@ bool AKnockAnomaly::Fail()
 void AKnockAnomaly::ClearActiveDoor()
 {
 	GetWorldTimerManager().ClearTimer(KnockTimer);
+	bKnockRevealed = false;
 	if (ActiveDoor)
 	{
 		ActiveDoor->StopKnock();

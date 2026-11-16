@@ -49,4 +49,7 @@ private:
 
 	FTimerHandle KnockTimer;
 	int32 ComplaintIndex = 0;
+
+	// CCTV로 처음 노크를 들은 뒤부터는 CCTV를 닫아도 계속 노크
+	bool bKnockRevealed = false;
 };
