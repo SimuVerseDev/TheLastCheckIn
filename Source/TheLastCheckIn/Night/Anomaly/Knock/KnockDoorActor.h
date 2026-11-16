@@ -53,6 +53,12 @@ public:
 		
 	bool TryPlaceHorseshoe(AHorseshoeActor* Horseshoe);
 	
+	UFUNCTION(BlueprintPure, Category="Night|Knock")
+	bool CanOpen() const
+	{
+		return bCanOpen;
+	}
+	
 	UPROPERTY(BlueprintAssignable, Category="Night|Knock")
 	FKnockDoorOpenChanged OnOpenChanged;
 	UPROPERTY(BlueprintAssignable, Category="Night|Knock")
