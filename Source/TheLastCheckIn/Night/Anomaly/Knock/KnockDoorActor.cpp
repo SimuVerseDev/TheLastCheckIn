@@ -19,14 +19,15 @@ AKnockDoorActor::AKnockDoorActor()
 
 bool AKnockDoorActor::IsOpen() const
 {
-	if (!LinkedDoor)
+	const AActor* Door = LinkedDoor.Get();
+	if (!Door)
 	{
 		return false;
 	}
 
-	if (const FBoolProperty* Prop = FindFProperty<FBoolProperty>(LinkedDoor->GetClass(), TEXT("bIsOpen")))
+	if (const FBoolProperty* Prop = FindFProperty<FBoolProperty>(Door->GetClass(), TEXT("bIsOpen")))
 	{
-		return Prop->GetPropertyValue_InContainer(LinkedDoor);
+		return Prop->GetPropertyValue_InContainer(Door);
 	}
 	return false;
 }

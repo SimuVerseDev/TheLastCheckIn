@@ -73,7 +73,7 @@ protected:
 	bool bCanOpen = true;
 	
 	UPROPERTY(EditInstanceOnly, Category="Night|Knock", meta=(EditCondition="bCanOpen"))
-	TObjectPtr<AActor> LinkedDoor;
+	TSoftObjectPtr<AActor> LinkedDoor; // 문이 다른 레벨(Level_combine)에 있어서 Soft 참조
 	
 	UPROPERTY(EditInstanceOnly, Category="Night|Knock", meta=(EditCondition="!bCanOpen"))
 	TObjectPtr<ARoomActor> Room;
