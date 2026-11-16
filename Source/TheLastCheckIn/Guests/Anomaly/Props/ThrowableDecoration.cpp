@@ -9,28 +9,33 @@
 #include "NavigationSystem.h"
 #include "NavigationData.h"
 #include "NavFilters/NavigationQueryFilter.h"
+#include "Housekeeping/Core/Dirt/HKPlacementDirtComponent.h"
 
 AThrowableDecoration::AThrowableDecoration()
 {
     PrimaryActorTick.bCanEverTick = false;
 
-    PropMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PropMesh"));
-    SetRootComponent(PropMesh);
+    // 실제 장식물 메시는 블루프린트에서 설정한다.
+    Mesh->SetStaticMesh(nullptr);
+    Mesh->SetRelativeScale3D(FVector::OneVector);
 
-    PropMesh->SetMobility(EComponentMobility::Movable);
-    PropMesh->SetSimulatePhysics(false);
-    PropMesh->SetEnableGravity(true);
-    PropMesh->SetCollisionObjectType(ECC_PhysicsBody);
-    PropMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-    PropMesh->SetCollisionResponseToAllChannels(ECR_Block);
+    // 쓰러진 장식물을 잡으면 똑바로 세운다.
+    bUprightWhileCarried = true;
+
+    Mesh->SetMobility(EComponentMobility::Movable);
+    Mesh->SetSimulatePhysics(false);
+    Mesh->SetEnableGravity(true);
+    Mesh->SetCollisionObjectType(ECC_PhysicsBody);
+    Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    Mesh->SetCollisionResponseToAllChannels(ECR_Block);
 
     // 작은 장식물이 캐릭터를 밀거나 이동을 막지 않도록 설정
-    PropMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
-    PropMesh->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
-    PropMesh->SetCanEverAffectNavigation(false);
+    Mesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+    Mesh->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+    Mesh->SetCanEverAffectNavigation(false);
 
     ApproachDirection = CreateDefaultSubobject<UArrowComponent>(TEXT("ApproachDirection"));
-    ApproachDirection->SetupAttachment(PropMesh);
+    ApproachDirection->SetupAttachment(Mesh);
     ApproachDirection->SetHiddenInGame(true);
     ApproachDirection->SetCanEverAffectNavigation(false);
 }
@@ -110,8 +115,8 @@ bool AThrowableDecoration::TryBuildActionTransform(
 bool AThrowableDecoration::CanReserve() const
 {
     return !IsActorBeingDestroyed()
-        && IsValid(PropMesh)
-        && IsValid(PropMesh->GetStaticMesh())
+        && IsValid(Mesh)
+        && IsValid(Mesh->GetStaticMesh())
         && !ReservedBy.IsValid()
         && !bHeld;
 }
@@ -134,22 +139,22 @@ bool AThrowableDecoration::IsReservedBy(const UObject* Requester) const
 
 bool AThrowableDecoration::EnablePhysics()
 {
-    if (!IsValid(PropMesh))
+    if (!IsValid(Mesh))
     {
         return false;
     }
 
-    PropMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-    PropMesh->SetSimulatePhysics(true);
-    return PropMesh->IsSimulatingPhysics();
+    Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    Mesh->SetSimulatePhysics(true);
+    return Mesh->IsSimulatingPhysics();
 }
 
 void AThrowableDecoration::ClearPhysicsVelocity()
 {
-    if (IsValid(PropMesh) && PropMesh->IsSimulatingPhysics())
+    if (IsValid(Mesh) && Mesh->IsSimulatingPhysics())
     {
-        PropMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
-        PropMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+        Mesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
+        Mesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
     }
 }
 
@@ -166,8 +171,8 @@ bool AThrowableDecoration::KnockDown(UObject* Requester, const FVector& Velocity
     }
 
     bPreparedForPickup = false;
-    PropMesh->AddImpulse(Velocity, NAME_None, true);
-    PropMesh->AddAngularImpulseInDegrees(KnockAngularVelocity, NAME_None, true);
+    Mesh->AddImpulse(Velocity, NAME_None, true);
+    Mesh->AddAngularImpulseInDegrees(KnockAngularVelocity, NAME_None, true);
     return true;
 }
 
@@ -175,14 +180,14 @@ bool AThrowableDecoration::PreparePickup(
     UObject* Requester,
     const FTransform& PickupTransform)
 {
-    if (!IsReservedBy(Requester) || !IsValid(PropMesh) || bHeld)
+    if (!IsReservedBy(Requester) || !IsValid(Mesh) || bHeld)
     {
         return false;
     }
 
     ClearPhysicsVelocity();
-    PropMesh->SetSimulatePhysics(false);
-    PropMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Mesh->SetSimulatePhysics(false);
+    Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
     // 물건 크기는 유지하고 위치와 회전만 변경
     SetActorLocationAndRotation(
@@ -201,7 +206,7 @@ bool AThrowableDecoration::Grab(
     USkeletalMeshComponent* HandMesh)
 {
     if (!IsReservedBy(Requester)
-        || !IsValid(PropMesh)
+        || !IsValid(Mesh)
         || !IsValid(HandMesh)
         || !HandMesh->DoesSocketExist(GripSocket)
         || bHeld
@@ -210,8 +215,8 @@ bool AThrowableDecoration::Grab(
         return false;
     }
 
-    PropMesh->SetSimulatePhysics(false);
-    PropMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Mesh->SetSimulatePhysics(false);
+    Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
     if (!AttachToComponent(
         HandMesh,
@@ -245,7 +250,7 @@ bool AThrowableDecoration::Throw(UObject* Requester, const FVector& Velocity)
     }
 
     ClearPhysicsVelocity();
-    PropMesh->AddImpulse(Velocity, NAME_None, true);
+    Mesh->AddImpulse(Velocity, NAME_None, true);
     return true;
 }
 
@@ -271,4 +276,44 @@ void AThrowableDecoration::EndInteraction(UObject* Requester)
     bHeld = false;
     bPreparedForPickup = false;
     ReservedBy.Reset();
+}
+
+bool AThrowableDecoration::CanUse_Implementation(
+    AActor* Interactor) const
+{
+    // 손님이 사용 중이거나, 기본 잡기 조건을 만족하지 않으면 차단.
+    if (ReservedBy.IsValid()
+        || bHeld
+        || bPreparedForPickup
+        || !Super::CanUse_Implementation(Interactor))
+    {
+        return false;
+    }
+
+    const UHKPlacementDirtComponent* Placement =
+        FindComponentByClass<UHKPlacementDirtComponent>();
+
+    if (!Placement)
+    {
+        return false;
+    }
+
+    const FTransform& Home = Placement->GetHomeTransform();
+
+    // 원위치에 정리된 물건은 다시 잡지 않는다.
+    const bool bMoved =
+        FVector::DistSquared(
+            GetActorLocation(), Home.GetLocation()) > FMath::Square(1.0f);
+
+    const bool bRotated =
+        FMath::RadiansToDegrees(
+            GetActorQuat().AngularDistance(Home.GetRotation())) > 1.0f;
+
+    return bMoved || bRotated;
+}
+
+bool AThrowableDecoration::Use_Implementation(AActor* Interactor)
+{
+    return CanUse_Implementation(Interactor)
+        && Super::Use_Implementation(Interactor);
 }
