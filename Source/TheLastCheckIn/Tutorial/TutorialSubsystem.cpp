@@ -289,7 +289,8 @@ FText UTutorialSubsystem::GetObjectiveText() const
 	{
 	case ETutorialStep::CleanRoom:
 		return FText::Format(NSLOCTEXT("Tutorial", "CleanRooms", "2층 청소하기 ({0}/4)"), FText::AsNumber(CleanedRooms.Num()));
-	//case ETutorialStep::UnlockRoom205: return NSLOCTEXT("Tutorial", "Purchase205", "205호 해금하기");
+	case ETutorialStep::UnlockRoom205:
+		return NSLOCTEXT("Tutorial", "Purchase205Desktop", "205호 해금하기\n컴퓨터 → 관리 → 해금목록 → 구매");
 	case ETutorialStep::CheckInGuest:
 		return FText::Format(NSLOCTEXT("Tutorial", "CheckInTeams", "5팀의 손님 체크인 ({0}/5)"), FText::AsNumber(CheckedInStays.Num()));
 	case ETutorialStep::AnomalyPresentation: return NSLOCTEXT("Tutorial", "Anomaly", "주변의 이상현상 살펴보기");

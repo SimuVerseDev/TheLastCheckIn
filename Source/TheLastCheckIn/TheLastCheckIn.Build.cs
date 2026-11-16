@@ -25,6 +25,7 @@ public class TheLastCheckIn : ModuleRules
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "SlateCore" });
+        if (Target.bBuildEditor) PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "UMGEditor", "Kismet", "KismetCompiler", "RenderCore" });
 
 		PublicIncludePaths.AddRange(new string[] {
 			"TheLastCheckIn",
