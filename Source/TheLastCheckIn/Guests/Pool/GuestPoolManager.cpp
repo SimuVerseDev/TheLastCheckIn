@@ -1,4 +1,5 @@
 #include "GuestPoolManager.h"
+#include "TheLastCheckIn.h"
 
 #include "Guests/GuestCharacter.h"
 #include "Guests/GuestAIController.h"
@@ -92,7 +93,7 @@ void AGuestPoolManager::BeginPlay()
 
 	if (AvailableGuests.Num() != PoolSize)
 	{
-		UE_LOG(LogTemp, Warning,
+		UE_LOG(LogGuests, Warning,
 			TEXT("GuestPool: Created %d / %d guests."),
 			AvailableGuests.Num(), PoolSize);
 	}
@@ -237,7 +238,7 @@ EGuestAcquireResult AGuestPoolManager::TryAcquireParty(
 			}
 			else
 			{
-				UE_LOG(LogTemp, Error,
+				UE_LOG(LogGuests, Error,
 					TEXT("GuestPool: Failed to cancel arrival of %s."),
 					*GetNameSafe(Member));
 			}

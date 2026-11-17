@@ -1,4 +1,5 @@
 #include "Core/Reputation/UI/ReputationHUDSubsystem.h"
+#include "Core/UI/UILayers.h"
 #include "Core/Reputation/UI/ReputationHUDWidget.h"
 #include "Core/Reputation/ReputationSettings.h"
 #include "Engine/World.h"
@@ -41,7 +42,7 @@ void UReputationHUDSubsystem::CreateHUD()
 	HUDWidget = CreateWidget<UReputationHUDWidget>(PC, WidgetClass);
 	if (HUDWidget)
 	{
-		HUDWidget->AddToPlayerScreen(0);
+		HUDWidget->AddToPlayerScreen(UILayer::HUD);
 	}
 }
 

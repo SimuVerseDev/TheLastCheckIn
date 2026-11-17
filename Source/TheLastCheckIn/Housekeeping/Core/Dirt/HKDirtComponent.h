@@ -4,7 +4,7 @@
 #include "HKDirtComponent.generated.h"
 
 UCLASS(Abstract, ClassGroup=(Housekeeping))
-class UHKDirtComponent : public UActorComponent
+class THELASTCHECKIN_API UHKDirtComponent : public UActorComponent
 {
 	GENERATED_BODY()
 

@@ -1,4 +1,5 @@
 #include "GuestAIController.h"
+#include "TheLastCheckIn.h"
 
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
@@ -186,7 +187,7 @@ void AGuestAIController::OnPossess(APawn* InPawn)
 	StopGuestAI();
 	if (!Guest->ShouldStartInPool())
 	{
-		UE_LOG(LogTemp, Warning,
+		UE_LOG(LogGuests, Warning,
 			TEXT("Guest %s: Non-pooled guests (bStartInPool=false), including level-placed guests, "
 				"are not supported. AI will remain stopped. Use a guest class with bStartInPool=true "
 				"and spawn parties through GuestPoolManager::TryAcquireParty to initialize "
@@ -278,7 +279,7 @@ void AGuestAIController::CheckFinalApproach()
 	Crowd->SuspendCrowdSteering(true);
 	GetWorldTimerManager().ClearTimer(FinalApproachTimerHandle);
 	NearGoalStallStartedAt = -1.0;
-	UE_LOG(LogTemp, Log,
+	UE_LOG(LogGuests, Log,
 		TEXT("Guest %s: Recovering stalled final approach; distance=%.1f location=(%s) goal=(%s)."),
 		*Guest->GetName(), FMath::Sqrt(DistanceSquared), *Location.ToString(), *Goal.ToString());
 }

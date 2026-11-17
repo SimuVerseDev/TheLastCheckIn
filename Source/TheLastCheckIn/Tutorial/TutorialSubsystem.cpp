@@ -2,9 +2,11 @@
 #include "Core/GameFlow/HotelPhaseSubsystem.h"
 #include "Housekeeping/Core/Room/HKRoomVolume.h"
 #include "Rooms/RoomActor.h"
+#include "Rooms/RoomQuery.h"
 #include "EngineUtils.h"
 #include "CCTV/CCTVMonitor.h"
 #include "Core/Time/GameClockSubsystem.h"
+#include "Core/Time/GameTimeMath.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTutorial, Log, All);
 
@@ -60,9 +62,10 @@ void UTutorialSubsystem::HandleDayStarted(int32 Day)
 		CleanedRooms.Reset();
 		CheckedInStays.Reset();
 		bRoom205Purchased = false;
-		for (TActorIterator<ARoomActor> It(GetWorld()); It; ++It)
+		TArray<ARoomActor*> Rooms;
+		RoomQuery::GetRooms(GetWorld(), Rooms);
+		for (ARoomActor* Room : Rooms)
 		{
-			ARoomActor* Room = *It;
 			ObservedRooms.Add(Room);
 			Room->OnPurchased.AddUniqueDynamic(this, &ThisClass::HandleRoomPurchased);
 			Room->OnOccupied.AddUniqueDynamic(this, &ThisClass::HandleRoomOccupied);
@@ -141,7 +144,7 @@ bool UTutorialSubsystem::CompleteStep(ETutorialStep CompletedStep)
 	if (CompletedStep == ETutorialStep::CleanRoom && CleanedRooms.Num() != 4) return false;
 	if (CompletedStep == ETutorialStep::UnlockRoom205 && !bRoom205Purchased) return false;
 	if (CompletedStep == ETutorialStep::CheckInGuest && CheckedInStays.Num() < 5) return false;
-	if (CompletedStep == ETutorialStep::ViewCCTV && CCTVViewingSeconds < 3600.0) return false;
+	if (CompletedStep == ETutorialStep::ViewCCTV && CCTVViewingSeconds < GameTime::SecondsPerHour) return false;
 
 	ETutorialStep NextStep;
 	switch (CurrentStep)
@@ -216,11 +219,11 @@ void UTutorialSubsystem::HandleTimeAdvanced(double PreviousSeconds, double Curre
 		OnProgressChanged.Broadcast();
 		return;
 	}
-	const int32 OldMinutes = FMath::FloorToInt(CCTVViewingSeconds / 60.0);
-	CCTVViewingSeconds = FMath::Min(3600.0, CCTVViewingSeconds
+	const int32 OldMinutes = FMath::FloorToInt(CCTVViewingSeconds / GameTime::SecondsPerMinute);
+	CCTVViewingSeconds = FMath::Min(GameTime::SecondsPerHour, CCTVViewingSeconds
 		+ FMath::Max(0.0, CurrentSeconds - FMath::Max(PreviousSeconds, CCTVStartSeconds)));
-	if (CCTVViewingSeconds >= 3600.0) CompleteStep(ETutorialStep::ViewCCTV);
-	else if (FMath::FloorToInt(CCTVViewingSeconds / 60.0) != OldMinutes) OnProgressChanged.Broadcast();
+	if (CCTVViewingSeconds >= GameTime::SecondsPerHour) CompleteStep(ETutorialStep::ViewCCTV);
+	else if (FMath::FloorToInt(CCTVViewingSeconds / GameTime::SecondsPerMinute) != OldMinutes) OnProgressChanged.Broadcast();
 }
 
 void UTutorialSubsystem::UnbindGameplayEvents()
@@ -297,7 +300,7 @@ FText UTutorialSubsystem::GetObjectiveText() const
 	case ETutorialStep::ReadBoardMemo: return NSLOCTEXT("Tutorial", "Memo", "보드 메모 확인하기");
 	case ETutorialStep::ViewCCTV:
 		return FText::Format(NSLOCTEXT("Tutorial", "CCTVContinuousHour", "CCTV 연속 1시간 시청하기 ({0}/60분)"),
-			FText::AsNumber(FMath::FloorToInt(CCTVViewingSeconds / 60.0)));
+			FText::AsNumber(FMath::FloorToInt(CCTVViewingSeconds / GameTime::SecondsPerMinute)));
 	case ETutorialStep::Completed:
 		return NSLOCTEXT("Tutorial", "CompletionSleepHint", "자정 이후 침대에서 잠을 자면\n다음 날로 넘어갑니다.");
 	default: return FText::GetEmpty();

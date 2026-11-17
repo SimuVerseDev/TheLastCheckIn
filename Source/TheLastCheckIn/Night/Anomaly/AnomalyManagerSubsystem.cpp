@@ -1,4 +1,5 @@
 #include "Night/Anomaly/AnomalyManagerSubsystem.h"
+#include "TheLastCheckIn.h"
 #include "Night/Anomaly/AnomalyBase.h"
 #include "Night/Settlement/DailySettlementSubsystem.h"
 #include "Night/Anomaly/AnomalyNightPlan.h"
@@ -7,6 +8,7 @@
 #include "Core/GameFlow/HotelPhaseSettings.h"
 #include "Night/Anomaly/UI/AnomalyNoticeWidget.h"
 #include "Core/Time/GameClockSubsystem.h"
+#include "Core/Time/GameTimeMath.h"
 #include "EngineUtils.h"
 
 void UAnomalyManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -186,7 +188,7 @@ void UAnomalyManagerSubsystem::HandleTimeAdvanced(double PreviousSeconds, double
 			It.RemoveCurrent();
 			continue;
 		}
-		if (CurrentSeconds - It.Value() >= Anomaly->EscalateAfterMinutes * 60.0)
+		if (CurrentSeconds - It.Value() >= GameTime::MinutesToSeconds(Anomaly->EscalateAfterMinutes))
 		{
 			ToEscalate.Add(Anomaly);
 		}
@@ -297,7 +299,7 @@ void UAnomalyManagerSubsystem::HandleDayStarted(int32 Day)
 		AAnomalyBase* Anomaly = FindAnomaly(Id);
 		if (!Anomaly || !Anomaly->bAutoSchedule)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[NightPlan] Day %d: '%s' 이상현상을 찾을 수 없음"), Day, *Id.ToString());
+			UE_LOG(LogAnomaly, Warning, TEXT("[NightPlan] Day %d: '%s' 이상현상을 찾을 수 없음"), Day, *Id.ToString());
 			continue;
 		}
 		PlanStart(Anomaly, Day);
@@ -307,7 +309,7 @@ void UAnomalyManagerSubsystem::HandleDayStarted(int32 Day)
 		}
 		LastNightIds.Add(Id);
 	}
-	UE_LOG(LogTemp, Log, TEXT("[NightPlan] Day %d: %s"), Day, *FString::JoinBy(Tonight, TEXT(", "), [](const FName& N) { return N.ToString(); }));
+	UE_LOG(LogAnomaly, Log, TEXT("[NightPlan] Day %d: %s"), Day, *FString::JoinBy(Tonight, TEXT(", "), [](const FName& N) { return N.ToString(); }));
 }
 
 /*
@@ -317,7 +319,7 @@ double UAnomalyManagerSubsystem::GetNightSeconds(int32 Day, int32 Hour) const
 {
 	const int32 DayStartHour = UHotelPhaseSettings::Get()->DayStartHour;
 	const int32 AdjustedHour = Hour < DayStartHour ? Hour + 24 : Hour;
-	return (Day - 1) * 86400.0 + AdjustedHour * 3600.0;
+	return GameTime::GetDayStartSeconds(Day - 1) + GameTime::HoursToSeconds(AdjustedHour);
 }
 
 const FAnomalyNightPlan* UAnomalyManagerSubsystem::FindPlanRow(int32 Day, TSet<FName>& OutLearned) const
@@ -329,7 +331,7 @@ const FAnomalyNightPlan* UAnomalyManagerSubsystem::FindPlanRow(int32 Day, TSet<F
 	const UDataTable* Table = UHotelPhaseSettings::Get()->AnomalyNightPlanTable.LoadSynchronous();
 	if (!Table)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[NightPlan] AnomalyNightPlanTable이 설정되지 않음 (Project Settings > Hotel Phase)"));
+		UE_LOG(LogAnomaly, Warning, TEXT("[NightPlan] AnomalyNightPlanTable이 설정되지 않음 (Project Settings > Hotel Phase)"));
 		return nullptr;
 	}
 	const FAnomalyNightPlan* Best = nullptr;
@@ -372,7 +374,7 @@ bool UAnomalyManagerSubsystem::PlanStart(AAnomalyBase* Anomaly, int32 Day, doubl
 
 void UAnomalyManagerSubsystem::HandleStartFailed(AAnomalyBase* Anomaly, double CurrentSeconds)
 {
-	constexpr double RetryDelay = 3600.0; // 1 게임시간
+	constexpr double RetryDelay = GameTime::SecondsPerHour; // 1 게임시간
 
 	/*
 	고정: 1시간 뒤 다시 시도
@@ -381,7 +383,7 @@ void UAnomalyManagerSubsystem::HandleStartFailed(AAnomalyBase* Anomaly, double C
 	{
 		if (!PlanStart(Anomaly, PlanDay, CurrentSeconds + RetryDelay))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[NightPlan] '%s' 오늘 밤 시작 실패 (시간 초과)"), *Anomaly->AnomalyId.ToString());
+			UE_LOG(LogAnomaly, Warning, TEXT("[NightPlan] '%s' 오늘 밤 시작 실패 (시간 초과)"), *Anomaly->AnomalyId.ToString());
 		}
 		return;
 	}

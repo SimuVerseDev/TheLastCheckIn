@@ -6,6 +6,7 @@
 #include "AnomalyBase.generated.h"
 
 class AAnomalyBase;
+class AHotelPhoneActor;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 	FAnomalyStateChanged,
@@ -69,6 +70,17 @@ public:
 	float SpawnChance = 1.0f;
 
 protected:
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	void RaiseComplaint(const FText& Message);
+	void ClearComplaint();
+	bool HasComplaint() const { return bComplaintActive; }
+	void ApplyComplaintPenalty() const;
+
+	UPROPERTY(EditInstanceOnly, Category="Night|Anomaly|Complaint")
+	TObjectPtr<AHotelPhoneActor> Phone;
+
 	UFUNCTION(BlueprintImplementableEvent, Category="Night|Anomaly")
 	void OnAnomalyStarted();
 	UFUNCTION(BlueprintImplementableEvent, Category="Night|Anomaly")
@@ -82,4 +94,5 @@ private:
 	bool TrySetState(EAnomalyState NewState);
 
 	EAnomalyState State = EAnomalyState::Idle;
+	bool bComplaintActive = false;
 };

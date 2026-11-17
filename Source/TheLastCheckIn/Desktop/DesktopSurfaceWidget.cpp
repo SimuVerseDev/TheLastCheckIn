@@ -22,6 +22,7 @@
 #include "GameFramework/Pawn.h"
 #include "CheckIn/CheckInInteractionComponent.h"
 #include "Rooms/RoomActor.h"
+#include "Rooms/RoomQuery.h"
 #include "Core/Economy/HotelEconomySubsystem.h"
 #include "Core/Time/GameClockSubsystem.h"
 #include "TimerManager.h"
@@ -258,7 +259,7 @@ void UDesktopSurfaceWidget::BuildPage()
 	auto* Rows = WidgetTree->ConstructWidget<UVerticalBox>();
 	Scroll->AddChild(Rows);
 	TArray<ARoomActor*> Rooms;
-	if (GetWorld() && !IsDesignTime()) for (TActorIterator<ARoomActor> It(GetWorld()); It; ++It) Rooms.Add(*It);
+	if (GetWorld() && !IsDesignTime()) RoomQuery::GetRooms(GetWorld(), Rooms);
 	Rooms.Sort([](const ARoomActor& A, const ARoomActor& B) { return A.GetRoomNumber() < B.GetRoomNumber(); });
 	const bool RoomPage = LayoutMode != 0 || (SelectedMenu == 0 && SelectedSub == 0);
 	const bool UnlockPage = LayoutMode == 0 && SelectedMenu == 3;
@@ -555,15 +556,8 @@ void UDesktopSurfaceWidget::HandleAction(int32 A)
 	}
 	if (A >= 2000 && A < 3000 && GetWorld())
 	{
-		ARoomActor* TargetRoom = nullptr;
-		int32 Matches = 0;
-		for (TActorIterator<ARoomActor> It(GetWorld()); It; ++It)
-			if (It->GetRoomNumber() == A - 2000)
-			{
-				TargetRoom = *It;
-				++Matches;
-			}
-		const bool Purchased = Matches == 1 && TargetRoom->TryPurchaseUnlock();
+		ARoomActor* TargetRoom = RoomQuery::FindRoom(GetWorld(), A - 2000);
+		const bool Purchased = TargetRoom && TargetRoom->TryPurchaseUnlock();
 		if (Purchased)if (auto* CI = CheckIn())CI->RefreshRoomList();
 		BuildPage();
 		RefreshData();

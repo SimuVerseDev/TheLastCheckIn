@@ -20,7 +20,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
  *  A basic first person character
  */
 UCLASS(abstract)
-class ATheLastCheckInCharacter : public ACharacter
+class THELASTCHECKIN_API ATheLastCheckInCharacter : public ACharacter
 {
 	GENERATED_BODY()
 

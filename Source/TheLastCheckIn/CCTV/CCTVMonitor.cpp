@@ -1,4 +1,5 @@
 ﻿#include "CCTV/CCTVMonitor.h"
+#include "Core/UI/UILayers.h"
 #include "CCTV/CCTVPadWidget.h"
 #include "Camera/CameraActor.h"
 #include "Components/StaticMeshComponent.h"
@@ -83,7 +84,7 @@ void ACCTVMonitor::OpenPad(APlayerController* PC)
 		}
 		PadWidget->OnPadCovered.AddDynamic(this, &ACCTVMonitor::HandlePadCovered);
 		PadWidget->OnPadLowered.AddDynamic(this, &ACCTVMonitor::HandlePadLowered);
-		PadWidget->AddToViewport();
+		PadWidget->AddToViewport(UILayer::CCTVPad);
 	}
 	bPadOpen = true;
 	bTransitioning = true;

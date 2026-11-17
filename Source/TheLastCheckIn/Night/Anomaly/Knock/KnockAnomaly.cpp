@@ -1,9 +1,6 @@
 ﻿#include "Night/Anomaly/Knock/KnockAnomaly.h"
 #include "Night/Anomaly/Knock/KnockDoorActor.h"
-#include "Night/Anomaly/UI/AnomalyNoticeWidget.h"
-#include "Core/Reputation/HotelReputationSubsystem.h"
 #include "CCTV/CCTVMonitor.h"
-#include "Phone/HotelPhoneActor.h"
 #include "Rooms/RoomActor.h"
 #include "Components/SceneComponent.h"
 #include "TimerManager.h"
@@ -61,14 +58,7 @@ bool AKnockAnomaly::StartAnomaly()
 		const FText Message = FText::FormatNamed(ComplaintMessages[ComplaintIndex], TEXT("Room"), RoomText);
 		ComplaintIndex = (ComplaintIndex + 1) % ComplaintMessages.Num();
 
-		if (Phone)
-		{
-			Phone->StartRinging(Message);
-		}
-		else
-		{
-			UAnomalyNoticeWidget::Show(this, Message, 5.0f);
-		}
+		RaiseComplaint(Message);
 	}
 	return true;
 }
@@ -102,33 +92,22 @@ void AKnockAnomaly::HandleHorseshoePlaced(AKnockDoorActor* Door)
 	{
 		return;
 	}
-	if (Phone && !Door->CanOpen())
-	{
-		Phone->StopRinging();
-	}
 	ClearActiveDoor();
 	Resolve();
 }
 
 bool AKnockAnomaly::Fail()
 {
-	const bool bUnsolved = ActiveDoor != nullptr;
-	if (Phone && ActiveDoor && !ActiveDoor->CanOpen())
-	{
-		Phone->StopRinging();
-	}
+	const bool bUnsolvedWithoutComplaint = ActiveDoor != nullptr && !HasComplaint();
 	ClearActiveDoor();
 
 	if (!Super::Fail())
 	{
 		return false;
 	}
-	if (bUnsolved)
+	if (bUnsolvedWithoutComplaint)
 	{
-		if (UHotelReputationSubsystem* Reputation = GetWorld()->GetSubsystem<UHotelReputationSubsystem>())
-		{
-			Reputation->AddReputation(EReputationReason::Complaint);
-		}
+		ApplyComplaintPenalty();
 	}
 	return true;
 }
