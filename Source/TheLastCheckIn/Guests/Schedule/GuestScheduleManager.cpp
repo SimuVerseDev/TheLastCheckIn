@@ -1,4 +1,5 @@
 ﻿#include "Guests/Schedule/GuestScheduleManager.h"
+#include "TheLastCheckIn.h"
 
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
@@ -59,7 +60,7 @@ void AGuestScheduleManager::BeginPlay()
         SpawnPoints, CounterTarget.Get(), GuestTypeRow, MaxSize);
     if (bArrivalsDisabled)
     {
-        UE_LOG(LogTemp, Error, TEXT("GuestSchedule: Arrivals disabled due to configuration errors. Fix the settings and restart play."));
+        UE_LOG(LogGuests, Error, TEXT("GuestSchedule: Arrivals disabled due to configuration errors. Fix the settings and restart play."));
     }
 }
 
@@ -251,7 +252,7 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
         if (Result == EGuestAcquireResult::InvalidConfiguration)
         {
             bArrivalsDisabled = true;
-            UE_LOG(LogTemp, Error, TEXT("GuestSchedule: Arrivals disabled; see GuestPool configuration error above."));
+            UE_LOG(LogGuests, Error, TEXT("GuestSchedule: Arrivals disabled; see GuestPool configuration error above."));
             return;
         }
 

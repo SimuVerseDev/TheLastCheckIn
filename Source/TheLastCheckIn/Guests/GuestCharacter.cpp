@@ -1,4 +1,5 @@
 ﻿#include "GuestCharacter.h"
+#include "TheLastCheckIn.h"
 #include "GuestAIController.h"
 #include "Data/GuestDataTypes.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -353,7 +354,7 @@ void AGuestCharacter::AbortVisitAndReturnToPool()
 		return;
 	}
 
-	UE_LOG(LogTemp, Error, TEXT("Guest %s: Pool return failed during visit cancellation; deactivating."), *GetName());
+	UE_LOG(LogGuests, Error, TEXT("Guest %s: Pool return failed during visit cancellation; deactivating."), *GetName());
 	DeactivateToPool();
 }
 

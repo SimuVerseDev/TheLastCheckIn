@@ -1,4 +1,5 @@
 #include "Night/Anomaly/AnomalyManagerSubsystem.h"
+#include "TheLastCheckIn.h"
 #include "Night/Anomaly/AnomalyBase.h"
 #include "Night/Settlement/DailySettlementSubsystem.h"
 #include "Night/Anomaly/AnomalyNightPlan.h"
@@ -298,7 +299,7 @@ void UAnomalyManagerSubsystem::HandleDayStarted(int32 Day)
 		AAnomalyBase* Anomaly = FindAnomaly(Id);
 		if (!Anomaly || !Anomaly->bAutoSchedule)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[NightPlan] Day %d: '%s' 이상현상을 찾을 수 없음"), Day, *Id.ToString());
+			UE_LOG(LogAnomaly, Warning, TEXT("[NightPlan] Day %d: '%s' 이상현상을 찾을 수 없음"), Day, *Id.ToString());
 			continue;
 		}
 		PlanStart(Anomaly, Day);
@@ -308,7 +309,7 @@ void UAnomalyManagerSubsystem::HandleDayStarted(int32 Day)
 		}
 		LastNightIds.Add(Id);
 	}
-	UE_LOG(LogTemp, Log, TEXT("[NightPlan] Day %d: %s"), Day, *FString::JoinBy(Tonight, TEXT(", "), [](const FName& N) { return N.ToString(); }));
+	UE_LOG(LogAnomaly, Log, TEXT("[NightPlan] Day %d: %s"), Day, *FString::JoinBy(Tonight, TEXT(", "), [](const FName& N) { return N.ToString(); }));
 }
 
 /*
@@ -330,7 +331,7 @@ const FAnomalyNightPlan* UAnomalyManagerSubsystem::FindPlanRow(int32 Day, TSet<F
 	const UDataTable* Table = UHotelPhaseSettings::Get()->AnomalyNightPlanTable.LoadSynchronous();
 	if (!Table)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[NightPlan] AnomalyNightPlanTable이 설정되지 않음 (Project Settings > Hotel Phase)"));
+		UE_LOG(LogAnomaly, Warning, TEXT("[NightPlan] AnomalyNightPlanTable이 설정되지 않음 (Project Settings > Hotel Phase)"));
 		return nullptr;
 	}
 	const FAnomalyNightPlan* Best = nullptr;
@@ -382,7 +383,7 @@ void UAnomalyManagerSubsystem::HandleStartFailed(AAnomalyBase* Anomaly, double C
 	{
 		if (!PlanStart(Anomaly, PlanDay, CurrentSeconds + RetryDelay))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[NightPlan] '%s' 오늘 밤 시작 실패 (시간 초과)"), *Anomaly->AnomalyId.ToString());
+			UE_LOG(LogAnomaly, Warning, TEXT("[NightPlan] '%s' 오늘 밤 시작 실패 (시간 초과)"), *Anomaly->AnomalyId.ToString());
 		}
 		return;
 	}

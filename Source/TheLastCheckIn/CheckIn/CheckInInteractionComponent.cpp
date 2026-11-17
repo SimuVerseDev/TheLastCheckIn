@@ -1,4 +1,5 @@
 ﻿#include "CheckInInteractionComponent.h"
+#include "TheLastCheckIn.h"
 #include "Core/UI/UILayers.h"
 #include "CheckInCounter.h"
 #include "Blueprint/UserWidget.h"
@@ -257,7 +258,7 @@ bool UCheckInInteractionComponent::OpenCheckIn()
     if (!IsValid(CheckInWidget))
     {
         UE_LOG(
-            LogTemp,
+            LogCheckIn,
             Warning,
             TEXT("CheckIn: Failed to create the sidebar widget."));
 
@@ -406,7 +407,7 @@ bool UCheckInInteractionComponent::TryAssignRoomNumber(int32 RoomNumber)
     else
     {
         UE_LOG(
-            LogTemp,
+            LogCheckIn,
             Warning,
             TEXT("CheckIn: Failed to assign room %d."),
             RoomNumber);

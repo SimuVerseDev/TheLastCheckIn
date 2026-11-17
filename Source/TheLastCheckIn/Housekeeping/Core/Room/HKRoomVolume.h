@@ -2,7 +2,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "HKRoomVolume.generated.h"
-class AHKRoomVolume;
+class THELASTCHECKIN_API AHKRoomVolume;
 class AHKTrashActor;
 class AHKStainActor;
 class ARoomActor;
@@ -13,7 +13,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHKOnCleanlinessChanged, AHKRoomVol
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnRoomCleaned, AHKRoomVolume*, Room);
 
 UCLASS()
-class AHKRoomVolume : public AActor
+class THELASTCHECKIN_API AHKRoomVolume : public AActor
 {
 	GENERATED_BODY()
 

@@ -9,7 +9,7 @@ class UHKWipeToolComponent;
 class UPrimitiveComponent;
 
 UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
-class UHKWipeComponent : public UActorComponent, public IInteractionExtension
+class THELASTCHECKIN_API UHKWipeComponent : public UActorComponent, public IInteractionExtension
 {
 	GENERATED_BODY()
 

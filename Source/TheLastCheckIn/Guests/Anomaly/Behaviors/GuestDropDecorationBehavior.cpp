@@ -1,4 +1,5 @@
 ﻿#include "Guests/Anomaly/Behaviors/GuestDropDecorationBehavior.h"
+#include "TheLastCheckIn.h"
 
 #include "Guests/Anomaly/GuestAnomalyDefinition.h"
 #include "Guests/Anomaly/Props/ThrowableDecoration.h"
@@ -171,7 +172,7 @@ void UGuestDropDecorationBehavior::HandleMoveTimeout()
     }
 
     UE_LOG(
-        LogTemp,
+        LogGuests,
         Warning,
         TEXT("DropDecoration movement timed out: %s"),
         *GetNameSafe(Guest.Get()));
@@ -385,7 +386,7 @@ bool UGuestDropDecorationBehavior::CanHandlePropEvent() const
 void UGuestDropDecorationBehavior::CancelPropAction(const TCHAR* Reason)
 {
     UE_LOG(
-        LogTemp,
+        LogGuests,
         Warning,
         TEXT("DropDecoration cancelled: %s / Guest=%s"),
         Reason,

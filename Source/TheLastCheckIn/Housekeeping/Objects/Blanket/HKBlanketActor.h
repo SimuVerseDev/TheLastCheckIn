@@ -8,7 +8,7 @@ class UMaterialInterface;
 struct FCollisionObjectQueryParams;
 struct FCollisionQueryParams;
 UCLASS()
-class AHKBlanketActor : public AActor, public IInteractable
+class THELASTCHECKIN_API AHKBlanketActor : public AActor, public IInteractable
 {
 	GENERATED_BODY()
 public:

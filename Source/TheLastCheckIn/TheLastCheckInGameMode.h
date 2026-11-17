@@ -10,7 +10,7 @@
  *  Simple GameMode for a first person game
  */
 UCLASS(abstract)
-class ATheLastCheckInGameMode : public AGameModeBase
+class THELASTCHECKIN_API ATheLastCheckInGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
 

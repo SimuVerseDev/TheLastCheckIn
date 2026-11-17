@@ -1,4 +1,5 @@
 ﻿#include "Guests/Anomaly/GuestAnomaly.h"
+#include "TheLastCheckIn.h"
 
 #include "Guests/Anomaly/GuestAnomalyComponent.h"
 #include "Guests/Anomaly/GuestAnomalyDefinition.h"
@@ -64,7 +65,7 @@ void AGuestAnomaly::BeginPlay()
             Manager->FindAnomaly(AnomalyId) != this)
         {
             UE_LOG(
-                LogTemp,
+                LogGuests,
                 Warning,
                 TEXT("Guest anomaly needs a unique AnomalyId: %s"),
                 *GetName());
@@ -74,7 +75,7 @@ void AGuestAnomaly::BeginPlay()
     if (bAutomaticStart && bAutoSchedule)
     {
         UE_LOG(
-            LogTemp,
+            LogGuests,
             Warning,
             TEXT("Guest anomaly has both bAutomaticStart and bAutoSchedule enabled; it can be started by itself and by the anomaly manager: %s"),
             *GetName());
@@ -358,7 +359,7 @@ bool AGuestAnomaly::TryAddParticipant()
             QueueEvaluation();
 
             UE_LOG(
-                LogTemp,
+                LogGuests,
                 Log,
                 TEXT("Guest anomaly participant added: %s, total=%d"),
                 *GetNameSafe(Component->GetOwner()),

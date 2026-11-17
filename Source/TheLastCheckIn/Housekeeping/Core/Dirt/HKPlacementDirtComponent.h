@@ -7,7 +7,7 @@
 흐트러진 가구 - 원래 위치 대비 거리·회전 오차로 오염도 계산
 */
 UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
-class UHKPlacementDirtComponent : public UHKDirtComponent
+class THELASTCHECKIN_API UHKPlacementDirtComponent : public UHKDirtComponent
 {
 	GENERATED_BODY()
 

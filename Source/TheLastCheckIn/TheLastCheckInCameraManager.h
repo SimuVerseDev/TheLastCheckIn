@@ -11,7 +11,7 @@
  *  Limits min/max look pitch.
  */
 UCLASS()
-class ATheLastCheckInCameraManager : public APlayerCameraManager
+class THELASTCHECKIN_API ATheLastCheckInCameraManager : public APlayerCameraManager
 {
 	GENERATED_BODY()
 	

@@ -12,7 +12,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnPickedUp, UPrimitiveComponent*,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHKOnReleased, UPrimitiveComponent*, Component, bool, bThrown);
 
 UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
-class UHKCarryComponent : public UActorComponent, public IInteractionExtension
+class THELASTCHECKIN_API UHKCarryComponent : public UActorComponent, public IInteractionExtension
 {
 	GENERATED_BODY()
 

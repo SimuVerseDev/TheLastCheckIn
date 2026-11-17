@@ -1,4 +1,5 @@
 ﻿#include "Combat/CrowbarCombatComponent.h"
+#include "TheLastCheckIn.h"
 
 #include "Combat/CrowbarActor.h"
 #include "TheLastCheckInCharacter.h"
@@ -85,7 +86,7 @@ bool UCrowbarCombatComponent::TryEquip(ACrowbarActor* Crowbar)
         !HandMesh->DoesSocketExist(Crowbar->AttachSocket))
     {
         UE_LOG(
-            LogTemp,
+            LogCombat,
             Warning,
             TEXT("Crowbar socket not found: %s"),
             *Crowbar->AttachSocket.ToString());
