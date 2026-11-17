@@ -55,6 +55,13 @@ private:
 	
 	const FAnomalyNightPlan* FindPlanRow(int32 Day, TSet<FName>&OutLearned) const;
 	
-	void PlanStart(AAnomalyBase* Anomaly, int32 Day);
+
+	bool PlanStart(AAnomalyBase* Anomaly, int32 Day, double NotBefore = 0.0);
+	void HandleStartFailed(AAnomalyBase* Anomaly, double CurrentSeconds);
+
+	int32 PlanDay = 0;
+	TSet<TWeakObjectPtr<AAnomalyBase>> FixedTonight;
+	TArray<FName> SpareIds;
+	
 	TSet<FName> LastNightIds;
 };

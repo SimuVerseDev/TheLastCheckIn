@@ -158,7 +158,10 @@ void UAnomalyManagerSubsystem::HandleTimeAdvanced(double PreviousSeconds, double
 	}
 	for (AAnomalyBase* Anomaly : ToStart)
 	{
-		Anomaly->StartAnomaly();
+		if (!Anomaly->StartAnomaly())
+		{
+			HandleStartFailed(Anomaly, CurrentSeconds);
+		}
 	}
 
 	/*
@@ -219,6 +222,9 @@ void UAnomalyManagerSubsystem::FailRunningAnomalies()
 void UAnomalyManagerSubsystem::HandleDayStarted(int32 Day)
 {
 	PlannedStartSeconds.Reset();
+	PlanDay = Day;
+	FixedTonight.Reset();
+	SpareIds.Reset();
 
 	TSet<FName> Learned;
 	const FAnomalyNightPlan* Plan = FindPlanRow(Day, Learned);
@@ -267,6 +273,10 @@ void UAnomalyManagerSubsystem::HandleDayStarted(int32 Day)
 	{
 		Tonight.Add(Fresh[i]);
 	}
+	for (int32 i = Extra; i < Fresh.Num(); ++i) // 안 뽑힌 나머지 = 대체 후보
+	{
+		SpareIds.Add(Fresh[i]);
+	}
 
 	/*
 	예약
@@ -281,6 +291,10 @@ void UAnomalyManagerSubsystem::HandleDayStarted(int32 Day)
 			continue;
 		}
 		PlanStart(Anomaly, Day);
+		if (Plan->Fixed.Contains(Id))
+		{
+			FixedTonight.Add(Anomaly);
+		}
 		LastNightIds.Add(Id);
 	}
 	UE_LOG(LogTemp, Log, TEXT("[NightPlan] Day %d: %s"), Day, *FString::JoinBy(Tonight, TEXT(", "), [](const FName& N) { return N.ToString(); }));
@@ -334,13 +348,48 @@ const FAnomalyNightPlan* UAnomalyManagerSubsystem::FindPlanRow(int32 Day, TSet<F
 	return Best;
 }
 
-void UAnomalyManagerSubsystem::PlanStart(AAnomalyBase* Anomaly, int32 Day)
+bool UAnomalyManagerSubsystem::PlanStart(AAnomalyBase* Anomaly, int32 Day, double NotBefore)
 {
-	const double Earliest = GetNightSeconds(Day, Anomaly->EarliestStartHour); // 22
-	const double Latest = GetNightSeconds(Day, Anomaly->LatestStartHour); // 4
+	const double Earliest = FMath::Max(GetNightSeconds(Day, Anomaly->EarliestStartHour), NotBefore);
+	const double Latest = GetNightSeconds(Day, Anomaly->LatestStartHour);
 	if (Latest < Earliest)
 	{
+		return false;
+	}
+	PlannedStartSeconds.Add(Anomaly, FMath::FRandRange(Earliest, Latest));
+	return true;
+}
+
+void UAnomalyManagerSubsystem::HandleStartFailed(AAnomalyBase* Anomaly, double CurrentSeconds)
+{
+	constexpr double RetryDelay = 3600.0; // 1 게임시간
+
+	/*
+	고정: 1시간 뒤 다시 시도
+	*/
+	if (FixedTonight.Contains(Anomaly))
+	{
+		if (!PlanStart(Anomaly, PlanDay, CurrentSeconds + RetryDelay))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[NightPlan] '%s' 오늘 밤 시작 실패 (시간 초과)"), *Anomaly->AnomalyId.ToString());
+		}
 		return;
 	}
-	PlannedStartSeconds.Add(Anomaly, FMath::FRandRange(Earliest, Latest)); 
+
+	/*
+	복습: 남은 후보로 대체 (어제 안 나온 것부터)
+	*/
+	LastNightIds.Remove(Anomaly->AnomalyId);
+	while (!SpareIds.IsEmpty())
+	{
+		const FName Id = SpareIds[0];
+		SpareIds.RemoveAt(0);
+
+		AAnomalyBase* Spare = FindAnomaly(Id);
+		if (Spare && Spare->bAutoSchedule && !Spare->IsRunning() && PlanStart(Spare, PlanDay, CurrentSeconds))
+		{
+			LastNightIds.Add(Id);
+			return;
+		}
+	}
 }
