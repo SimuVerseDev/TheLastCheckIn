@@ -161,6 +161,13 @@ void UAnomalyManagerSubsystem::HandleTimeAdvanced(double PreviousSeconds, double
 	}
 	for (AAnomalyBase* Anomaly : ToStart)
 	{
+		/*
+		bool bStarted = Anomaly->StartAnomaly();
+		if (!bStarted)
+		{
+			HandleStartFailed(Anomaly, CurrentSeconds);
+		}
+		*/
 		if (!Anomaly->StartAnomaly())
 		{
 			HandleStartFailed(Anomaly, CurrentSeconds);
