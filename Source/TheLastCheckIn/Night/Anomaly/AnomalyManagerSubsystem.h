@@ -11,6 +11,8 @@ class UGameClockSubsystem;
 class UHotelPhaseSubsystem;
 class UDailySettlementSubsystem;
 
+struct FAnomalyNightPlan;
+
 UCLASS()
 class THELASTCHECKIN_API UAnomalyManagerSubsystem : public UWorldSubsystem
 {
@@ -50,4 +52,9 @@ private:
 	UPROPERTY() TObjectPtr<UDailySettlementSubsystem> Settlement;
 	UPROPERTY() TArray<TWeakObjectPtr<AAnomalyBase>> Anomalies;
 	TMap<TWeakObjectPtr<AAnomalyBase>, double> StartSeconds;
+	
+	const FAnomalyNightPlan* FindPlanRow(int32 Day, TSet<FName>&OutLearned) const;
+	
+	void PlanStart(AAnomalyBase* Anomaly, int32 Day);
+	TSet<FName> LastNightIds;
 };

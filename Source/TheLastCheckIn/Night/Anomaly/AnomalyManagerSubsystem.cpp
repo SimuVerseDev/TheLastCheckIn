@@ -1,6 +1,8 @@
 #include "Night/Anomaly/AnomalyManagerSubsystem.h"
 #include "Night/Anomaly/AnomalyBase.h"
 #include "Night/Settlement/DailySettlementSubsystem.h"
+#include "Night/Anomaly/AnomalyNightPlan.h"
+#include "Engine/DataTable.h"
 #include "Core/GameFlow/HotelPhaseSubsystem.h"
 #include "Core/GameFlow/HotelPhaseSettings.h"
 #include "Night/Anomaly/UI/AnomalyNoticeWidget.h"
@@ -246,4 +248,52 @@ double UAnomalyManagerSubsystem::GetNightSeconds(int32 Day, int32 Hour) const
 	const int32 DayStartHour = UHotelPhaseSettings::Get()->DayStartHour;
 	const int32 AdjustedHour = Hour < DayStartHour ? Hour + 24 : Hour;
 	return (Day - 1) * 86400.0 + AdjustedHour * 3600.0;
+}
+
+const FAnomalyNightPlan* UAnomalyManagerSubsystem::FindPlanRow(int32 Day, TSet<FName>& OutLearned) const
+{
+	OutLearned.Reset();
+	/*
+	DataTable 동기로드
+	*/
+	const UDataTable* Table = UHotelPhaseSettings::Get()->AnomalyNightPlanTable.LoadSynchronous();
+	if (!Table)
+	{
+		return nullptr;
+	}
+	const FAnomalyNightPlan* Best = nullptr;
+	int32 BestDay = 0;
+	
+	/*
+	DT 순회
+	*/
+	for (const TPair<FName, uint8*>& Pair : Table->GetRowMap())
+	{
+		int32 RowDay = 0;
+		if (!LexTryParseString(RowDay, *Pair.Key.ToString()) || RowDay > Day)
+		{
+			continue;
+		}
+		
+		const FAnomalyNightPlan* Row = reinterpret_cast<const FAnomalyNightPlan*>(Pair.Value);
+		
+		OutLearned.Append(Row->Fixed);
+		if (RowDay > BestDay)
+		{
+			BestDay = RowDay;
+			Best = Row;
+		}
+	}
+	return Best;
+}
+
+void UAnomalyManagerSubsystem::PlanStart(AAnomalyBase* Anomaly, int32 Day)
+{
+	const double Earliest = GetNightSeconds(Day, Anomaly->EarliestStartHour); // 22
+	const double Latest = GetNightSeconds(Day, Anomaly->LatestStartHour); // 4
+	if (Latest < Earliest)
+	{
+		return;
+	}
+	PlannedStartSeconds.Add(Anomaly, Day);
 }
