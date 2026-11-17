@@ -71,5 +71,5 @@ private:
 	FTimerHandle MoveTimeoutHandle;
 
 	static constexpr float AcceptanceRadius = 20.0f;
-	static constexpr float MoveTimeoutSeconds = 30.0f;
+	static constexpr float MoveTimeoutSeconds = 200.0f;
 };
