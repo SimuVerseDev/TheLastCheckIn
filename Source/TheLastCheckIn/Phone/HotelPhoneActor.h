@@ -29,6 +29,9 @@ public:
 		return bRinging;
 	}
 
+	void StartRingingFor(const UObject* InRequester, const FText& InSubtitle);
+	void StopRingingFor(const UObject* InRequester);
+
 	/*
 	Interactable
 	*/
@@ -73,5 +76,6 @@ private:
 	TObjectPtr<UPhoneSubtitleWidget> SubtitleWidget;
 	
 	FText PendingSubtitle;
+	TWeakObjectPtr<const UObject> RingRequester;
 	bool bRinging = false;
 };

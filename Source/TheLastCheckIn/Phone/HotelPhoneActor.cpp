@@ -24,6 +24,7 @@ AHotelPhoneActor::AHotelPhoneActor()
 
 void AHotelPhoneActor::StartRinging(const FText& InSubtitle)
 {
+	RingRequester.Reset();
 	PendingSubtitle = InSubtitle;
 	bRinging = true;
 	if (RingSound)
@@ -35,8 +36,23 @@ void AHotelPhoneActor::StartRinging(const FText& InSubtitle)
 
 void AHotelPhoneActor::StopRinging()
 {
+	RingRequester.Reset();
 	bRinging = false;
 	RingAudio->Stop();
+}
+
+void AHotelPhoneActor::StartRingingFor(const UObject* InRequester, const FText& InSubtitle)
+{
+	StartRinging(InSubtitle);
+	RingRequester = InRequester;
+}
+
+void AHotelPhoneActor::StopRingingFor(const UObject* InRequester)
+{
+	if (bRinging && InRequester && RingRequester.Get() == InRequester)
+	{
+		StopRinging();
+	}
 }
 
 bool AHotelPhoneActor::CanInteract_Implementation(AActor* Interactor) const

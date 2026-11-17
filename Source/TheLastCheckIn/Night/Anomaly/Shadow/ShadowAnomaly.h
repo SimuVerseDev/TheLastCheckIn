@@ -6,7 +6,6 @@
 
 class AShadowFigureActor;
 class ARoomActor;
-class AHotelPhoneActor;
 
 USTRUCT(BlueprintType)
 struct FShadowDoorFigure
@@ -63,8 +62,6 @@ protected:
 	*/
 	UPROPERTY(EditAnywhere, Category="Night|Shadow")
 	FText ComplaintMessage;
-	UPROPERTY(EditInstanceOnly, Category="Night|Shadow")
-	TObjectPtr<AHotelPhoneActor> Phone;
 
 private:
 	UFUNCTION()

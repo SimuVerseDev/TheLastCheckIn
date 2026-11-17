@@ -1,10 +1,7 @@
 ﻿#include "Night/Anomaly/Shadow/ShadowAnomaly.h"
 #include "Night/Anomaly/Shadow/ShadowFigureActor.h"
-#include "Night/Anomaly/UI/AnomalyNoticeWidget.h"
-#include "Core/Reputation/HotelReputationSubsystem.h"
 #include "Core/Time/GameClockSubsystem.h"
 #include "Core/Time/GameTimeMath.h"
-#include "Phone/HotelPhoneActor.h"
 #include "Rooms/RoomActor.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
@@ -154,15 +151,7 @@ bool AShadowAnomaly::Escalate()
 	ComplaintFigure = Picked->Figure;
 
 	const FText RoomText = FText::AsNumber(Picked->Room->GetRoomNumber(), &FNumberFormattingOptions::DefaultNoGrouping());
-	const FText Complaint = FText::FormatNamed(ComplaintMessage, TEXT("Room"), RoomText);
-	if (Phone)
-	{
-		Phone->StartRinging(Complaint);
-	}
-	else
-	{
-		UAnomalyNoticeWidget::Show(this, Complaint, 5.0f);
-	}
+	RaiseComplaint(FText::FormatNamed(ComplaintMessage, TEXT("Room"), RoomText));
 	return true;
 }
 
@@ -171,22 +160,9 @@ bool AShadowAnomaly::Escalate()
 */
 bool AShadowAnomaly::Fail()
 {
-	if (Phone)
-	{
-		Phone->StopRinging();
-	}
-	
-	const bool bComplaintLeft = ComplaintFigure && ActiveFigures.Contains(ComplaintFigure);
 	if (!Super::Fail())
 	{
 		return false;
-	}
-	if (bComplaintLeft)
-	{
-		if (UHotelReputationSubsystem* Reputation = GetWorld()->GetSubsystem<UHotelReputationSubsystem>())
-		{
-			Reputation->AddReputation(EReputationReason::Complaint);
-		}
 	}
 	HideAllFigures();
 	PendingReveals.Reset();
@@ -201,6 +177,7 @@ void AShadowAnomaly::HandleFigureAbsorbed(AShadowFigureActor* Figure)
 	if (Figure == ComplaintFigure)
 	{
 		ComplaintFigure = nullptr;
+		ClearComplaint();
 	}
 	TryResolve();
 }

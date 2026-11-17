@@ -1,7 +1,5 @@
 #include "Night/Anomaly/Bell/BellAnomaly.h"
 #include "Night/Anomaly/Bell/BellActor.h"
-#include "Core/Reputation/HotelReputationSubsystem.h"
-#include "Phone/HotelPhoneActor.h"
 #include "Rooms/RoomActor.h"
 #include "Rooms/RoomQuery.h"
 #include "Components/SceneComponent.h"
@@ -42,12 +40,6 @@ void ABellAnomaly::BeginPlay()
 		{
 			Bell->OnBroken.AddUniqueDynamic(this, &ThisClass::HandleBellBroken);
 		}
-	}
-
-	if (!Phone)
-	{
-		TActorIterator<AHotelPhoneActor> It(GetWorld());
-		Phone = It ? *It : nullptr;
 	}
 }
 
@@ -99,11 +91,7 @@ bool ABellAnomaly::Escalate()
 
 	const ARoomActor* Caller = Occupied[FMath::RandRange(0, Occupied.Num() - 1)];
 	const FText RoomText = FText::AsNumber(Caller->GetRoomNumber(), &FNumberFormattingOptions::DefaultNoGrouping());
-	const FText Complaint = FText::FormatNamed(ComplaintMessage, TEXT("Room"), RoomText);
-	if (Phone)
-	{
-		Phone->StartRinging(Complaint);
-	}
+	RaiseComplaint(FText::FormatNamed(ComplaintMessage, TEXT("Room"), RoomText));
 	return true;
 }
 
@@ -112,7 +100,6 @@ bool ABellAnomaly::Escalate()
 */
 bool ABellAnomaly::Fail()
 {
-	const bool bComplained = GetState() == EAnomalyState::Escalated;
 	if (!Super::Fail())
 	{
 		return false;
@@ -121,17 +108,6 @@ bool ABellAnomaly::Fail()
 	{
 		RingingBell->StopRinging();
 		RingingBell = nullptr;
-	}
-	if (bComplained)
-	{
-		if (Phone)
-		{
-			Phone->StopRinging();
-		}
-		if (UHotelReputationSubsystem* Reputation = GetWorld()->GetSubsystem<UHotelReputationSubsystem>())
-		{
-			Reputation->AddReputation(EReputationReason::Complaint);
-		}
 	}
 	return true;
 }
