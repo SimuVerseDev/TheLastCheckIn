@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
+#include "Engine/DataTable.h"
 #include "HotelPhaseSettings.generated.h"
 
 UCLASS(Config = Game, DefaultConfig, meta = (DisplayName = "Hotel Phase"))
@@ -32,8 +33,7 @@ public:
 	
 	UPROPERTY(Config, EditAnywhere, Category = "Days", meta = (ClampMin = "1"))
 	int32 MaxDays = 10;
-
-	// 낮 이상현상이 처음 허용되는 날
+	
 	UPROPERTY(Config, EditAnywhere, Category = "Days", meta = (ClampMin = "1"))
 	int32 FirstAnomalyDay = 2;
 	
@@ -55,4 +55,7 @@ public:
 	int32 CheckInStartHour = 14;
 	UPROPERTY(Config, EditAnywhere, Category = "Day Slot Hours", meta = (ClampMin = "0", ClampMax = "23"))
 	int32 EveningStartHour = 18;
+	
+	UPROPERTY(Config, EditAnywhere, Category = "Days", meta = (RequiredAssetDataTags = "RowStructure=/Script/TheLastCheckIn.AnomalyNightPlan"))
+	TSoftObjectPtr<UDataTable> AnomalyNightPlanTable;
 };
