@@ -1,16 +1,17 @@
 ﻿#include "CheckInInteractionComponent.h"
+#include "Core/UI/UILayers.h"
 #include "CheckInCounter.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/PrimitiveComponent.h"
 #include "InputCoreTypes.h"
 #include "Engine/World.h"
-#include "EngineUtils.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "Guests/GuestCharacter.h"
 #include "Guests/Party/GuestParty.h"
 #include "Rooms/RoomActor.h"
+#include "Rooms/RoomQuery.h"
 #include "Housekeeping/Core/Carry/HKCarryComponent.h"
 #include "TimerManager.h"
 
@@ -270,7 +271,7 @@ bool UCheckInInteractionComponent::OpenCheckIn()
     bPreviousMouseCursor =
         LocalController->bShowMouseCursor;
 
-    CheckInWidget->AddToViewport(20);
+    CheckInWidget->AddToViewport(UILayer::CheckIn);
 
     LocalController->bShowMouseCursor = true;
     LocalController->SetIgnoreMoveInput(true);
@@ -321,32 +322,7 @@ void UCheckInInteractionComponent::CloseCheckIn()
 
 ARoomActor* UCheckInInteractionComponent::FindUniqueRoom(int32 RoomNumber) const
 {
-    if (!GetWorld())
-    {
-        return nullptr;
-    }
-
-    ARoomActor* FoundRoom = nullptr;
-
-    for (TActorIterator<ARoomActor> It(GetWorld()); It; ++It)
-    {
-        ARoomActor* Room = *It;
-
-        if (!IsValid(Room)
-            || Room->GetRoomNumber() != RoomNumber)
-        {
-            continue;
-        }
-        
-        if (FoundRoom)
-        {
-            return nullptr;
-        }
-
-        FoundRoom = Room;
-    }
-
-    return FoundRoom;
+    return RoomQuery::FindRoom(GetWorld(), RoomNumber);
 }
 
 void UCheckInInteractionComponent::GetRoomStatus(

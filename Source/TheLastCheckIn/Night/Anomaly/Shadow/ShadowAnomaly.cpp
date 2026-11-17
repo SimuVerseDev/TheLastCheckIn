@@ -3,17 +3,11 @@
 #include "Night/Anomaly/UI/AnomalyNoticeWidget.h"
 #include "Core/Reputation/HotelReputationSubsystem.h"
 #include "Core/Time/GameClockSubsystem.h"
+#include "Core/Time/GameTimeMath.h"
 #include "Phone/HotelPhoneActor.h"
 #include "Rooms/RoomActor.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
-
-// 유니티 빌드에서 다른 cpp의 익명 네임스페이스 상수와 겹치지 않도록 이름 분리
-namespace ShadowAnomalyTime
-{
-	constexpr double SecondsPerHour = 3600.0;
-	constexpr double SecondsPerDay = 86400.0;
-}
 
 AShadowAnomaly::AShadowAnomaly()
 {
@@ -88,11 +82,11 @@ bool AShadowAnomaly::StartAnomaly()
 	지금부터 RevealUntilHour(다음 날 새벽)까지 남은 시간
 	*/
 	const double Now = Clock->GetTotalGameSeconds();
-	const double TimeOfDay = FMath::Fmod(Now, ShadowAnomalyTime::SecondsPerDay);
-	double Until = RevealUntilHour * ShadowAnomalyTime::SecondsPerHour;
+	const double TimeOfDay = GameTime::GetSecondsOfDay(Now);
+	double Until = GameTime::HoursToSeconds(RevealUntilHour);
 	if (Until <= TimeOfDay)
 	{
-		Until += ShadowAnomalyTime::SecondsPerDay;
+		Until += GameTime::SecondsPerDay;
 	}
 	const double Window = Until - TimeOfDay;
 

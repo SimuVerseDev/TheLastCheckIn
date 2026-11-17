@@ -1,4 +1,5 @@
 #include "Night/NightFlowComponent.h"
+#include "Core/UI/UILayers.h"
 #include "Night/NightBedActor.h"
 #include "Night/Settlement/DailySettlementSubsystem.h"
 #include "Night/Settlement/SettlementWidget.h"
@@ -117,7 +118,7 @@ void UNightFlowComponent::SetSleepPromptVisible(bool bVisible)
 	if (bVisible && !SleepPromptWidget)
 	{
 		SleepPromptWidget = CreateWidget<UNightSleepPromptWidget>(GetPlayerController());
-		if (SleepPromptWidget) SleepPromptWidget->AddToPlayerScreen(100);
+		if (SleepPromptWidget) SleepPromptWidget->AddToPlayerScreen(UILayer::SleepPrompt);
 	}
 	if (SleepPromptWidget)
 	{
@@ -146,7 +147,7 @@ bool UNightFlowComponent::RequestSleep()
 	if (!BlackoutWidget) return false;
 	bBlackout = true;
 	LockInput();
-	BlackoutWidget->AddToPlayerScreen(10000);
+	BlackoutWidget->AddToPlayerScreen(UILayer::Blackout);
 	// Only input is blocked. Game time continues throughout the blackout.
 	GetWorld()->GetTimerManager().SetTimer(BlackoutTimer, this, &ThisClass::FinishBlackout,
 		FMath::Max(0.01f, BlackoutSeconds), false);
@@ -204,7 +205,7 @@ void UNightFlowComponent::ShowSettlement()
 	LockInput();
 	SettlementWidget->SetResult(Settlement->GetLastResult(), Phase->GetCurrentDay() >= UHotelPhaseSettings::Get()->MaxDays);
 	SettlementWidget->OnConfirmed.AddUObject(this, &ThisClass::ConfirmSettlement);
-	SettlementWidget->AddToPlayerScreen(10001);
+	SettlementWidget->AddToPlayerScreen(UILayer::Settlement);
 	if (BlackoutWidget) BlackoutWidget->RemoveFromParent();
 	BlackoutWidget = nullptr;
 	FInputModeUIOnly Mode;

@@ -7,6 +7,7 @@
 #include "Core/GameFlow/HotelPhaseSettings.h"
 #include "Night/Anomaly/UI/AnomalyNoticeWidget.h"
 #include "Core/Time/GameClockSubsystem.h"
+#include "Core/Time/GameTimeMath.h"
 #include "EngineUtils.h"
 
 void UAnomalyManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -186,7 +187,7 @@ void UAnomalyManagerSubsystem::HandleTimeAdvanced(double PreviousSeconds, double
 			It.RemoveCurrent();
 			continue;
 		}
-		if (CurrentSeconds - It.Value() >= Anomaly->EscalateAfterMinutes * 60.0)
+		if (CurrentSeconds - It.Value() >= GameTime::MinutesToSeconds(Anomaly->EscalateAfterMinutes))
 		{
 			ToEscalate.Add(Anomaly);
 		}
@@ -317,7 +318,7 @@ double UAnomalyManagerSubsystem::GetNightSeconds(int32 Day, int32 Hour) const
 {
 	const int32 DayStartHour = UHotelPhaseSettings::Get()->DayStartHour;
 	const int32 AdjustedHour = Hour < DayStartHour ? Hour + 24 : Hour;
-	return (Day - 1) * 86400.0 + AdjustedHour * 3600.0;
+	return GameTime::GetDayStartSeconds(Day - 1) + GameTime::HoursToSeconds(AdjustedHour);
 }
 
 const FAnomalyNightPlan* UAnomalyManagerSubsystem::FindPlanRow(int32 Day, TSet<FName>& OutLearned) const
@@ -372,7 +373,7 @@ bool UAnomalyManagerSubsystem::PlanStart(AAnomalyBase* Anomaly, int32 Day, doubl
 
 void UAnomalyManagerSubsystem::HandleStartFailed(AAnomalyBase* Anomaly, double CurrentSeconds)
 {
-	constexpr double RetryDelay = 3600.0; // 1 게임시간
+	constexpr double RetryDelay = GameTime::SecondsPerHour; // 1 게임시간
 
 	/*
 	고정: 1시간 뒤 다시 시도

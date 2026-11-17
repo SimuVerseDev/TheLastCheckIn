@@ -3,6 +3,7 @@
 #include "Core/Reputation/HotelReputationSubsystem.h"
 #include "Phone/HotelPhoneActor.h"
 #include "Rooms/RoomActor.h"
+#include "Rooms/RoomQuery.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -81,12 +82,14 @@ bool ABellAnomaly::Escalate()
 	}
 
 	const int32 Floor = RingingBell->GetFloor();
+	TArray<ARoomActor*> Rooms;
+	RoomQuery::GetRooms(GetWorld(), Rooms);
 	TArray<ARoomActor*> Occupied;
-	for (TActorIterator<ARoomActor> It(GetWorld()); It; ++It)
+	for (ARoomActor* Room : Rooms)
 	{
-		if (It->GetRoomState() == ERoomState::Occupied && It->GetRoomNumber() / 100 == Floor)
+		if (Room->GetRoomState() == ERoomState::Occupied && Room->GetRoomNumber() / 100 == Floor)
 		{
-			Occupied.Add(*It);
+			Occupied.Add(Room);
 		}
 	}
 	if (Occupied.IsEmpty() || !Super::Escalate())
@@ -160,12 +163,5 @@ bool ABellAnomaly::CanRing(const ABellActor* Bell) const
 
 ARoomActor* ABellAnomaly::FindRoom(int32 RoomNumber) const
 {
-	for (TActorIterator<ARoomActor> It(GetWorld()); It; ++It)
-	{
-		if (It->GetRoomNumber() == RoomNumber)
-		{
-			return *It;
-		}
-	}
-	return nullptr;
+	return RoomQuery::FindRoom(GetWorld(), RoomNumber);
 }

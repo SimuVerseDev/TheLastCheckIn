@@ -1,4 +1,5 @@
 #include "Shop/ShopPlacementComponent.h"
+#include "Core/UI/UILayers.h"
 #include "Shop/ShopPurchaseSubsystem.h"
 #include "Shop/ShopPlacedProductComponent.h"
 #include "Core/Interaction/InteractionExtension.h"
@@ -283,7 +284,7 @@ bool UShopPlacementComponent::OpenControls()
 	if (!Controls) Controls = CreateWidget<UShopPlacementWidget>(Cast<APlayerController>(GetOwner()));
 	if (!Controls) return false;
 	Controls->Placement = this;
-	if (!Controls->IsInViewport()) Controls->AddToViewport(9001);
+	if (!Controls->IsInViewport()) Controls->AddToViewport(UILayer::ShopPlacement);
 	return true;
 }
 

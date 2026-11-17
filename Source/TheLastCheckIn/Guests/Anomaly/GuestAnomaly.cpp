@@ -7,6 +7,7 @@
 
 #include "Night/Anomaly/AnomalyManagerSubsystem.h"
 #include "Core/Time/GameClockSubsystem.h"
+#include "Core/Time/GameTimeMath.h"
 #include "Core/GameFlow/HotelPhaseSubsystem.h"
 
 #include "Components/SceneComponent.h"
@@ -68,6 +69,15 @@ void AGuestAnomaly::BeginPlay()
                 TEXT("Guest anomaly needs a unique AnomalyId: %s"),
                 *GetName());
         }
+    }
+
+    if (bAutomaticStart && bAutoSchedule)
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("Guest anomaly has both bAutomaticStart and bAutoSchedule enabled; it can be started by itself and by the anomaly manager: %s"),
+            *GetName());
     }
 
     bReady = true;
@@ -637,7 +647,7 @@ void AGuestAnomaly::ScheduleNextStart()
 
     NextStartGameSeconds =
         Clock->GetTotalGameSeconds()
-        + FMath::FRandRange(MinMinutes, MaxMinutes) * 60.0;
+        + GameTime::MinutesToSeconds(FMath::FRandRange(MinMinutes, MaxMinutes));
 }
 
 void AGuestAnomaly::ScheduleNextSpread()
@@ -650,7 +660,7 @@ void AGuestAnomaly::ScheduleNextSpread()
 
     NextSpreadGameSeconds =
         Clock->GetTotalGameSeconds()
-        + FMath::Max(0.1f, SpreadIntervalGameMinutes) * 60.0;
+        + GameTime::MinutesToSeconds(FMath::Max(0.1f, SpreadIntervalGameMinutes));
 }
 
 bool AGuestAnomaly::Resolve()

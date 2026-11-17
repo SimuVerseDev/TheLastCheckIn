@@ -1,15 +1,10 @@
 ﻿#include "Core/GameFlow/HotelPhaseSubsystem.h"
 #include "Core/GameFlow/HotelPhaseSettings.h"
 #include "Core/Time/GameClockSubsystem.h"
+#include "Core/Time/GameTimeMath.h"
 #include "Engine/World.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogHotelPhase, Log, All);
-
-namespace
-{
-	constexpr double SecondsPerHour = 3600.0;
-	constexpr double SecondsPerDay = 86400.0;
-}
 
 void UHotelPhaseSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -137,8 +132,8 @@ void UHotelPhaseSubsystem::StartDay()
 	const UHotelPhaseSettings* Settings = UHotelPhaseSettings::Get();
 
 	const double DayStartSeconds =
-		(CurrentDay - 1) * SecondsPerDay
-		+ Settings->DayStartHour * SecondsPerHour;
+		GameTime::GetDayStartSeconds(CurrentDay - 1)
+		+ GameTime::HoursToSeconds(Settings->DayStartHour);
 
 	Clock->StartClock(DayStartSeconds, Settings->TimeRate);
 
