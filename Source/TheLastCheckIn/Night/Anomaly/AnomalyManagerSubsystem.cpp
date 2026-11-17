@@ -136,6 +136,9 @@ void UAnomalyManagerSubsystem::HandleAnomalyStateChanged(AAnomalyBase* Anomaly, 
 	}
 }
 
+/*
+HandleTimeAdvanced -> Fail -> HandleStartFailed
+*/
 void UAnomalyManagerSubsystem::HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds)
 {
 	/*
