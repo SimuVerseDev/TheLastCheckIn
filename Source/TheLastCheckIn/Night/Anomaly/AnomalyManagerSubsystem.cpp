@@ -219,19 +219,71 @@ void UAnomalyManagerSubsystem::FailRunningAnomalies()
 void UAnomalyManagerSubsystem::HandleDayStarted(int32 Day)
 {
 	PlannedStartSeconds.Reset();
-	if (Day < UHotelPhaseSettings::Get()->FirstAnomalyDay)
+
+	TSet<FName> Learned;
+	const FAnomalyNightPlan* Plan = FindPlanRow(Day, Learned);
+
+	if (!Plan)
 	{
+		LastNightIds.Reset();
 		return;
 	}
-	for (const TWeakObjectPtr<AAnomalyBase>& Weak : Anomalies)
+
+	/*
+	고정 (소개 / 조합)
+	*/
+	TArray<FName> Tonight;
+	for (const FName& Id : Plan->Fixed)
 	{
-		AAnomalyBase* Anomaly = Weak.Get();
-		if (!Anomaly || !Anomaly->bAutoSchedule || FMath::FRand() > Anomaly->SpawnChance)
+		Tonight.AddUnique(Id);
+	}
+
+	/*
+	복습 후보 = 소개된 것 - 오늘 고정, 어제 안 나온 것을 앞에
+	*/
+	TArray<FName> Fresh;
+	TArray<FName> Repeat;
+	for (const FName& Id : Learned)
+	{
+		if (!Tonight.Contains(Id))
 		{
+			(LastNightIds.Contains(Id) ? Repeat : Fresh).Add(Id);
+		}
+	}
+	auto Shuffle = [](TArray<FName>& Arr)
+	{
+		for (int32 i = Arr.Num() - 1; i > 0; --i)
+		{
+			Arr.Swap(i, FMath::RandRange(0, i));
+		}
+	};
+	Shuffle(Fresh);
+	Shuffle(Repeat);
+	Fresh.Append(Repeat);
+
+	const int32 ExtraMax = FMath::Max(Plan->ExtraMin, Plan->ExtraMax);
+	const int32 Extra = FMath::Min(FMath::RandRange(Plan->ExtraMin, ExtraMax), Fresh.Num());
+	for (int32 i = 0; i < Extra; ++i)
+	{
+		Tonight.Add(Fresh[i]);
+	}
+
+	/*
+	예약
+	*/
+	LastNightIds.Reset();
+	for (const FName& Id : Tonight)
+	{
+		AAnomalyBase* Anomaly = FindAnomaly(Id);
+		if (!Anomaly || !Anomaly->bAutoSchedule)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[NightPlan] Day %d: '%s' 이상현상을 찾을 수 없음"), Day, *Id.ToString());
 			continue;
 		}
 		PlanStart(Anomaly, Day);
+		LastNightIds.Add(Id);
 	}
+	UE_LOG(LogTemp, Log, TEXT("[NightPlan] Day %d: %s"), Day, *FString::JoinBy(Tonight, TEXT(", "), [](const FName& N) { return N.ToString(); }));
 }
 
 /*
