@@ -9,7 +9,7 @@ class UHKStainDirtComponent;
 class UMaterialInstanceDynamic;
 
 UCLASS()
-class AHKStainActor : public AActor, public IInteractable
+class THELASTCHECKIN_API AHKStainActor : public AActor, public IInteractable
 {
 	GENERATED_BODY()
 public:

@@ -1,4 +1,5 @@
-﻿#include "Guests/Anomaly/Behaviors/GuestDropDecorationBehavior.h"
+#include "Guests/Anomaly/Behaviors/GuestDropDecorationBehavior.h"
+#include "TheLastCheckIn.h"
 
 #include "Guests/Anomaly/GuestAnomalyDefinition.h"
 #include "Guests/Anomaly/Props/ThrowableDecoration.h"
@@ -228,7 +229,7 @@ bool UGuestDropDecorationBehavior::CanHandlePropEvent() const
 void UGuestDropDecorationBehavior::CancelPropAction(const TCHAR* Reason)
 {
     UE_LOG(
-        LogTemp,
+        LogGuests,
         Warning,
         TEXT("DropDecoration cancelled: %s / Guest=%s"),
         Reason,

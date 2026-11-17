@@ -1,5 +1,6 @@
 ﻿#include "Guests/Anomaly/Behaviors/GuestMoveToPointBehavior.h"
 
+#include "TheLastCheckIn.h"
 #include "Guests/GuestCharacter.h"
 #include "Guests/GuestAIController.h"
 #include "Guests/GuestCrowdFollowingComponent.h"
@@ -132,7 +133,7 @@ void UGuestMoveToPointBehavior::HandleMoveTimeout()
     }
 
     UE_LOG(
-        LogTemp,
+        LogGuests,
         Warning,
         TEXT("Guest action movement timed out: %s / Behavior=%s"),
         *GetNameSafe(Guest.Get()),

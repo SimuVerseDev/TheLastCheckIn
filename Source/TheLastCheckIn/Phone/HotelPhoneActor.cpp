@@ -1,4 +1,5 @@
 ﻿#include "Phone/HotelPhoneActor.h"
+#include "Core/UI/UILayers.h"
 #include "Phone/UI/PhoneSubtitleWidget.h"
 #include "Camera/CameraComponent.h"
 #include "Components/AudioComponent.h"
@@ -23,6 +24,7 @@ AHotelPhoneActor::AHotelPhoneActor()
 
 void AHotelPhoneActor::StartRinging(const FText& InSubtitle)
 {
+	RingRequester.Reset();
 	PendingSubtitle = InSubtitle;
 	bRinging = true;
 	if (RingSound)
@@ -34,8 +36,23 @@ void AHotelPhoneActor::StartRinging(const FText& InSubtitle)
 
 void AHotelPhoneActor::StopRinging()
 {
+	RingRequester.Reset();
 	bRinging = false;
 	RingAudio->Stop();
+}
+
+void AHotelPhoneActor::StartRingingFor(const UObject* InRequester, const FText& InSubtitle)
+{
+	StartRinging(InSubtitle);
+	RingRequester = InRequester;
+}
+
+void AHotelPhoneActor::StopRingingFor(const UObject* InRequester)
+{
+	if (bRinging && InRequester && RingRequester.Get() == InRequester)
+	{
+		StopRinging();
+	}
 }
 
 bool AHotelPhoneActor::CanInteract_Implementation(AActor* Interactor) const
@@ -70,7 +87,7 @@ void AHotelPhoneActor::Interact_Implementation(AActor* Interactor)
 	if (SubtitleWidget)
 	{
 		SubtitleWidget->SetSubtitle(PendingSubtitle);
-		SubtitleWidget->AddToViewport(60);
+		SubtitleWidget->AddToViewport(UILayer::PhoneSubtitle);
 	}
 	
 	GetWorldTimerManager().SetTimer(CallTimer, this, &ThisClass::EndCall, CallDuration, false);

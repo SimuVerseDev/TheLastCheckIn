@@ -6,7 +6,7 @@
 이 컴포넌트가 붙은 물건은 들고 얼룩을 조준하면 닦기 도구로 동작
 */
 UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
-class UHKWipeToolComponent : public UActorComponent
+class THELASTCHECKIN_API UHKWipeToolComponent : public UActorComponent
 {
 	GENERATED_BODY()
 

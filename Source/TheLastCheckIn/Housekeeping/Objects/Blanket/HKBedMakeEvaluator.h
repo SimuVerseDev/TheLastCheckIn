@@ -6,7 +6,7 @@ class AHKBlanketActor;
 class UBoxComponent;
 
 UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
-class UHKBedMakeEvaluator : public UHKDirtComponent
+class THELASTCHECKIN_API UHKBedMakeEvaluator : public UHKDirtComponent
 {
 	GENERATED_BODY()
 

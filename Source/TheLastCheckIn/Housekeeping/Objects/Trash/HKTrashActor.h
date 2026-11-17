@@ -14,7 +14,7 @@ enum class EHKTrashState : uint8
 };
 
 UCLASS()
-class AHKTrashActor : public AHKPhysicsPickupActor
+class THELASTCHECKIN_API AHKTrashActor : public AHKPhysicsPickupActor
 {
 	GENERATED_BODY()
 	

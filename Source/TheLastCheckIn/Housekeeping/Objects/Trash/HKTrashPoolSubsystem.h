@@ -15,7 +15,7 @@ struct FHKTrashPoolBucket
 };
 
 UCLASS()
-class UHKTrashPoolSubsystem : public UWorldSubsystem
+class THELASTCHECKIN_API UHKTrashPoolSubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
 

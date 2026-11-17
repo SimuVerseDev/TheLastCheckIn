@@ -1,4 +1,5 @@
 ﻿#include "Night/Anomaly/UI/AnomalyNoticeWidget.h"
+#include "Core/UI/UILayers.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/CanvasPanel.h"
@@ -53,7 +54,7 @@ void UAnomalyNoticeWidget::Show(const UObject* WorldContext, const FText& Messag
 		return;
 	}
 	Widget->SetMessage(Message);
-	Widget->AddToViewport(50);
+	Widget->AddToViewport(UILayer::AnomalyNotice);
 
 	TWeakObjectPtr<UAnomalyNoticeWidget> WeakWidget(Widget);
 	FTimerHandle Handle;

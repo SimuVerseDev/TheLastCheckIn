@@ -5,7 +5,6 @@
 #include "KnockAnomaly.generated.h"
 
 class AKnockDoorActor;
-class AHotelPhoneActor;
 class ACCTVMonitor;
 
 UCLASS()
@@ -24,9 +23,6 @@ protected:
 
 	UPROPERTY(EditInstanceOnly, Category="Night|Knock")
 	TArray<TObjectPtr<AKnockDoorActor>> Doors;
-	
-	UPROPERTY(EditInstanceOnly, Category="Night|Knock")
-	TObjectPtr<AHotelPhoneActor> Phone;
 
 	UPROPERTY(EditInstanceOnly, Category="Night|Knock")
 	TObjectPtr<ACCTVMonitor> CCTVMonitor;

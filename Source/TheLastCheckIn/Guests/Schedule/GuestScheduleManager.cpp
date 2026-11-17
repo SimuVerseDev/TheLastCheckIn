@@ -1,11 +1,14 @@
 ﻿#include "Guests/Schedule/GuestScheduleManager.h"
+#include "TheLastCheckIn.h"
 
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 
 #include "Core/Time/GameClockSubsystem.h"
+#include "Core/Time/GameTimeMath.h"
 #include "Core/Economy/HotelEconomySubsystem.h"
 #include "Core/Reputation/HotelReputationSubsystem.h"
+#include "Core/GameFlow/HotelPhaseSettings.h"
 #include "Guests/GuestCharacter.h"
 #include "Guests/Pool/GuestPoolManager.h"
 #include "Guests/Party/GuestParty.h"
@@ -37,8 +40,7 @@ void AGuestScheduleManager::BeginPlay()
         return;
     }
 
-    if (CheckInStartHour >= CheckInEndHour ||
-        CheckoutStartHour > CheckoutEndHour)
+    if (!UHotelPhaseSettings::Get()->HasValidHourOrder())
     {
         return;
     }
@@ -58,7 +60,7 @@ void AGuestScheduleManager::BeginPlay()
         SpawnPoints, CounterTarget.Get(), GuestTypeRow, MaxSize);
     if (bArrivalsDisabled)
     {
-        UE_LOG(LogTemp, Error, TEXT("GuestSchedule: Arrivals disabled due to configuration errors. Fix the settings and restart play."));
+        UE_LOG(LogGuests, Error, TEXT("GuestSchedule: Arrivals disabled due to configuration errors. Fix the settings and restart play."));
     }
 }
 
@@ -154,7 +156,7 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
     }
 
     const int64 DayIndex =
-        FMath::FloorToInt64(CurrentSeconds / 86400.0);
+        GameTime::GetDayIndex(CurrentSeconds);
 
     if (ArrivalDayIndex != DayIndex)
     {
@@ -166,11 +168,13 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
     }
 
     const double SecondsOfDay =
-        CurrentSeconds - static_cast<double>(DayIndex) * 86400.0;
+        CurrentSeconds - GameTime::GetDayStartSeconds(DayIndex);
+    
+    const UHotelPhaseSettings* PhaseSettings = UHotelPhaseSettings::Get();
 
     const bool bReceptionOpen =
-        SecondsOfDay >= CheckInStartHour * 3600.0 &&
-        SecondsOfDay < CheckInEndHour * 3600.0;
+        SecondsOfDay >= GameTime::HoursToSeconds(PhaseSettings->CheckInStartHour) &&
+        SecondsOfDay < GameTime::HoursToSeconds(PhaseSettings->EveningStartHour);
 
     int32 EffectiveGuestLimit = DailyGuestLimit;
     if (const UTutorialSubsystem* Tutorial = GetWorld()->GetSubsystem<UTutorialSubsystem>();
@@ -250,11 +254,11 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
         if (Result == EGuestAcquireResult::InvalidConfiguration)
         {
             bArrivalsDisabled = true;
-            UE_LOG(LogTemp, Error, TEXT("GuestSchedule: Arrivals disabled; see GuestPool configuration error above."));
+            UE_LOG(LogGuests, Error, TEXT("GuestSchedule: Arrivals disabled; see GuestPool configuration error above."));
             return;
         }
 
-        NextArrivalSeconds = CurrentSeconds + FMath::Max(1, SpawnRetryIntervalMinutes) * 60.0;
+        NextArrivalSeconds = CurrentSeconds + GameTime::MinutesToSeconds(FMath::Max(1, SpawnRetryIntervalMinutes));
         // 손님이 모두 사용 중이면 같은 인원을 유지하고 반환을 기다림.
         if (Result == EGuestAcquireResult::PoolExhausted ||
             Result == EGuestAcquireResult::CounterBusy)
@@ -269,8 +273,8 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
             NextPartySize = 0;
             SpawnFailureCount = 0;
             const int32 MinMinutes = FMath::Max(1, MinArrivalIntervalMinutes);
-            NextArrivalSeconds = CurrentSeconds + FMath::RandRange(
-                MinMinutes, FMath::Max(MinMinutes, MaxArrivalIntervalMinutes)) * 60.0;
+            NextArrivalSeconds = CurrentSeconds + GameTime::MinutesToSeconds(FMath::RandRange(
+                MinMinutes, FMath::Max(MinMinutes, MaxArrivalIntervalMinutes)));
         }
         return;
     }
@@ -278,8 +282,8 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
     UGuestParty* NewParty = Members[0]->GetParty();
 
     const double DeadlineSeconds =
-        static_cast<double>(DayIndex) * 86400.0
-        + CheckInEndHour * 3600.0;
+        GameTime::GetDayStartSeconds(DayIndex)
+        + GameTime::HoursToSeconds(PhaseSettings->EveningStartHour);
 
     NewParty->ConfigureMovementRecovery(MovementTimeoutSeconds, MaxMovementRetries);
     NewParty->ConfigureVisit(
@@ -313,7 +317,7 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
         FMath::RandRange(MinMinutes, MaxMinutes);
 
     NextArrivalSeconds =
-        CurrentSeconds + IntervalMinutes * 60.0;
+        CurrentSeconds + GameTime::MinutesToSeconds(IntervalMinutes);
 }
 
 void AGuestScheduleManager::HandlePartyRoomAssigned(UGuestParty* Party)
@@ -328,16 +332,18 @@ void AGuestScheduleManager::HandlePartyRoomAssigned(UGuestParty* Party)
     const double Now = Clock->GetTotalGameSeconds();
 
     const int64 CheckInDayIndex =
-        FMath::FloorToInt64(Now / 86400.0);
+        GameTime::GetDayIndex(Now);
 
     const double NextDayStart =
-        static_cast<double>(CheckInDayIndex + 1) * 86400.0;
+        GameTime::GetDayStartSeconds(CheckInDayIndex + 1);
+
+    const UHotelPhaseSettings* PhaseSettings = UHotelPhaseSettings::Get();
 
     const int32 CheckoutMinuteOfDay = FMath::RandRange(
-        CheckoutStartHour * 60,
-        CheckoutEndHour * 60);
+        PhaseSettings->DayStartHour * 60,
+        PhaseSettings->MiddayStartHour * 60);
 
-    Party->SetCheckoutTime(NextDayStart + CheckoutMinuteOfDay * 60.0);
+    Party->SetCheckoutTime(NextDayStart + GameTime::MinutesToSeconds(CheckoutMinuteOfDay));
 }
 
 void AGuestScheduleManager::HandlePartyCheckedIn(UGuestParty* Party)

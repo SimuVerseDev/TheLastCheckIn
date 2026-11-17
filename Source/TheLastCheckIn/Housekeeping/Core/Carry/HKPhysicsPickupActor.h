@@ -6,7 +6,7 @@
 
 class UStaticMeshComponent;
 UCLASS()
-class AHKPhysicsPickupActor : public AActor, public IInteractable
+class THELASTCHECKIN_API AHKPhysicsPickupActor : public AActor, public IInteractable
 {
 	GENERATED_BODY()
 

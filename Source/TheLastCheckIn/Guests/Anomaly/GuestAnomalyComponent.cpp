@@ -1,4 +1,5 @@
 ﻿#include "Guests/Anomaly/GuestAnomalyComponent.h"
+#include "TheLastCheckIn.h"
 
 #include "Guests/Anomaly/GuestAnomalyBehavior.h"
 #include "Guests/Anomaly/GuestAnomalyDefinition.h"
@@ -239,7 +240,7 @@ void UGuestAnomalyComponent::ReturnToRoomAfterIncidentEnd()
 
     bTransitioning = false;
 
-    UE_LOG(LogTemp, Log,
+    UE_LOG(LogGuests, Log,
         TEXT("Anomaly guest returning after settlement: %s"),
         *GetNameSafe(GetOwner()));
 
@@ -392,7 +393,7 @@ void UGuestAnomalyComponent::BeginReturnToRoom()
 
     if (!Guest->ReturnToAssignedRoomAfterAnomaly())
     {
-        UE_LOG(LogTemp, Warning,
+        UE_LOG(LogGuests, Warning,
             TEXT("Anomaly room return could not start: %s"),
             *GetNameSafe(Guest));
 
@@ -420,7 +421,7 @@ void UGuestAnomalyComponent::NotifyReturnedToRoom()
     ClearReturnTimer();
     Phase = EGuestAnomalyPhase::Resolved;
 
-    UE_LOG(LogTemp, Log,
+    UE_LOG(LogGuests, Log,
         TEXT("Anomaly guest returned to room: %s"),
         *GetNameSafe(Guest));
 
@@ -440,7 +441,7 @@ void UGuestAnomalyComponent::HandleReturnTimeout()
         return;
     }
 
-    UE_LOG(LogTemp, Warning,
+    UE_LOG(LogGuests, Warning,
         TEXT("Anomaly room return timed out: %s"),
         *GetNameSafe(GetOwner()));
 

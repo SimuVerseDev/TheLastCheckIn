@@ -1,4 +1,5 @@
 ﻿#include "Core/Time/GameClockSubsystem.h"
+#include "Core/Time/GameTimeMath.h"
 #include "Engine/World.h"
 
 void UGameClockSubsystem::StartClock(double InitialGameSeconds, double InTimeRate)
@@ -60,20 +61,19 @@ void UGameClockSubsystem::ResumeClock()
 
 int32 UGameClockSubsystem::GetDay() const
 {
-	return static_cast<int32>(
-		FMath::FloorToInt64(TotalGameSeconds / 86400.0)) + 1;
+	return static_cast<int32>(GameTime::GetDayIndex(TotalGameSeconds)) + 1;
 }
 
 int32 UGameClockSubsystem::GetHour() const
 {
 	return static_cast<int32>(
-		FMath::FloorToInt64(TotalGameSeconds / 3600.0) % 24);
+		FMath::FloorToInt64(TotalGameSeconds / GameTime::SecondsPerHour) % 24);
 }
 
 int32 UGameClockSubsystem::GetMinute() const
 {
 	return static_cast<int32>(
-	FMath::FloorToInt64(TotalGameSeconds / 60.0) % 60);
+	FMath::FloorToInt64(TotalGameSeconds / GameTime::SecondsPerMinute) % 60);
 }
 
 void UGameClockSubsystem::Deinitialize()

@@ -1,4 +1,5 @@
 ﻿#include "Housekeeping/Core/Room/HKRoomVolume.h"
+#include "TheLastCheckIn.h"
 #include "Housekeeping/Core/Dirt/HKDirtComponent.h"
 #include "Housekeeping/Objects/Trash/HKTrashActor.h"
 #include "Housekeeping/Objects/Trash/HKTrashDirtComponent.h"
@@ -378,7 +379,7 @@ void AHKRoomVolume::HandleRoomAssigned(ARoomActor* Room)
 	}
 	if (bDirty)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] 미청소 객실 %d 배정 (청결도 %.0f)"),
+		UE_LOG(LogHousekeeping, Warning, TEXT("[%s] 미청소 객실 %d 배정 (청결도 %.0f)"),
 			*GetActorNameOrLabel(), Room->GetRoomNumber(), Cleanliness);
 	}
 }

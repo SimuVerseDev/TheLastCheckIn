@@ -1,4 +1,9 @@
 ﻿#include "Night/Anomaly/AnomalyBase.h"
+#include "Night/Anomaly/UI/AnomalyNoticeWidget.h"
+#include "Core/Reputation/HotelReputationSubsystem.h"
+#include "Phone/HotelPhoneActor.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
 
 /*
 Anomalies are driven by the manager and state changes, so ticking is disabled.
@@ -45,6 +50,11 @@ bool AAnomalyBase::Fail()
 	{
 		return false;
 	}
+	if (bComplaintActive)
+	{
+		ApplyComplaintPenalty();
+	}
+	ClearComplaint();
 	OnAnomalyFailed();
 	return true;
 }
@@ -58,8 +68,60 @@ bool AAnomalyBase::Resolve()
 	{
 		return false;
 	}
+	ClearComplaint();
 	OnAnomalyResolved();
 	return true;
+}
+
+void AAnomalyBase::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (!Phone)
+	{
+		TActorIterator<AHotelPhoneActor> It(GetWorld());
+		Phone = It ? *It : nullptr;
+	}
+}
+
+void AAnomalyBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	ClearComplaint();
+	Super::EndPlay(EndPlayReason);
+}
+
+void AAnomalyBase::RaiseComplaint(const FText& Message)
+{
+	bComplaintActive = true;
+	if (Phone)
+	{
+		Phone->StartRingingFor(this, Message);
+	}
+	else
+	{
+		UAnomalyNoticeWidget::Show(this, Message, 5.0f);
+	}
+}
+
+void AAnomalyBase::ClearComplaint()
+{
+	if (!bComplaintActive)
+	{
+		return;
+	}
+	bComplaintActive = false;
+	if (Phone)
+	{
+		Phone->StopRingingFor(this);
+	}
+}
+
+void AAnomalyBase::ApplyComplaintPenalty() const
+{
+	if (UHotelReputationSubsystem* Reputation = GetWorld() ? GetWorld()->GetSubsystem<UHotelReputationSubsystem>() : nullptr)
+	{
+		Reputation->AddReputation(EReputationReason::Complaint);
+	}
 }
 
 /*

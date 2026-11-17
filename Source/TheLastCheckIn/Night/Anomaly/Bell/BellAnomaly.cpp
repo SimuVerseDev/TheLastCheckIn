@@ -1,8 +1,7 @@
 #include "Night/Anomaly/Bell/BellAnomaly.h"
 #include "Night/Anomaly/Bell/BellActor.h"
-#include "Core/Reputation/HotelReputationSubsystem.h"
-#include "Phone/HotelPhoneActor.h"
 #include "Rooms/RoomActor.h"
+#include "Rooms/RoomQuery.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -42,12 +41,6 @@ void ABellAnomaly::BeginPlay()
 			Bell->OnBroken.AddUniqueDynamic(this, &ThisClass::HandleBellBroken);
 		}
 	}
-
-	if (!Phone)
-	{
-		TActorIterator<AHotelPhoneActor> It(GetWorld());
-		Phone = It ? *It : nullptr;
-	}
 }
 
 bool ABellAnomaly::StartAnomaly()
@@ -81,12 +74,14 @@ bool ABellAnomaly::Escalate()
 	}
 
 	const int32 Floor = RingingBell->GetFloor();
+	TArray<ARoomActor*> Rooms;
+	RoomQuery::GetRooms(GetWorld(), Rooms);
 	TArray<ARoomActor*> Occupied;
-	for (TActorIterator<ARoomActor> It(GetWorld()); It; ++It)
+	for (ARoomActor* Room : Rooms)
 	{
-		if (It->GetRoomState() == ERoomState::Occupied && It->GetRoomNumber() / 100 == Floor)
+		if (Room->GetRoomState() == ERoomState::Occupied && Room->GetRoomNumber() / 100 == Floor)
 		{
-			Occupied.Add(*It);
+			Occupied.Add(Room);
 		}
 	}
 	if (Occupied.IsEmpty() || !Super::Escalate())
@@ -96,11 +91,7 @@ bool ABellAnomaly::Escalate()
 
 	const ARoomActor* Caller = Occupied[FMath::RandRange(0, Occupied.Num() - 1)];
 	const FText RoomText = FText::AsNumber(Caller->GetRoomNumber(), &FNumberFormattingOptions::DefaultNoGrouping());
-	const FText Complaint = FText::FormatNamed(ComplaintMessage, TEXT("Room"), RoomText);
-	if (Phone)
-	{
-		Phone->StartRinging(Complaint);
-	}
+	RaiseComplaint(FText::FormatNamed(ComplaintMessage, TEXT("Room"), RoomText));
 	return true;
 }
 
@@ -109,7 +100,6 @@ bool ABellAnomaly::Escalate()
 */
 bool ABellAnomaly::Fail()
 {
-	const bool bComplained = GetState() == EAnomalyState::Escalated;
 	if (!Super::Fail())
 	{
 		return false;
@@ -118,17 +108,6 @@ bool ABellAnomaly::Fail()
 	{
 		RingingBell->StopRinging();
 		RingingBell = nullptr;
-	}
-	if (bComplained)
-	{
-		if (Phone)
-		{
-			Phone->StopRinging();
-		}
-		if (UHotelReputationSubsystem* Reputation = GetWorld()->GetSubsystem<UHotelReputationSubsystem>())
-		{
-			Reputation->AddReputation(EReputationReason::Complaint);
-		}
 	}
 	return true;
 }
@@ -160,12 +139,5 @@ bool ABellAnomaly::CanRing(const ABellActor* Bell) const
 
 ARoomActor* ABellAnomaly::FindRoom(int32 RoomNumber) const
 {
-	for (TActorIterator<ARoomActor> It(GetWorld()); It; ++It)
-	{
-		if (It->GetRoomNumber() == RoomNumber)
-		{
-			return *It;
-		}
-	}
-	return nullptr;
+	return RoomQuery::FindRoom(GetWorld(), RoomNumber);
 }

@@ -12,7 +12,7 @@ class UInteractionExtension : public UInterface
 /*
 플레이어의 기능 컴포넌트(잡기·카트 등)가 공통 상호작용 컴포넌트에 끼어드는 지점
 */
-class IInteractionExtension
+class THELASTCHECKIN_API IInteractionExtension
 {
 	GENERATED_BODY()
 

@@ -2,6 +2,7 @@
 
 
 #include "TheLastCheckInPlayerController.h"
+#include "Core/UI/UILayers.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
 #include "InputMappingContext.h"
@@ -34,7 +35,7 @@ void ATheLastCheckInPlayerController::BeginPlay()
 		if (MobileControlsWidget)
 		{
 			// add the controls to the player screen
-			MobileControlsWidget->AddToPlayerScreen(0);
+			MobileControlsWidget->AddToPlayerScreen(UILayer::MobileControls);
 
 		} else {
 

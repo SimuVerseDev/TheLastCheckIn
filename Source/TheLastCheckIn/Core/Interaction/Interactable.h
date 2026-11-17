@@ -10,7 +10,7 @@ class UInteractable : public UInterface
 	GENERATED_BODY()
 };
 
-class IInteractable
+class THELASTCHECKIN_API IInteractable
 {
 	GENERATED_BODY()
 

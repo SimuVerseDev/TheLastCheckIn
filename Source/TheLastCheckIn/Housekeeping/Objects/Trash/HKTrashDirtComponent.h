@@ -6,7 +6,7 @@
 class UBoxComponent;
 
 UCLASS(ClassGroup=(HOUSEKEEPING), meta=(BlueprintSpawnableComponent))
-class UHKTrashDirtComponent : public UHKDirtComponent
+class THELASTCHECKIN_API UHKTrashDirtComponent : public UHKDirtComponent
 {
 	GENERATED_BODY()
 	

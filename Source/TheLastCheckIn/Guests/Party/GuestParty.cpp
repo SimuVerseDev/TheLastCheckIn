@@ -1,4 +1,5 @@
 ﻿#include "Guests/Party/GuestParty.h"
+#include "TheLastCheckIn.h"
 
 #include "Guests/GuestCharacter.h"
 #include "UObject/UObjectGlobals.h"
@@ -81,7 +82,7 @@ UGuestParty* UGuestParty::Create(UObject* InOuter, const TArray<AGuestCharacter*
         Member->Party = NewParty;
     }
 
-    UE_LOG(LogTemp, Log,
+    UE_LOG(LogGuests, Log,
         TEXT("Party created: %s, members: %d"),
         *NewParty->PartyId.ToString(),
         NewParty->Members.Num());
@@ -240,7 +241,7 @@ void UGuestParty::CheckMovementProgress()
     const int32 RoomNumber = IsValid(AssignedRoom.Get()) ? AssignedRoom->GetRoomNumber() : -1;
     const FString StateName = StaticEnum<EGuestPartyState>()->GetNameStringByValue(static_cast<int64>(State));
     const bool bRetriesExhausted = MovementRetryCount >= MaxMovementRetries;
-    UE_LOG(LogTemp, Warning,
+    UE_LOG(LogGuests, Warning,
         TEXT("GuestParty %s: Movement timeout; room=%d roomActor=%s state=%s(%d) elapsed=%.2fs timeout=%.2fs; %s retry=%d/%d pending=%d/%d."),
         *PartyId.ToString(), RoomNumber, *GetNameSafe(AssignedRoom.Get()), *StateName, static_cast<int32>(State),
         Now - MovementAttemptStartedAt, MovementTimeoutSeconds,
@@ -256,7 +257,7 @@ void UGuestParty::CheckMovementProgress()
             ? Member->ReservedMoveLocation.ToString() : TEXT("unset");
         const FString TargetLocation = IsValid(MemberTarget)
             ? MemberTarget->GetActorLocation().ToString() : TEXT("unset");
-        UE_LOG(LogTemp, Warning,
+        UE_LOG(LogGuests, Warning,
             TEXT("GuestParty %s: Pending guest; room=%d guest=%s state=%s location=(%s) velocity=(%s) target=%s targetLocation=(%s) reservedLocation=(%s)."),
             *PartyId.ToString(), RoomNumber, *Member->GetName(),
             *StaticEnum<EGuestState>()->GetNameStringByValue(static_cast<int64>(Member->GetGuestState())),
@@ -282,7 +283,7 @@ void UGuestParty::CheckMovementProgress()
 
 void UGuestParty::CancelVisitAfterMovementFailure()
 {
-    UE_LOG(LogTemp, Warning,
+    UE_LOG(LogGuests, Warning,
         TEXT("GuestParty %s: Cancelling visit after movement failure; room=%d roomActor=%s state=%s retries=%d/%d; returning %d guests to pool."),
         *PartyId.ToString(), IsValid(AssignedRoom.Get()) ? AssignedRoom->GetRoomNumber() : -1,
         *GetNameSafe(AssignedRoom.Get()),
@@ -303,7 +304,7 @@ void UGuestParty::CancelVisitAfterMovementFailure()
         }
         if (!bRoomReleased)
         {
-            UE_LOG(LogTemp, Error, TEXT("GuestParty %s: Room stay ID mismatch; room left untouched."), *PartyId.ToString());
+            UE_LOG(LogGuests, Error, TEXT("GuestParty %s: Room stay ID mismatch; room left untouched."), *PartyId.ToString());
         }
     }
 

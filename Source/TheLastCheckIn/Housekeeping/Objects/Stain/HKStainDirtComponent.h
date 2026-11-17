@@ -5,7 +5,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnStainAmountChanged, float, Amount);
 
 UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
-class UHKStainDirtComponent : public UHKDirtComponent
+class THELASTCHECKIN_API UHKStainDirtComponent : public UHKDirtComponent
 {
 	GENERATED_BODY()
 public:

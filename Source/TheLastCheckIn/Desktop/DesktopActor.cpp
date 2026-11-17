@@ -1,4 +1,5 @@
 #include "Desktop/DesktopActor.h"
+#include "Core/UI/UILayers.h"
 #include "Desktop/DesktopWidget.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
@@ -22,7 +23,7 @@ void ADesktopActor::Interact_Implementation(AActor* Interactor)
 	APlayerController* PC = Cast<APlayerController>(CastChecked<APawn>(Interactor)->GetController());
 	OpenWidget = CreateWidget<UDesktopWidget>(PC, DesktopWidgetClass);
 	// Use the viewport layer so viewport HUDs (including tutorial quests) stay behind it.
-	if (OpenWidget) OpenWidget->AddToViewport(9000);
+	if (OpenWidget) OpenWidget->AddToViewport(UILayer::Desktop);
 }
 
 void ADesktopActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
