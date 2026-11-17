@@ -90,22 +90,6 @@ protected:
         meta = (ClampMin = "1"))
     int32 MaxArrivalIntervalMinutes = 30;
 
-    UPROPERTY(EditAnywhere, Category = "Schedule|Hours",
-        meta = (ClampMin = "0", ClampMax = "23"))
-    int32 CheckInStartHour = 14;
-
-    UPROPERTY(EditAnywhere, Category = "Schedule|Hours",
-        meta = (ClampMin = "1", ClampMax = "24"))
-    int32 CheckInEndHour = 18;
-
-    UPROPERTY(EditAnywhere, Category = "Schedule|Hours",
-        meta = (ClampMin = "0", ClampMax = "23"))
-    int32 CheckoutStartHour = 6;
-
-    UPROPERTY(EditAnywhere, Category = "Schedule|Hours",
-        meta = (ClampMin = "0", ClampMax = "23"))
-    int32 CheckoutEndHour = 11;
-
 private:
 
     UFUNCTION()

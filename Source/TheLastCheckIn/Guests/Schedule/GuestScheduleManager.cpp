@@ -8,6 +8,7 @@
 #include "Core/Time/GameTimeMath.h"
 #include "Core/Economy/HotelEconomySubsystem.h"
 #include "Core/Reputation/HotelReputationSubsystem.h"
+#include "Core/GameFlow/HotelPhaseSettings.h"
 #include "Guests/GuestCharacter.h"
 #include "Guests/Pool/GuestPoolManager.h"
 #include "Guests/Party/GuestParty.h"
@@ -39,8 +40,7 @@ void AGuestScheduleManager::BeginPlay()
         return;
     }
 
-    if (CheckInStartHour >= CheckInEndHour ||
-        CheckoutStartHour > CheckoutEndHour)
+    if (!UHotelPhaseSettings::Get()->HasValidHourOrder())
     {
         return;
     }
@@ -169,10 +169,12 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
 
     const double SecondsOfDay =
         CurrentSeconds - GameTime::GetDayStartSeconds(DayIndex);
+    
+    const UHotelPhaseSettings* PhaseSettings = UHotelPhaseSettings::Get();
 
     const bool bReceptionOpen =
-        SecondsOfDay >= GameTime::HoursToSeconds(CheckInStartHour) &&
-        SecondsOfDay < GameTime::HoursToSeconds(CheckInEndHour);
+        SecondsOfDay >= GameTime::HoursToSeconds(PhaseSettings->CheckInStartHour) &&
+        SecondsOfDay < GameTime::HoursToSeconds(PhaseSettings->EveningStartHour);
 
     int32 EffectiveGuestLimit = DailyGuestLimit;
     if (const UTutorialSubsystem* Tutorial = GetWorld()->GetSubsystem<UTutorialSubsystem>();
@@ -281,7 +283,7 @@ void AGuestScheduleManager::TryAdmitGuest(double CurrentSeconds)
 
     const double DeadlineSeconds =
         GameTime::GetDayStartSeconds(DayIndex)
-        + GameTime::HoursToSeconds(CheckInEndHour);
+        + GameTime::HoursToSeconds(PhaseSettings->EveningStartHour);
 
     NewParty->ConfigureMovementRecovery(MovementTimeoutSeconds, MaxMovementRetries);
     NewParty->ConfigureVisit(
@@ -335,9 +337,11 @@ void AGuestScheduleManager::HandlePartyRoomAssigned(UGuestParty* Party)
     const double NextDayStart =
         GameTime::GetDayStartSeconds(CheckInDayIndex + 1);
 
+    const UHotelPhaseSettings* PhaseSettings = UHotelPhaseSettings::Get();
+
     const int32 CheckoutMinuteOfDay = FMath::RandRange(
-        CheckoutStartHour * 60,
-        CheckoutEndHour * 60);
+        PhaseSettings->DayStartHour * 60,
+        PhaseSettings->MiddayStartHour * 60);
 
     Party->SetCheckoutTime(NextDayStart + GameTime::MinutesToSeconds(CheckoutMinuteOfDay));
 }
