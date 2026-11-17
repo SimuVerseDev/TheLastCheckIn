@@ -78,6 +78,15 @@ public:
         BlueprintReadOnly,
         Category = "Anomaly|Presentation")
     TObjectPtr<USoundBase> NoiseSound;
+    
+    // 켜면 소음 행동 중 연결된 구역 안에서 이동
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Anomaly|Movement")
+    bool bRoamInZone = false;
+
+    // 소음 행동 중 이동 속도. 단위는 cm/s.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Anomaly|Movement",
+        meta = (ClampMin = "1.0"))
+    float RoamSpeed = 80.0f;
 
     // 새로운 손님에게 배정 가능한 지점인지 검사
     UFUNCTION(BlueprintPure, Category = "Anomaly|Point")
