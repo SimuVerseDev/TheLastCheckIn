@@ -230,13 +230,7 @@ void UAnomalyManagerSubsystem::HandleDayStarted(int32 Day)
 		{
 			continue;
 		}
-		const double Earliest = GetNightSeconds(Day, Anomaly->EarliestStartHour);
-		const double Latest = GetNightSeconds(Day, Anomaly->LatestStartHour);
-		if (Latest < Earliest)
-		{
-			continue;
-		}
-		PlannedStartSeconds.Add(Anomaly, FMath::FRandRange(Earliest, Latest));
+		PlanStart(Anomaly, Day);
 	}
 }
 
