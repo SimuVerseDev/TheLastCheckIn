@@ -305,6 +305,7 @@ const FAnomalyNightPlan* UAnomalyManagerSubsystem::FindPlanRow(int32 Day, TSet<F
 	const UDataTable* Table = UHotelPhaseSettings::Get()->AnomalyNightPlanTable.LoadSynchronous();
 	if (!Table)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[NightPlan] AnomalyNightPlanTable이 설정되지 않음 (Project Settings > Hotel Phase)"));
 		return nullptr;
 	}
 	const FAnomalyNightPlan* Best = nullptr;
@@ -341,5 +342,5 @@ void UAnomalyManagerSubsystem::PlanStart(AAnomalyBase* Anomaly, int32 Day)
 	{
 		return;
 	}
-	PlannedStartSeconds.Add(Anomaly, Day);
+	PlannedStartSeconds.Add(Anomaly, FMath::FRandRange(Earliest, Latest)); 
 }
