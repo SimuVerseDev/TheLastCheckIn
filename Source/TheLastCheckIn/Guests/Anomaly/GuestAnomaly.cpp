@@ -3,6 +3,7 @@
 
 #include "Guests/Anomaly/GuestAnomalyComponent.h"
 #include "Guests/Anomaly/GuestAnomalyDefinition.h"
+#include "Guests/Anomaly/GuestActionLocation.h"
 #include "Guests/GuestCharacter.h"
 #include "Guests/Party/GuestParty.h"
 
@@ -139,11 +140,23 @@ void AGuestAnomaly::CollectCandidates(TArray<UGuestAnomalyComponent*>& OutGuests
     {
         AActor* Point = PointRef.Get();
 
-        if (!IsValid(Point) ||
-            Point->IsActorBeingDestroyed() ||
-            Point->GetWorld() != World)
+        if (!IsValid(Point)
+            || Point->IsActorBeingDestroyed()
+            || Point->GetWorld() != World)
         {
             continue;
+        }
+
+        if (bSelectZoneFirst)
+        {
+            const AGuestActionPoint* ActionPoint =
+                Cast<AGuestActionPoint>(Point);
+
+            // 플레이어가 있는 구역이나 이미 예약된 지점은 제외
+            if (!IsValid(ActionPoint) || !ActionPoint->IsAvailable())
+            {
+                continue;
+            }
         }
 
         const bool bReserved =
@@ -176,8 +189,8 @@ void AGuestAnomaly::CollectCandidates(TArray<UGuestAnomalyComponent*>& OutGuests
         UGuestAnomalyComponent* Component =
             Guest->GetAnomalyComponent();
 
-        if (!IsValid(Component) ||
-            !Component->CanStartFor(Definition.Get(), OutPoints[0]))
+        if (!IsValid(Component)
+            || !Component->CanStartFor(Definition.Get(), OutPoints[0]))
         {
             continue;
         }
@@ -200,9 +213,9 @@ void AGuestAnomaly::CollectCandidates(TArray<UGuestAnomalyComponent*>& OutGuests
         {
             const double CheckoutTime = Party->GetCheckoutTime();
 
-            if (CheckoutTime >= 0.0 &&
-                (!IsValid(Clock) ||
-                 Clock->GetTotalGameSeconds() >= CheckoutTime))
+            if (CheckoutTime >= 0.0
+                && (!IsValid(Clock)
+                    || Clock->GetTotalGameSeconds() >= CheckoutTime))
             {
                 continue;
             }
@@ -210,6 +223,46 @@ void AGuestAnomaly::CollectCandidates(TArray<UGuestAnomalyComponent*>& OutGuests
 
         OutGuests.Add(Component);
     }
+}
+
+void AGuestAnomaly::SelectRandomZone(TArray<AActor*>& Points) const
+{
+    if (!bSelectZoneFirst)
+    {
+        return;
+    }
+
+    TMap<AGuestActionZone*, TArray<AActor*>> PointsByZone;
+
+    for (AActor* Actor : Points)
+    {
+        AGuestActionPoint* Point = Cast<AGuestActionPoint>(Actor);
+
+        if (!IsValid(Point) || !Point->IsAvailable())
+        {
+            continue;
+        }
+
+        PointsByZone.FindOrAdd(Point->Zone.Get()).Add(Point);
+    }
+
+    Points.Reset();
+
+    if (PointsByZone.IsEmpty())
+    {
+        return;
+    }
+
+    TArray<AGuestActionZone*> Zones;
+    PointsByZone.GetKeys(Zones);
+
+    const int32 ZoneIndex =
+        FMath::RandRange(0, Zones.Num() - 1);
+
+    // 지점 수에 관계없이 각 구역을 같은 확률로 선택
+    // 이후 지점 추첨에는 선택된 구역의 지점만 사용
+    Points = MoveTemp(
+        PointsByZone.FindChecked(Zones[ZoneIndex]));
 }
 
 bool AGuestAnomaly::CanStartAnomaly() const
@@ -322,7 +375,11 @@ bool AGuestAnomaly::TryAddParticipant()
 
     TArray<UGuestAnomalyComponent*> Guests;
     TArray<AActor*> Points;
+
     CollectCandidates(Guests, Points);
+
+    // 구역을 먼저 선택한 뒤 해당 구역 안에서 지점을 선택
+    SelectRandomZone(Points);
 
     ShuffleItems(Guests);
     ShuffleItems(Points);
@@ -331,9 +388,9 @@ bool AGuestAnomaly::TryAddParticipant()
     {
         for (AActor* Point : Points)
         {
-            if (!IsValid(Component) ||
-                !IsValid(Point) ||
-                !Component->CanStartFor(Definition.Get(), Point))
+            if (!IsValid(Component)
+                || !IsValid(Point)
+                || !Component->CanStartFor(Definition.Get(), Point))
             {
                 continue;
             }
@@ -344,11 +401,13 @@ bool AGuestAnomaly::TryAddParticipant()
             }
 
             FGuestAnomalyParticipant Participant;
+
             Participant.Guest =
                 Cast<AGuestCharacter>(Component->GetOwner());
 
             Participant.Component = Component;
             Participant.ContextActor = Point;
+
             Participant.ParticipationId =
                 Component->GetParticipationId();
 

@@ -1,49 +1,45 @@
-﻿#include "Guests/Anomaly/Behaviors/GuestDropDecorationBehavior.h"
+#include "Guests/Anomaly/Behaviors/GuestDropDecorationBehavior.h"
 #include "TheLastCheckIn.h"
 
 #include "Guests/Anomaly/GuestAnomalyDefinition.h"
 #include "Guests/Anomaly/Props/ThrowableDecoration.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Guests/GuestCharacter.h"
-#include "Guests/GuestAIController.h"
-#include "Guests/GuestCrowdFollowingComponent.h"
 #include "Animation/AnimMontage.h"
-#include "Navigation/CrowdFollowingComponent.h"
 #include "Engine/World.h"
 
 bool UGuestDropDecorationBehavior::CanStart() const
 {
+    // 컨텍스트와 AI 컨트롤러 검사는 공통 부모에서 처리
     if (!Super::CanStart()
-        || !IsValid(ContextActor)
-        || ContextActor->GetWorld() != GetWorld()
-        || !IsValid(Cast<AGuestAIController>(Guest->GetController()))
         || !IsValid(Definition->InitialMontage)
         || !IsValid(Definition->ActionMontage))
     {
         return false;
     }
 
-    const AThrowableDecoration* Prop = Cast<AThrowableDecoration>(ContextActor.Get());
+    const AThrowableDecoration* Prop =
+        Cast<AThrowableDecoration>(ContextActor.Get());
+
     USkeletalMeshComponent* Mesh = Guest->GetMesh();
 
     FTransform CandidateTransform;
+
     return IsValid(Prop)
         && Prop->CanReserve()
         && IsValid(Mesh)
         && Mesh->DoesSocketExist(Prop->GripSocket)
-        && Prop->TryBuildActionTransform(Guest.Get(), CandidateTransform);
+        && Prop->TryBuildActionTransform(
+            Guest.Get(),
+            CandidateTransform);
 }
 
 void UGuestDropDecorationBehavior::OnStarted_Implementation()
 {
     Super::OnStarted_Implementation();
 
-    GuestController =
-        Cast<AGuestAIController>(Guest->GetController());
-
-    if (!IsValid(GuestController) ||
-        !IsValid(ContextActor) ||
-        !GetWorld())
+    // 기존과 같은 위치에서 컨트롤러와 이동 대상을 확인
+    if (!InitializeMovement())
     {
         RequestCancelled();
         return;
@@ -52,16 +48,21 @@ void UGuestDropDecorationBehavior::OnStarted_Implementation()
     TargetProp = Cast<AThrowableDecoration>(ContextActor.Get());
 
     if (!IsValid(TargetProp)
-        || !TargetProp->TryBuildActionTransform(Guest.Get(), ActionTransform))
+        || !TargetProp->TryBuildActionTransform(
+            Guest.Get(),
+            ActionTransform))
     {
         RequestCancelled();
         return;
     }
 
-    PickupTransform = FTransform(TargetProp->PickupRotation, TargetProp->PickupOffset)
+    PickupTransform =
+        FTransform(
+            TargetProp->PickupRotation,
+            TargetProp->PickupOffset)
         * ActionTransform;
 
-    // 같은 물건을 여러 손님이 동시에 사용하지 않도록 예약
+    // 위치 계산 후 장식물을 예약
     if (!TargetProp->TryReserve(this))
     {
         RequestCancelled();
@@ -71,113 +72,8 @@ void UGuestDropDecorationBehavior::OnStarted_Implementation()
     PropStage = EPropStage::WaitingForKnock;
     bThrowMontageStarted = false;
 
-    UPathFollowingComponent* PathFollowing =
-        GuestController->GetPathFollowingComponent();
-
-    if (!IsValid(PathFollowing))
-    {
-        RequestCancelled();
-        return;
-    }
-
-    // 대기용 장애물 등록을 해제한 뒤, 이동 가능한 에이전트로 다시 등록
-    if (UGuestCrowdFollowingComponent* Crowd =
-        Cast<UGuestCrowdFollowingComponent>(PathFollowing))
-    {
-        Crowd->SetCrowdSimulationState(
-            ECrowdSimulationState::Disabled);
-
-        Crowd->SuspendCrowdSteering(false);
-
-        Crowd->SetCrowdSimulationState(
-            ECrowdSimulationState::Enabled);
-
-        Crowd->SetRequireActualArrival(true);
-    }
-
-    MoveFinishedHandle =
-        PathFollowing->OnRequestFinished.AddUObject(
-            this,
-            &UGuestDropDecorationBehavior::HandleMoveFinished);
-
-    FAIMoveRequest MoveRequest;
-    MoveRequest.SetGoalLocation(ActionTransform.GetLocation());
-    MoveRequest.SetAcceptanceRadius(AcceptanceRadius);
-    MoveRequest.SetReachTestIncludesAgentRadius(false);
-    MoveRequest.SetReachTestIncludesGoalRadius(false);
-    MoveRequest.SetUsePathfinding(true);
-    MoveRequest.SetAllowPartialPath(false);
-    // 사전 검사한 위치를 다시 투영하지 않고 그대로 목적지로 사용
-    MoveRequest.SetProjectGoalLocation(false);
-    MoveRequest.SetNavigationFilter(GuestController->GetDefaultNavigationFilterClass());
-
-    const FPathFollowingRequestResult MoveResult =
-        GuestController->MoveTo(MoveRequest);
-
-    if (MoveResult.Code == EPathFollowingRequestResult::Failed)
-    {
-        RequestCancelled();
-        return;
-    }
-
-    if (MoveResult.Code == EPathFollowingRequestResult::AlreadyAtGoal)
-    {
-        BeginActing();
-        return;
-    }
-
-    ActiveMoveId = MoveResult.MoveId;
-
-    GetWorld()->GetTimerManager().SetTimer(
-        MoveTimeoutHandle,
-        this,
-        &UGuestDropDecorationBehavior::HandleMoveTimeout,
-        MoveTimeoutSeconds,
-        false);
-}
-
-void UGuestDropDecorationBehavior::HandleMoveFinished(
-    FAIRequestID RequestId,
-    const FPathFollowingResult& Result)
-{
-    // 현재 행동이 요청한 이동만 처리
-    if (!IsRunning() ||
-        ActiveMoveId == FAIRequestID::InvalidRequest ||
-        RequestId != ActiveMoveId)
-    {
-        return;
-    }
-
-    ActiveMoveId = FAIRequestID::InvalidRequest;
-
-    if (UWorld* World = GetWorld())
-    {
-        World->GetTimerManager().ClearTimer(MoveTimeoutHandle);
-    }
-
-    if (Result.Code != EPathFollowingResult::Success)
-    {
-        RequestCancelled();
-        return;
-    }
-
-    BeginActing();
-}
-
-void UGuestDropDecorationBehavior::HandleMoveTimeout()
-{
-    if (!IsRunning())
-    {
-        return;
-    }
-
-    UE_LOG(
-        LogGuests,
-        Warning,
-        TEXT("DropDecoration movement timed out: %s"),
-        *GetNameSafe(Guest.Get()));
-
-    RequestCancelled();
+    // 이 아래에 있던 이동 코드를 공통 부모로 추출
+    MoveToActionPoint();
 }
 
 void UGuestDropDecorationBehavior::BeginActing()
@@ -187,64 +83,41 @@ void UGuestDropDecorationBehavior::BeginActing()
         return;
     }
 
-    if (!IsValid(Guest) ||
-        !IsValid(GuestController) ||
-        !IsValid(ContextActor) ||
-        !IsValid(TargetProp) ||
-        !TargetProp->IsReservedBy(this) ||
-        !IsValid(Definition) ||
-        !IsValid(Definition->ActionMontage) ||
-        !GetWorld())
+    if (!HasMovementContext()
+        || !IsValid(TargetProp)
+        || !TargetProp->IsReservedBy(this)
+        || !IsValid(Definition)
+        || !IsValid(Definition->ActionMontage))
     {
         RequestCancelled();
         return;
     }
 
-    ActiveMoveId = FAIRequestID::InvalidRequest;
-    GetWorld()->GetTimerManager().ClearTimer(MoveTimeoutHandle);
+    FVector ArrivalOffset;
 
-    const FRotator FacingRotation = ActionTransform.Rotator();
-
-    // 이동 Success가 전달돼도 실제 목적지에 도착했는지 확인한다.
-    const FVector ArrivalOffset =
-        Guest->GetNavAgentLocation() - ActionTransform.GetLocation();
-
-    // 단위: cm. 애니메이션과 실제 도착 오차를 보면서 조정한다.
-    constexpr double MaxArrivalDistance = AcceptanceRadius;
-    constexpr double MaxArrivalHeight = 20.0;
-
-    const bool bTooFar =
-        ArrivalOffset.SizeSquared2D() >
-        FMath::Square(MaxArrivalDistance);
-
-    const bool bWrongHeight =
-        FMath::Abs(ArrivalOffset.Z) > MaxArrivalHeight;
-
-    if (ArrivalOffset.ContainsNaN() || bTooFar || bWrongHeight)
+    if (!TryConfirmArrival(ArrivalOffset))
     {
         CancelPropAction(TEXT(
             "Move reported success before reaching the decoration."));
         return;
     }
 
-    // 가까이 도착한 경우에만 작은 위치 오차를 보정한다.
+    // 기존처럼 방향 적용 전에 집기 위치를 보정
     PickupTransform.AddToTranslation(ArrivalOffset);
 
-    Guest->SetActorRotation(FacingRotation);
-    GuestController->SetControlRotation(FacingRotation);
-    GuestController->UseWaitingAvoidance();
+    ApplyActionFacing();
 
+    // 위치 보정과 방향 적용이 끝난 뒤에만 제압 허용
     bActing = true;
 
-    // 첫 동작이 지정돼 있으면 한 번 재생
     if (IsValid(Definition->InitialMontage))
     {
-        const float Duration = Guest->PlayAnimMontage(
-            Definition->InitialMontage.Get());
+        const float Duration =
+            Guest->PlayAnimMontage(Definition->InitialMontage.Get());
 
         if (Duration > 0.0f)
         {
-            // Throw의 Blend In 시간만큼 미리 전환
+            // 기존 전환 시점을 유지
             const float BlendTime =
                 Definition->ActionMontage->BlendIn.GetBlendTime();
 
@@ -262,10 +135,8 @@ void UGuestDropDecorationBehavior::BeginActing()
         }
     }
 
-    // 첫 동작이 없거나 재생에 실패하면 바로 Throw 시작
     PerformAction();
 }
-
 void UGuestDropDecorationBehavior::PerformAction()
 {
     if (!IsRunning() || !bActing)
@@ -303,35 +174,17 @@ void UGuestDropDecorationBehavior::OnStopped_Implementation()
 {
     bActing = false;
     bThrowMontageStarted = false;
-    ActiveMoveId = FAIRequestID::InvalidRequest;
+
+    // 이동 요청과 이동 타이머부터 정리
+    ClearMoveRequest();
 
     if (UWorld* World = GetWorld())
     {
-        World->GetTimerManager().ClearTimer(MoveTimeoutHandle);
         World->GetTimerManager().ClearTimer(ActionTimerHandle);
     }
 
-    if (IsValid(GuestController))
-    {
-        if (UPathFollowingComponent* PathFollowing =
-            GuestController->GetPathFollowingComponent())
-        {
-            PathFollowing->OnRequestFinished.Remove(MoveFinishedHandle);
-        }
-
-        GuestController->StopMovement();
-
-        if (UGuestCrowdFollowingComponent* Crowd =
-            Cast<UGuestCrowdFollowingComponent>(
-                GuestController->GetPathFollowingComponent()))
-        {
-            Crowd->SetRequireActualArrival(false);
-        }
-
-        GuestController->UseWaitingAvoidance();
-    }
-
-    MoveFinishedHandle.Reset();
+    // 애니메이션과 장식물보다 이동을 먼저 정리
+    StopPointMovement();
 
     if (IsValid(Guest) && IsValid(Definition))
     {
@@ -352,7 +205,7 @@ void UGuestDropDecorationBehavior::OnStopped_Implementation()
     {
         TargetProp->EndInteraction(this);
     }
-
+    
     TargetProp = nullptr;
     ActionTransform = FTransform::Identity;
     PickupTransform = FTransform::Identity;
@@ -362,17 +215,7 @@ void UGuestDropDecorationBehavior::OnStopped_Implementation()
     Super::OnStopped_Implementation();
 }
 
-void UGuestDropDecorationBehavior::OnSignalReceived_Implementation(FName Signal, AActor* InstigatorActor)
-{
-    // 목적지 도착 전에는 제압 신호를 무시
-    if (!bActing)
-    {
-        return;
-    }
 
-    // 도착해서 이상행동을 시작한 뒤에는 기존 제압 처리
-    Super::OnSignalReceived_Implementation(Signal, InstigatorActor);
-}
 
 bool UGuestDropDecorationBehavior::CanHandlePropEvent() const
 {
@@ -471,9 +314,3 @@ void UGuestDropDecorationBehavior::HandleThrow()
     PropStage = EPropStage::OnGround;
 }
 
-void UGuestDropDecorationBehavior::EndPlay(
-    const EEndPlayReason::Type EndPlayReason)
-{
-    StopBehavior();
-    Super::EndPlay(EndPlayReason);
-}
