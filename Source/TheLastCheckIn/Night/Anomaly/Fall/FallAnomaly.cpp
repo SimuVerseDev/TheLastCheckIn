@@ -7,6 +7,8 @@
 #include "Core/GameFlow/HotelPhaseSettings.h"
 #include "Core/Reputation/HotelReputationSubsystem.h"
 #include "Shop/ShopPurchaseSubsystem.h"
+#include "Shop/ShopPlacedProductComponent.h"
+#include "Housekeeping/Core/Carry/HKPhysicsPickupActor.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -46,6 +48,9 @@ void AFallAnomaly::BeginPlay()
 	{
 		Shop->OnPurchaseConfirmed.AddUniqueDynamic(this, &ThisClass::HandlePurchaseConfirmed);
 	}
+
+	// 설치 미리보기는 구매 확정 전이라 이벤트가 없음 - 주기적으로 확인
+	GetWorldTimerManager().SetTimer(SnapTimer, this, &ThisClass::CheckSnap, SnapCheckInterval, true);
 }
 
 void AFallAnomaly::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -65,6 +70,7 @@ void AFallAnomaly::EndPlay(const EEndPlayReason::Type EndPlayReason)
 			Shop->OnPurchaseConfirmed.RemoveAll(this);
 		}
 	}
+	GetWorldTimerManager().ClearTimer(SnapTimer);
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -170,7 +176,8 @@ void AFallAnomaly::HandlePhaseChanged(EHotelPhase OldPhase, EHotelPhase NewPhase
 }
 
 /*
-빈 자리와 같은 상품이 설치되면 가장 가까운 빈 자리를 원래 오브젝트로 복구하고 설치된 상품은 제거
+낙하 대상 상품을 사면 기억해 두고, 빈 자리 근처에 놓였는지 확인
+설치 확정 위치가 멀면 일반 가구로 남고, 나중에 재배치·들고 오기로 근처에 오면 스냅
 */
 void AFallAnomaly::HandlePurchaseConfirmed(FName ProductId, AActor* Product)
 {
@@ -179,24 +186,75 @@ void AFallAnomaly::HandlePurchaseConfirmed(FName ProductId, AActor* Product)
 		return;
 	}
 
+	const bool bFallProduct = FallObjects.ContainsByPredicate([ProductId](const AFallObjectActor* Object)
+	{
+		return IsValid(Object) && Object->GetRefillProductId() == ProductId;
+	});
+	if (!bFallProduct)
+	{
+		return;
+	}
+
+	PurchasedProducts.AddUnique(Product);
+	TrySnapProduct(Product);
+	UpdateSlotHints();
+}
+
+void AFallAnomaly::CheckSnap()
+{
+	PurchasedProducts.RemoveAll([](const TWeakObjectPtr<AActor>& Weak)
+	{
+		return !Weak.IsValid();
+	});
+
+	// TrySnapProduct가 목록에서 지우므로 복사본으로 돎
+	const TArray<TWeakObjectPtr<AActor>> Products = PurchasedProducts;
+	for (const TWeakObjectPtr<AActor>& Weak : Products)
+	{
+		TrySnapProduct(Weak.Get());
+	}
+	UpdateSlotHints();
+}
+
+bool AFallAnomaly::TrySnapProduct(AActor* Product)
+{
+	if (!IsValid(Product))
+	{
+		return false;
+	}
+	const UShopPlacedProductComponent* Placed = Product->FindComponentByClass<UShopPlacedProductComponent>();
+	if (!Placed || Placed->IsRelocating())
+	{
+		return false;
+	}
+	// 들고 있는 동안은 기다림 - 놓은 뒤에 판정
+	if (const AHKPhysicsPickupActor* Pickup = Cast<AHKPhysicsPickupActor>(Product))
+	{
+		if (Pickup->IsCarried())
+		{
+			return false;
+		}
+	}
+
+	const FName ProductId = Placed->GetProductId();
 	AFallObjectActor* Nearest = nullptr;
-	double NearestDistSq = TNumericLimits<double>::Max();
+	double NearestDist = SnapRadius;
 	for (AFallObjectActor* Object : FallObjects)
 	{
 		if (!IsValid(Object) || Object->GetFallState() != EFallObjectState::Empty || Object->GetRefillProductId() != ProductId)
 		{
 			continue;
 		}
-		const double DistSq = FVector::DistSquared(Object->GetActorLocation(), Product->GetActorLocation());
-		if (DistSq < NearestDistSq)
+		const double Dist = FVector::Dist2D(Object->GetActorLocation(), Product->GetActorLocation());
+		if (Dist <= NearestDist)
 		{
-			NearestDistSq = DistSq;
+			NearestDist = Dist;
 			Nearest = Object;
 		}
 	}
 	if (!Nearest || !Nearest->Restore())
 	{
-		return;
+		return false;
 	}
 
 	if (UHotelReputationSubsystem* Reputation = GetWorld()->GetSubsystem<UHotelReputationSubsystem>())
@@ -204,7 +262,10 @@ void AFallAnomaly::HandlePurchaseConfirmed(FName ProductId, AActor* Product)
 		Reputation->AddReputation(EReputationReason::CleanRoomAssigned);
 	}
 
-	// 구매 처리가 끝난 뒤 제거
+	// 원래 오브젝트가 복구됐으니 산 상품은 제거 - 구매·재배치 처리가 끝난 뒤
+	PurchasedProducts.Remove(Product);
+	Product->SetActorHiddenInGame(true);
+	Product->SetActorEnableCollision(false);
 	TWeakObjectPtr<AActor> WeakProduct = Product;
 	GetWorldTimerManager().SetTimerForNextTick([WeakProduct]()
 	{
@@ -213,7 +274,45 @@ void AFallAnomaly::HandlePurchaseConfirmed(FName ProductId, AActor* Product)
 			ToDestroy->Destroy();
 		}
 	});
-	UE_LOG(LogAnomaly, Log, TEXT("[Fall] '%s' 재배치"), *Nearest->GetName());
+	UE_LOG(LogAnomaly, Log, TEXT("[Fall] '%s' 자리로 스냅 - 복구"), *Nearest->GetName());
+	return true;
+}
+
+/*
+놓으려는 상품 = 상점 설치 미리보기 중인 상품 + 재배치 중이거나 들고 있는 산 상품
+*/
+void AFallAnomaly::UpdateSlotHints()
+{
+	TSet<FName> ActiveIds;
+	if (const UShopPurchaseSubsystem* Shop = GetWorld()->GetSubsystem<UShopPurchaseSubsystem>())
+	{
+		if (Shop->HasPendingPurchase())
+		{
+			ActiveIds.Add(Shop->GetPendingProductId());
+		}
+	}
+	for (const TWeakObjectPtr<AActor>& Weak : PurchasedProducts)
+	{
+		const AActor* Product = Weak.Get();
+		const UShopPlacedProductComponent* Placed = Product ? Product->FindComponentByClass<UShopPlacedProductComponent>() : nullptr;
+		if (!Placed)
+		{
+			continue;
+		}
+		const AHKPhysicsPickupActor* Pickup = Cast<AHKPhysicsPickupActor>(Product);
+		if (Placed->IsRelocating() || (Pickup && Pickup->IsCarried()))
+		{
+			ActiveIds.Add(Placed->GetProductId());
+		}
+	}
+
+	for (AFallObjectActor* Object : FallObjects)
+	{
+		if (IsValid(Object))
+		{
+			Object->SetSlotHintVisible(ActiveIds.Contains(Object->GetRefillProductId()));
+		}
+	}
 }
 
 void AFallAnomaly::CollectFallObjects()

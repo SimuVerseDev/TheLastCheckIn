@@ -7,6 +7,8 @@
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/CollisionProfile.h"
+#include "Materials/MaterialInterface.h"
+#include "UObject/ConstructorHelpers.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 
@@ -32,7 +34,21 @@ AFallObjectActor::AFallObjectActor()
 	BrokenMesh->SetCollisionProfileName(UCollisionProfile::PhysicsActor_ProfileName);
 	BrokenMesh->SetMassOverrideInKg(NAME_None, IntactMassKg, true);
 
-	CleanupPrompt = NSLOCTEXT("Anomaly", "FallCleanup", "잔해 치우기");
+	// 빈 자리 표시 - 평소엔 숨김, 충돌·그림자 없음
+	SlotHintMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SlotHintMesh"));
+	SlotHintMesh->SetupAttachment(Root);
+	SlotHintMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SlotHintMesh->SetCastShadow(false);
+	SlotHintMesh->SetVisibility(false);
+
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> HintMaterial(
+		TEXT("/Game/HouseKeeping/Materials/M_HK_TrashHighlight.M_HK_TrashHighlight"));
+	if (HintMaterial.Succeeded())
+	{
+		SlotHintMaterial = HintMaterial.Object;
+	}
+
+	CleanupPrompt = NSLOCTEXT("Anomaly", "FallCleanup", "꾹 눌러 잔해 봉투에 담기");
 	PickupPrompt = NSLOCTEXT("Anomaly", "FallPickup", "잡기");
 }
 
@@ -43,6 +59,18 @@ void AFallObjectActor::BeginPlay()
 	BrokenMesh->SetMassOverrideInKg(NAME_None, IntactMassKg, true);
 	IntactHome = IntactMesh->GetRelativeTransform();
 	BrokenHome = BrokenMesh->GetRelativeTransform();
+
+	// 원래 자리에 원래 메시 모양으로 표시
+	SlotHintMesh->SetStaticMesh(IntactMesh->GetStaticMesh());
+	SlotHintMesh->SetRelativeTransform(IntactHome);
+	if (SlotHintMaterial)
+	{
+		for (int32 i = 0; i < SlotHintMesh->GetNumMaterials(); ++i)
+		{
+			SlotHintMesh->SetMaterial(i, SlotHintMaterial);
+		}
+	}
+
 	ResetIntactMesh();
 	ApplyState();
 }
@@ -104,6 +132,16 @@ bool AFallObjectActor::Restore()
 	ApplyState();
 	OnRestored();
 	return true;
+}
+
+void AFallObjectActor::SetSlotHintVisible(bool bVisible)
+{
+	if (bSlotHintRequested == bVisible)
+	{
+		return;
+	}
+	bSlotHintRequested = bVisible;
+	SlotHintMesh->SetVisibility(bSlotHintRequested && State == EFallObjectState::Empty);
 }
 
 /*
@@ -322,4 +360,6 @@ void AFallObjectActor::ApplyState()
 	}
 	BrokenMesh->SetVisibility(bBroken);
 	BrokenMesh->SetCollisionEnabled(bBroken ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+
+	SlotHintMesh->SetVisibility(bSlotHintRequested && State == EFallObjectState::Empty);
 }

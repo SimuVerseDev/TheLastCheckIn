@@ -7,6 +7,7 @@
 #include "FallObjectActor.generated.h"
 
 class UStaticMeshComponent;
+class UMaterialInterface;
 class ATrashBagActor;
 
 UENUM(BlueprintType)
@@ -50,6 +51,9 @@ public:
 	UFUNCTION(BlueprintPure, Category="Night|Fall")
 	FName GetRefillProductId() const { return RefillProductId; }
 
+	// 빈 자리 표시 - 같은 상품을 설치·재배치·운반 중일 때 AFallAnomaly가 켬 (Empty일 때만 보임)
+	void SetSlotHintVisible(bool bVisible);
+
 	// 오늘 밤 떨어졌고 아직 봉투에 담지 않았는지 - 정산 때 평판 판정 후 AFallAnomaly가 초기화
 	bool HasFallenTonight() const { return bFellTonight; }
 	void ClearFallenTonight() { bFellTonight = false; }
@@ -82,6 +86,14 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night|Fall")
 	TObjectPtr<UStaticMeshComponent> BrokenMesh;
+
+	// 빈 자리에 띄우는 원래 오브젝트 모양 - 충돌 없음, IntactMesh의 메시를 SlotHintMaterial로 덮음
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night|Fall")
+	TObjectPtr<UStaticMeshComponent> SlotHintMesh;
+
+	// 빈 자리 표시 머티리얼 - 기본은 하우스키핑 쓰레기 하이라이트(M_HK_TrashHighlight)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Fall")
+	TObjectPtr<UMaterialInterface> SlotHintMaterial;
 
 	// 다시 채울 때 쓰는 상점 상품 ID (상품 DataTable의 행 이름)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Fall")
@@ -163,6 +175,9 @@ private:
 
 	EFallObjectState State = EFallObjectState::Intact;
 	bool bFellTonight = false;
+
+	// AFallAnomaly가 표시를 요청했는지 - 실제로는 Empty일 때만 보임
+	bool bSlotHintRequested = false;
 
 	// 잔해가 물리로 쓰러지는 중 (Broken이지만 아직 고정 전)
 	bool bFalling = false;
