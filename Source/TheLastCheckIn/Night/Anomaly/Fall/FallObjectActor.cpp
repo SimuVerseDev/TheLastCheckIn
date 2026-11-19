@@ -9,6 +9,20 @@
 #include "Engine/CollisionProfile.h"
 #include "Materials/MaterialInterface.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Night/Anomaly/Mirror/MirrorReflectionComponent.h"
+
+// 유니티 빌드에서 다른 cpp와 이름이 겹치지 않도록 분리
+namespace FallObjectMirror
+{
+	// 거울면 기준점 - 이 이름이거나 이 태그가 붙은 SceneComponent, 앞(X)이 거울이 바라보는 방향
+	static const FName PlaneName(TEXT("MirrorPlane"));
+
+	// 잔해와 함께 치워지고 복구되는 부속 메시 태그 (거울 틀 등)
+	static const FName PartTag(TEXT("FallPart"));
+
+	// 부속 메시의 빈 자리 표시용 복제본 (BeginPlay에서 생성)
+	static const FName PartHintTag(TEXT("FallPartHint"));
+}
 #include "Engine/World.h"
 #include "TimerManager.h"
 
@@ -71,8 +85,56 @@ void AFallObjectActor::BeginPlay()
 		}
 	}
 
+	/*
+	부속 메시(FallPart)도 빈 자리 표시에 같이 보이도록 같은 모양의 표시 메시를 런타임에 만듦
+	*/
+	TArray<UStaticMeshComponent*> MeshComponents;
+	GetComponents(MeshComponents);
+	for (UStaticMeshComponent* Part : MeshComponents)
+	{
+		if (!Part->ComponentHasTag(FallObjectMirror::PartTag) || !Part->GetStaticMesh())
+		{
+			continue;
+		}
+		UStaticMeshComponent* PartHint = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
+		PartHint->SetupAttachment(Root);
+		PartHint->SetMobility(EComponentMobility::Movable);
+		PartHint->SetStaticMesh(Part->GetStaticMesh());
+		PartHint->SetRelativeTransform(Part->GetComponentTransform().GetRelativeTransform(Root->GetComponentTransform()));
+		PartHint->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		PartHint->SetCastShadow(false);
+		PartHint->SetVisibility(false);
+		PartHint->ComponentTags.Add(FallObjectMirror::PartHintTag);
+		if (SlotHintMaterial)
+		{
+			for (int32 i = 0; i < PartHint->GetNumMaterials(); ++i)
+			{
+				PartHint->SetMaterial(i, SlotHintMaterial);
+			}
+		}
+		AddInstanceComponent(PartHint);
+		PartHint->RegisterComponent();
+	}
+
 	ResetIntactMesh();
 	ApplyState();
+}
+
+/*
+빈 자리 표시 (SlotHintMesh + 부속 메시 표시) 보이기/숨기기
+*/
+static void SetFallSlotHintsVisible(AActor* Owner, UStaticMeshComponent* SlotHintMesh, bool bVisible)
+{
+	SlotHintMesh->SetVisibility(bVisible);
+	TArray<UStaticMeshComponent*> MeshComponents;
+	Owner->GetComponents(MeshComponents);
+	for (UStaticMeshComponent* Component : MeshComponents)
+	{
+		if (Component->ComponentHasTag(FallObjectMirror::PartHintTag))
+		{
+			Component->SetVisibility(bVisible);
+		}
+	}
 }
 
 /*
@@ -99,6 +161,16 @@ bool AFallObjectActor::Fall()
 	IntactMesh->SetSimulatePhysics(false);
 	State = EFallObjectState::Broken;
 	ApplyState();
+
+	// 제자리에서 깨지는 것은 물리 없이 BP에 배치한 자리 그대로 - 바로 고정
+	if (!bFallOnBreak)
+	{
+		ResetBrokenMesh();
+		OnFell();
+		Settle();
+		UE_LOG(LogAnomaly, Log, TEXT("[Fall] '%s' 제자리에서 깨짐"), *GetName());
+		return true;
+	}
 
 	BrokenMesh->SetSimulatePhysics(true);
 	BrokenMesh->WakeAllRigidBodies();
@@ -141,7 +213,7 @@ void AFallObjectActor::SetSlotHintVisible(bool bVisible)
 		return;
 	}
 	bSlotHintRequested = bVisible;
-	SlotHintMesh->SetVisibility(bSlotHintRequested && State == EFallObjectState::Empty);
+	SetFallSlotHintsVisible(this, SlotHintMesh, bSlotHintRequested && State == EFallObjectState::Empty);
 }
 
 /*
@@ -361,5 +433,53 @@ void AFallObjectActor::ApplyState()
 	BrokenMesh->SetVisibility(bBroken);
 	BrokenMesh->SetCollisionEnabled(bBroken ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
 
-	SlotHintMesh->SetVisibility(bSlotHintRequested && State == EFallObjectState::Empty);
+	SetFallSlotHintsVisible(this, SlotHintMesh, bSlotHintRequested && State == EFallObjectState::Empty);
+
+	/*
+	부속 메시 (거울 틀 등) - "FallPart" 태그가 붙은 컴포넌트는 멀쩡하거나 깨져 있는 동안만 보이고
+	잔해를 봉투에 담으면 같이 사라졌다가 복구되면 다시 나타남
+	*/
+	{
+		const bool bPartsPresent = bIntact || bBroken;
+		TArray<UPrimitiveComponent*> Primitives;
+		GetComponents(Primitives);
+		for (UPrimitiveComponent* Part : Primitives)
+		{
+			if (Part->ComponentHasTag(FallObjectMirror::PartTag))
+			{
+				Part->SetVisibility(bPartsPresent, true);
+				Part->SetCollisionEnabled(bPartsPresent ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+			}
+		}
+	}
+
+	/*
+	거울 반사 - BP에 MirrorReflectionComponent와 "MirrorPlane" SceneComponent가 있을 때만
+	멀쩡하면 IntactMesh, 깨지면 BrokenMesh에 반사를 넘기고, 치운 뒤엔 끔
+	*/
+	if (UMirrorReflectionComponent* Reflection = FindComponentByClass<UMirrorReflectionComponent>())
+	{
+		USceneComponent* Plane = nullptr;
+		TArray<USceneComponent*> SceneComponents;
+		GetComponents(SceneComponents);
+		for (USceneComponent* Component : SceneComponents)
+		{
+			if (Component->GetFName() == FallObjectMirror::PlaneName || Component->ComponentHasTag(FallObjectMirror::PlaneName))
+			{
+				Plane = Component;
+				break;
+			}
+		}
+
+		UStaticMeshComponent* Surface = bIntact ? IntactMesh.Get() : (bBroken ? BrokenMesh.Get() : nullptr);
+		if (Plane && Surface)
+		{
+			Reflection->SetupMirror(Plane, Surface);
+			Reflection->SetReflectionEnabled(true);
+		}
+		else
+		{
+			Reflection->SetReflectionEnabled(false);
+		}
+	}
 }

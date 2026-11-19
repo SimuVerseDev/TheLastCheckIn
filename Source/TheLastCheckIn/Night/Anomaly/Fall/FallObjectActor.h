@@ -107,6 +107,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Fall|Physics")
 	bool bSimulateWhileIntact = true;
 
+	/*
+	true: 이상현상 때 잔해가 물리로 떨어져 쓰러짐
+	false: 떨어지지 않고 제자리에서 깨짐 (벽걸이 거울 등) - BrokenMesh가 BP에 배치한 자리에 그대로 나타나고 바로 치우기 가능
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Fall|Physics")
+	bool bFallOnBreak = true;
+
 	// 멀쩡한 오브젝트 무게 - Carry의 MaxCarryMass(기본 50kg)보다 크면 들 수 없음
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Fall|Physics", meta=(ClampMin="0.1", Units="kg"))
 	float IntactMassKg = 10.0f;
