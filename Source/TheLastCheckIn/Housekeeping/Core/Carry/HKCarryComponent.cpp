@@ -6,6 +6,9 @@
 #include "GameFramework/Controller.h"
 #include "Housekeeping/Objects/Blanket/HKBlanketActor.h"
 #include "EngineUtils.h"
+#include "Core/Interaction/PlayerInteractionComponent.h"
+#include "Housekeeping/Objects/Trash/HKTrashBinComponent.h"
+#include "Components/SceneComponent.h"
 
 UHKCarryComponent::UHKCarryComponent()
 {
@@ -150,30 +153,142 @@ void UHKCarryComponent::Drop()
 	}
 }
 
+UHKTrashBinComponent* UHKCarryComponent::GetHeldTrashBin() const
+{
+	AActor* Owner = GetOwner();
+
+	if (!IsValid(Owner))
+	{
+		return nullptr;
+	}
+
+	// BP 도구처럼 E로 들고 있는 액터를 먼저 확인합니다.
+	if (UPlayerInteractionComponent* Interaction =
+		Owner->FindComponentByClass<UPlayerInteractionComponent>())
+	{
+		AActor* ActiveActor = Interaction->GetActiveInteraction();
+
+		if (IsValid(ActiveActor))
+		{
+			if (UHKTrashBinComponent* Bin =
+				ActiveActor->FindComponentByClass<UHKTrashBinComponent>())
+			{
+				return Bin;
+			}
+		}
+	}
+
+	// 플레이어의 물리 핸들로 들고 있는 경우도 확인합니다.
+	TInlineComponentArray<UPhysicsHandleComponent*> Handles(Owner);
+
+	for (const UPhysicsHandleComponent* Handle : Handles)
+	{
+		if (!IsValid(Handle))
+		{
+			continue;
+		}
+
+		const UPrimitiveComponent* Grabbed =
+			Handle->GetGrabbedComponent();
+
+		AActor* HeldActor =
+			IsValid(Grabbed) ? Grabbed->GetOwner() : nullptr;
+
+		if (!IsValid(HeldActor))
+		{
+			continue;
+		}
+
+		if (UHKTrashBinComponent* Bin =
+			HeldActor->FindComponentByClass<UHKTrashBinComponent>())
+		{
+			return Bin;
+		}
+	}
+
+	return nullptr;
+}
+
+bool UHKCarryComponent::CanAbsorbTrash() const
+{
+	const USceneComponent* Target = GetTrashAbsorbTarget();
+
+	AActor* TargetOwner =
+		IsValid(Target) ? Target->GetOwner() : nullptr;
+
+	const UHKTrashBinComponent* Bin = IsValid(TargetOwner)
+		? TargetOwner->FindComponentByClass<UHKTrashBinComponent>()
+		: nullptr;
+
+	return IsValid(Bin) && Bin->CanAcceptTrash(1);
+}
+
 USceneComponent* UHKCarryComponent::GetTrashAbsorbTarget() const
 {
+	// 손에 든 쓰레기통의 투입구를 우선합니다.
+	if (const UHKTrashBinComponent* Bin = GetHeldTrashBin())
+	{
+		AActor* BinActor = Bin->GetOwner();
+
+		if (!IsValid(BinActor))
+		{
+			return nullptr;
+		}
+
+		TInlineComponentArray<USceneComponent*> Components(BinActor);
+
+		for (USceneComponent* Component : Components)
+		{
+			if (IsValid(Component)
+				&& Component->ComponentHasTag(TrashAbsorbPointTag))
+			{
+				return Component;
+			}
+		}
+
+		// 들고 있는 쓰레기통에 투입구가 없으면 흡수하지 않습니다.
+		return nullptr;
+	}
+
+	// 기존에 별도로 등록한 투입구를 확인합니다.
 	if (USceneComponent* Target = TrashAbsorbTarget.Get())
 	{
 		return Target;
 	}
+
+	// 기존 플레이어 물리 핸들 기반의 투입구 탐색을 유지합니다.
 	TInlineComponentArray<UPhysicsHandleComponent*> Handles(GetOwner());
+
 	for (const UPhysicsHandleComponent* Handle : Handles)
 	{
-		const UPrimitiveComponent* Grabbed = Handle->GetGrabbedComponent();
-		AActor* HeldActor = Grabbed ? Grabbed->GetOwner() : nullptr;
-		if (!HeldActor)
+		if (!IsValid(Handle))
 		{
 			continue;
 		}
+
+		const UPrimitiveComponent* Grabbed =
+			Handle->GetGrabbedComponent();
+
+		AActor* HeldActor =
+			IsValid(Grabbed) ? Grabbed->GetOwner() : nullptr;
+
+		if (!IsValid(HeldActor))
+		{
+			continue;
+		}
+
 		TInlineComponentArray<USceneComponent*> Components(HeldActor);
+
 		for (USceneComponent* Component : Components)
 		{
-			if (Component->ComponentHasTag(TrashAbsorbPointTag))
+			if (IsValid(Component)
+				&& Component->ComponentHasTag(TrashAbsorbPointTag))
 			{
 				return Component;
 			}
 		}
 	}
+
 	return nullptr;
 }
 

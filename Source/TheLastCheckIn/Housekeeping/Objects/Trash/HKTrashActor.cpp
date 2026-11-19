@@ -3,6 +3,8 @@
 #include "Housekeeping/Objects/Trash/HKTrashPoolSubsystem.h"
 #include "Housekeeping/Core/Carry/HKCarryComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Housekeeping/Objects/Trash/HKTrashBinComponent.h"
+#include "Components/SceneComponent.h"
 
 AHKTrashActor::AHKTrashActor()
 {
@@ -65,20 +67,43 @@ void AHKTrashActor::Tick(float DeltaTime)
 
 bool AHKTrashActor::Absorb(USceneComponent* Target)
 {
-	if (State != EHKTrashState::Active || !Target)
+	if (State != EHKTrashState::Active || !IsValid(Target))
 	{
 		return false;
 	}
 
+	AActor* TargetOwner = Target->GetOwner();
+
+	UHKTrashBinComponent* Bin = IsValid(TargetOwner)
+		? TargetOwner->FindComponentByClass<UHKTrashBinComponent>()
+		: nullptr;
+
+	// 실제 흡수 시점에도 남은 용량을 확인합니다.
+	if (!IsValid(Bin) || !Bin->CanAcceptTrash(1))
+	{
+		return false;
+	}
+
+	// 용량 변경 알림이 발생하기 전에 상태를 바꿔
+	// 같은 쓰레기가 중복으로 흡수되지 않게 합니다.
 	State = EHKTrashState::Absorbing;
 	AbsorbTarget = Target;
 	AbsorbStartLocation = GetActorLocation();
 	AbsorbElapsed = 0.0f;
 
+	// 흡수 중인 쓰레기도 용량을 차지합니다.
+	if (!Bin->TryAddTrash(1))
+	{
+		State = EHKTrashState::Active;
+		AbsorbTarget.Reset();
+		return false;
+	}
+
 	SetHighlighted(false);
 	Mesh->SetSimulatePhysics(false);
 	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SetActorTickEnabled(true);
+
 	return true;
 }
 
