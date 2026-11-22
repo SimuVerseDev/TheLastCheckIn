@@ -14,6 +14,8 @@
 #include "Navigation/CrowdFollowingComponent.h"
 #include "NavigationSystem.h"
 #include "TimerManager.h"
+#include "BrainComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 namespace
 {
@@ -127,6 +129,8 @@ bool AGuestAIController::StartGuestAI(AActor* StartTarget)
 		GetWorldTimerManager().SetTimer(FinalApproachTimerHandle, this,
 			&AGuestAIController::CheckFinalApproach, FinalApproachCheckInterval, true);
 	}
+	
+	PauseForAction();
 
 	return true;
 }
@@ -170,6 +174,9 @@ void AGuestAIController::StopGuestAI()
 	}
 
 	ClearFocus(EAIFocusPriority::Gameplay);
+	
+	// 종료된 AI의 일시정지 상태 정리
+	ResumeAfterAction();
 }
 
 void AGuestAIController::OnPossess(APawn* InPawn)
@@ -282,4 +289,76 @@ void AGuestAIController::CheckFinalApproach()
 	UE_LOG(LogGuests, Log,
 		TEXT("Guest %s: Recovering stalled final approach; distance=%.1f location=(%s) goal=(%s)."),
 		*Guest->GetName(), FMath::Sqrt(DistanceSquared), *Location.ToString(), *Goal.ToString());
+}
+
+
+void AGuestAIController::PauseForAction()
+{
+	AGuestCharacter* Guest = Cast<AGuestCharacter>(GetPawn());
+
+	if (!IsValid(Guest) || !Guest->IsActionMovementPaused())
+	{
+		return;
+	}
+
+	NearGoalStallStartedAt = -1.0;
+
+	UBrainComponent* Brain = GetBrainComponent();
+
+	if (IsValid(Brain) && Brain->IsRunning() && !Brain->IsPaused())
+	{
+		ActionPausedBrain = Brain;
+		Brain->PauseLogic(TEXT("Guest action"));
+	}
+
+	const EPathFollowingStatus::Type Status = GetMoveStatus();
+
+	if (Status == EPathFollowingStatus::Moving ||
+		Status == EPathFollowingStatus::Waiting)
+	{
+		const FAIRequestID MoveId = GetCurrentMoveRequestID();
+
+		if (PauseMove(MoveId))
+		{
+			ActionPausedMoveId = MoveId;
+		}
+	}
+
+	Guest->GetCharacterMovement()->StopMovementImmediately();
+}
+
+void AGuestAIController::ResumeAfterAction()
+{
+	const FAIRequestID MoveId = ActionPausedMoveId;
+	UBrainComponent* Brain = ActionPausedBrain.Get();
+
+	ActionPausedMoveId = FAIRequestID::InvalidRequest;
+	ActionPausedBrain.Reset();
+	NearGoalStallStartedAt = -1.0;
+
+	// 일시정지한 이동 요청만 재개
+	if (MoveId.IsValid() &&
+		GetCurrentMoveRequestID() == MoveId &&
+		GetMoveStatus() == EPathFollowingStatus::Paused)
+	{
+		ResumeMove(MoveId);
+	}
+
+	if (IsValid(Brain) && Brain->IsPaused())
+	{
+		Brain->ResumeLogic(TEXT("Guest action finished"));
+	}
+}
+
+FAIRequestID AGuestAIController::RequestMove(
+	const FAIMoveRequest& MoveRequest,
+	FNavPathSharedPtr Path)
+{
+	const FAIRequestID MoveId =
+		Super::RequestMove(MoveRequest, Path);
+
+	// 동작 중 새 이동 요청도 일시정지
+	PauseForAction();
+
+	return MoveId;
 }

@@ -5,6 +5,8 @@
 #include "Engine/TimerHandle.h"
 #include "GuestAIController.generated.h"
 
+class UBrainComponent;
+
 UCLASS()
 class THELASTCHECKIN_API AGuestAIController : public AAIController
 {
@@ -20,6 +22,16 @@ public:
 
 	// 도착한 손님을 다른 손님이 피할 수 있는 대기 장애물로 전환한다.
 	void UseWaitingAvoidance();
+	
+	// 동작 중 AI 일시정지
+	void PauseForAction();
+
+	// 동작으로 정지한 AI 재개
+	void ResumeAfterAction();
+
+	virtual FAIRequestID RequestMove(
+		const FAIMoveRequest& MoveRequest,
+		FNavPathSharedPtr Path) override;
 
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
@@ -31,4 +43,8 @@ private:
 
 	FTimerHandle FinalApproachTimerHandle;
 	double NearGoalStallStartedAt = -1.0;
+	
+	// 재개할 이동 요청과 행동 트리
+	FAIRequestID ActionPausedMoveId = FAIRequestID::InvalidRequest;
+	TWeakObjectPtr<UBrainComponent> ActionPausedBrain;
 };
