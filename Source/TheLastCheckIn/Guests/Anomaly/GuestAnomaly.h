@@ -17,6 +17,7 @@ struct FGuestAnomalyParticipant
     TWeakObjectPtr<UGuestAnomalyComponent> Component;
     TWeakObjectPtr<AActor> ContextActor;
     FGuid ParticipationId;
+    bool bResolved = false;
 };
 
 UCLASS(Blueprintable)

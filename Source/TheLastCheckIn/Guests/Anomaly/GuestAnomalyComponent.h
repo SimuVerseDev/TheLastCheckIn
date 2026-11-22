@@ -86,6 +86,11 @@ public:
     
     // 행동 실패를 알리고 객실로 복귀한다.
     void CancelBehaviorAndReturnToRoom(UGuestAnomalyBehavior* Requester);
+    
+    bool IsResolutionSucceeded() const
+    {
+        return bResolutionSucceeded;
+    }
 
 protected:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -124,4 +129,7 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "Anomaly|Return", 
         meta = (ClampMin = "1.0"))
     float ReturnTimeoutSeconds = 120.0f;
+    
+    // 제압 성공 여부
+    bool bResolutionSucceeded = false;
 };
