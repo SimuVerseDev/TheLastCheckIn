@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Night/Anomaly/Light/LightSwitchActor.h"
@@ -11,7 +11,8 @@
 
 ALightSwitchActor::ALightSwitchActor()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 
 	SwitchMesh = CreateDefaultSubobject<UStaticMeshComponent>(
 		TEXT("SwitchMesh"));
@@ -38,6 +39,7 @@ ALightSwitchActor::ALightSwitchActor()
 void ALightSwitchActor::BeginPlay()
 {
 	Super::BeginPlay();
+	LeverAnimation.Initialize(*this, FName(TEXT("SM_switch_button")));
 
 	if (!IsValid(Anomaly))
 	{
@@ -53,6 +55,33 @@ void ALightSwitchActor::BeginPlay()
 			TEXT("[LightSwitch] %s: LightAnomaly를 찾을 수 없습니다."),
 			*GetName());
 	}
+	else
+	{
+		Anomaly->OnLightingChanged.AddUniqueDynamic(this, &ALightSwitchActor::HandleLightingChanged);
+		HandleLightingChanged(Anomaly->LightingMode, Anomaly->ActiveZoneId);
+	}
+}
+
+void ALightSwitchActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (IsValid(Anomaly))
+	{
+		Anomaly->OnLightingChanged.RemoveDynamic(this, &ALightSwitchActor::HandleLightingChanged);
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
+void ALightSwitchActor::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	LeverAnimation.Tick(*this, DeltaSeconds);
+}
+
+void ALightSwitchActor::HandleLightingChanged(EHotelLightMode Mode, FName AffectedZoneId)
+{
+	const bool bDown = Mode == EHotelLightMode::Blackout
+		|| (Mode == EHotelLightMode::Flickering && !ZoneId.IsNone() && ZoneId == AffectedZoneId);
+	LeverAnimation.SetDown(*this, bDown, LeverDownRotation);
 }
 
 bool ALightSwitchActor::CanInteract_Implementation(
