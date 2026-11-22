@@ -335,6 +335,10 @@ void UCrowbarCombatComponent::PerformHit()
     {
         Anomaly->SendSignal(TEXT("Crowbar"), Pawn);
     }
+    if (IsValid(Guest))
+    {
+        Guest->OnCrowbarHit();
+    }
 }
 
 void UCrowbarCombatComponent::CancelPendingHit()

@@ -109,6 +109,9 @@ public:
 	// 복귀가 취소됐을 때 이동 상태 정리
 	void ClearAnomalyReturnState();
 	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Guests|Combat")
+	void OnCrowbarHit();
+	
 protected:
 	virtual void BeginPlay() override;
 	
