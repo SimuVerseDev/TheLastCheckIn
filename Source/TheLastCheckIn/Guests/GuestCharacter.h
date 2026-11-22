@@ -120,7 +120,7 @@ public:
 	void ClearAnomalyReturnState();
 	
 	UFUNCTION(BlueprintImplementableEvent, Category = "Guests|Combat")
-	void OnCrowbarHit();
+	void OnCrowbarHit(FVector HitDirection);
 	
 	// 공통 동작 재생 및 기존 동작 교체
 	UFUNCTION(BlueprintCallable, Category = "Guests|Action")

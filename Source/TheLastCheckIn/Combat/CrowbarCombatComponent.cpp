@@ -333,6 +333,15 @@ void UCrowbarCombatComponent::PerformHit()
 
     // 타격 전 일반 손님 구분
     const bool bNormalGuest = !IsValid(Anomaly) || !Anomaly->IsBusy();
+    
+    // 공격자에서 손님으로 향하는 수평 방향
+    FVector HitDirection =
+        (Guest->GetActorLocation() - Pawn->GetActorLocation()).GetSafeNormal2D();
+
+    if (HitDirection.IsNearlyZero())
+    {
+        HitDirection = Pawn->GetActorForwardVector().GetSafeNormal2D();
+    }
 
     if (IsValid(Anomaly))
     {
@@ -341,7 +350,7 @@ void UCrowbarCombatComponent::PerformHit()
 
     if (IsValid(Guest))
     {
-        Guest->OnCrowbarHit();
+        Guest->OnCrowbarHit(HitDirection);
     }
 
     // 일반 손님 타격 감점
