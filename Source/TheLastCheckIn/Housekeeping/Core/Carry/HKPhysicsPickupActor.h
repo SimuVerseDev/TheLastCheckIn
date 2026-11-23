@@ -53,6 +53,8 @@ public:
 
 protected:
 
+	virtual void BeginPlay() override;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> Mesh;
 
@@ -61,6 +63,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Pickup")
 	bool bCanBePickedUp = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Pickup")
+	bool bRestUntilPickedUp = false;
 
 
 	/*
