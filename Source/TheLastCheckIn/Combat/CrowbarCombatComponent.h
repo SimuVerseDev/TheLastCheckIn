@@ -42,6 +42,9 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "Combat")
     FCrowbarAttackEvent OnAttackStarted;
+    
+    UPROPERTY(EditAnywhere, Category = "Combat|Audio")
+    TObjectPtr<class USoundBase> ImpactSound;
 
 protected:
     virtual void EndPlay(

@@ -10,6 +10,8 @@ class THELASTCHECKIN_API AHorseshoeActor : public AHKPhysicsPickupActor
 	GENERATED_BODY()
 
 public:
+	AHorseshoeActor();
+
 	void MarkUsed()
 	{
 		bUsed = true;

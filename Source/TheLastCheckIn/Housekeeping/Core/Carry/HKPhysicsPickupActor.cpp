@@ -25,6 +25,16 @@ AHKPhysicsPickupActor::AHKPhysicsPickupActor()
 	PickupPrompt = NSLOCTEXT("Housekeeping", "PickupPrompt", "잡기");
 }
 
+void AHKPhysicsPickupActor::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (bRestUntilPickedUp)
+	{
+		Mesh->SetSimulatePhysics(false);
+	}
+}
+
 void AHKPhysicsPickupActor::NotifyPickedUp(AActor* InCarrier)
 {
 	Carrier = InCarrier;
@@ -51,7 +61,7 @@ bool AHKPhysicsPickupActor::CanBePickedUp() const
 {
 	const UHKPlacementDirtComponent* Placement = FindComponentByClass<UHKPlacementDirtComponent>();
 	const bool bResting = Placement && !Placement->IsSnapping();
-	return bCanBePickedUp && !IsCarried() && (Mesh->IsSimulatingPhysics() || bResting);
+	return bCanBePickedUp && !IsCarried() && (Mesh->IsSimulatingPhysics() || bResting || bRestUntilPickedUp);
 }
 
 /*
