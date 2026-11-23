@@ -5,8 +5,8 @@
 #include "HKBlanketActor.generated.h"
 class UProceduralMeshComponent;
 class UMaterialInterface;
-struct FCollisionObjectQueryParams;
 struct FCollisionQueryParams;
+struct FCollisionResponseParams;
 UCLASS()
 class THELASTCHECKIN_API AHKBlanketActor : public AActor, public IInteractable
 {
@@ -37,6 +37,9 @@ public:
 	{
 		return Positions;
 	}
+
+	float GetSpreadRatio() const;
+
 	void Scramble(FRandomStream& Random, const FVector& Center, float MaxOffset);
 	
 	void MakeBed(const FTransform& Target, float Duration);
@@ -134,6 +137,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, ClampMax=1))
 	float AirDrag = 0.1f;
 
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Simulation", meta=(ClampMin=0, Units="cm/s"))
+	float RestSpeed = 5.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Housekeeping|Blanket")
 	FText GrabPrompt;
 	
@@ -160,6 +166,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Performance", meta=(ClampMin=0, Units="s"))
 	float SleepDelay = 1.0f;
 
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Blanket|Performance", meta=(ClampMin=0, Units="s"))
+	float MaxAwakeTime = 3.0f;
+
 private:
 	struct FDistanceConstraint
 	{
@@ -184,9 +193,10 @@ private:
 	void UpdateSleep(float DeltaTime, float SubStep);
 	bool IsPlayerNearby() const;
 	float SleepTimer = 0.0f;
+	float AwakeTimer = 0.0f;
 
 	FVector ResolvePush(const FVector& SurfacePoint, const FVector& Normal, const FVector& Target,
-		const FCollisionObjectQueryParams& ObjectParams, const FCollisionQueryParams& Params) const;
+		const FCollisionQueryParams& Params, const FCollisionResponseParams& ResponseParams) const;
 	void BuildTriangles();
 	void BuildMesh(bool bCreate);
 	void ComputeParticleNormals();

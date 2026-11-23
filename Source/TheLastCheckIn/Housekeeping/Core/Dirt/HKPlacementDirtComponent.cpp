@@ -13,6 +13,11 @@ void UHKPlacementDirtComponent::BeginPlay()
 	{
 		UE_LOG(LogHKPlacementDirt, Warning, TEXT("%s : 루트가 Movable이 아니라 흐트러뜨릴 수 없음"), *GetOwner()->GetName());
 	}
+
+	if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(GetOwner()->GetRootComponent()))
+	{
+		Prim->SetSimulatePhysics(false);
+	}
 }
 
 float UHKPlacementDirtComponent::EvaluateDirt() const
@@ -29,16 +34,11 @@ float UHKPlacementDirtComponent::EvaluateDirt() const
 void UHKPlacementDirtComponent::ApplyDirt(FRandomStream& Random)
 {
 	Super::ApplyDirt(Random);
-	/*
-	스냅 중이면 취소하고 물리 복구
-	*/
-	if (SnapTimer.IsValid())
+	
+	GetWorld()->GetTimerManager().ClearTimer(SnapTimer);
+	if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(GetOwner()->GetRootComponent()))
 	{
-		GetWorld()->GetTimerManager().ClearTimer(SnapTimer);
-		if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(GetOwner()->GetRootComponent()))
-		{
-			Prim->SetSimulatePhysics(true);
-		}
+		Prim->SetSimulatePhysics(true);
 	}
 	
 	AActor* Owner = GetOwner();
@@ -125,10 +125,4 @@ void UHKPlacementDirtComponent::TickSnap()
 		return;
 	}
 	GetWorld()->GetTimerManager().ClearTimer(SnapTimer);
-	if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(Owner->GetRootComponent()))
-	{
-		Prim->SetSimulatePhysics(true);
-		Prim->SetPhysicsLinearVelocity(FVector::ZeroVector);
-		Prim->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
-	}
 }
