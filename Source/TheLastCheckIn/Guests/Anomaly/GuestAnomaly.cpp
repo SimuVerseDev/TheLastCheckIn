@@ -1,17 +1,15 @@
 ﻿#include "Guests/Anomaly/GuestAnomaly.h"
 #include "TheLastCheckIn.h"
-
 #include "Guests/Anomaly/GuestAnomalyComponent.h"
 #include "Guests/Anomaly/GuestAnomalyDefinition.h"
 #include "Guests/Anomaly/GuestActionLocation.h"
 #include "Guests/GuestCharacter.h"
 #include "Guests/Party/GuestParty.h"
-
 #include "Night/Anomaly/AnomalyManagerSubsystem.h"
 #include "Core/Time/GameClockSubsystem.h"
 #include "Core/Time/GameTimeMath.h"
 #include "Core/GameFlow/HotelPhaseSubsystem.h"
-
+#include "Core/Reputation/HotelReputationSubsystem.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -408,8 +406,9 @@ bool AGuestAnomaly::TryAddParticipant()
             Participant.Component = Component;
             Participant.ContextActor = Point;
 
-            Participant.ParticipationId =
-                Component->GetParticipationId();
+            Participant.ParticipationId = Component->GetParticipationId();
+            
+            Participant.bResolved = Component->IsResolutionSucceeded();
 
             Participants.Add(Participant);
             BindParticipant(Participant);
@@ -487,6 +486,12 @@ bool AGuestAnomaly::AreParticipantsValid() const
 
     for (const FGuestAnomalyParticipant& Participant : Participants)
     {
+        // 해결된 참여자는 이동 상태 검사 제외
+        if (Participant.bResolved)
+        {
+            continue;
+        }
+        
         if (!Participant.Guest.IsValid() ||
             !Participant.ContextActor.IsValid() ||
             !IsSameParticipation(Participant))
@@ -514,8 +519,7 @@ bool AGuestAnomaly::AreAllParticipantsResolved() const
 
     for (const FGuestAnomalyParticipant& Participant : Participants)
     {
-        if (Participant.Component->GetPhase() !=
-            EGuestAnomalyPhase::Resolved)
+        if (!Participant.bResolved)
         {
             return false;
         }
@@ -526,7 +530,21 @@ bool AGuestAnomaly::AreAllParticipantsResolved() const
 
 void AGuestAnomaly::HandleParticipantResolved(UGuestAnomalyComponent* Component)
 {
-    QueueEvaluation();
+    if (!IsValid(Component))
+    {
+        return;
+    }
+
+    for (FGuestAnomalyParticipant& Participant : Participants)
+    {
+        if (Participant.Component.Get() == Component
+            && Participant.ParticipationId == Component->GetParticipationId())
+        {
+            Participant.bResolved = true;
+            QueueEvaluation();
+            return;
+        }
+    }
 }
 
 void AGuestAnomaly::HandleParticipantCancelled(UGuestAnomalyComponent* Component)
@@ -544,7 +562,7 @@ void AGuestAnomaly::HandleParticipantCancelled(UGuestAnomalyComponent* Component
                     == Component->GetParticipationId();
         });
 
-    if (Index == INDEX_NONE)
+    if (Index == INDEX_NONE || Participants[Index].bResolved)
     {
         return;
     }
@@ -560,7 +578,7 @@ void AGuestAnomaly::HandleParticipantCancelled(UGuestAnomalyComponent* Component
 
 void AGuestAnomaly::HandleParticipantActorEndPlay(AActor* Actor,EEndPlayReason::Type EndPlayReason)
 {
-    QueueEvaluation(true);
+    QueueEvaluation();
 }
 
 void AGuestAnomaly::QueueEvaluation(bool bRequestFailure)
@@ -644,9 +662,8 @@ void AGuestAnomaly::CleanupParticipants(bool bResolved)
 {
     ClearEvaluation();
 
-    // 정산 전 실패도 복귀시킨다.
-    // 액터/게임 종료 중에는 이동을 새로 시작하지 않는다.
-    const bool bReturnToRoom = !bResolved && !bEndingPlay;
+    // 사건 종료 후 객실 복귀 유지
+    const bool bReturnToRoom = !bEndingPlay;
 
     TArray<FGuestAnomalyParticipant> OldParticipants =
         MoveTemp(Participants);
@@ -741,6 +758,14 @@ bool AGuestAnomaly::Resolve()
     if (!Super::Resolve())
     {
         return false;
+    }
+    
+    
+    // 사건 해결 보상
+    if (UHotelReputationSubsystem* Reputation =
+        GetWorld()->GetSubsystem<UHotelReputationSubsystem>())
+    {
+        Reputation->AddReputation(EReputationReason::AnomalyGuestHandled);
     }
 
     NextSpreadGameSeconds = -1.0;
