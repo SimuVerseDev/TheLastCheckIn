@@ -18,7 +18,8 @@ enum class EBellState : uint8
 	Idle,     // 평소 - 걸려 있기만 함
 	Ringing,  // 이상현상으로 울리는 중
 	Broken,   // 부서진 채 남아 있음
-	Removed   // 치워져서 빈 자리 - 상점에서 다시 사야 함
+	Removed,  // 치워져서 빈 자리 - 상점에서 다시 사야 함
+	Tied      // 줄로 묶여 계속 울리지 않음
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBellEvent, ABellActor*, Bell);
@@ -26,6 +27,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBellEvent, ABellActor*, Bell);
 /*
 로비 종 판(BP_RoomBellSet)에 걸린 객실 호출 종 하나 - RoomNumber 객실과 연결
 울리는 중 E: 부수기 / 부서진 뒤 E: 치우기
+울리는 중 줄(BellRopeItem)을 들고 LMB: 묶기
 */
 UCLASS()
 class THELASTCHECKIN_API ABellActor : public AActor, public IInteractable
@@ -71,12 +73,18 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Night|Bell")
 	FBellEvent OnRemoved;
 
+	UPROPERTY(BlueprintAssignable, Category="Night|Bell")
+	FBellEvent OnTied;
+
 	/*
 	Interactable
 	*/
 	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
 	virtual FText GetInteractPrompt_Implementation(AActor* Interactor) const override;
 	virtual void Interact_Implementation(AActor* Interactor) override;
+	virtual bool CanUse_Implementation(AActor* Interactor) const override;
+	virtual FText GetUsePrompt_Implementation(AActor* Interactor) const override;
+	virtual bool Use_Implementation(AActor* Interactor) override;
 
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
@@ -92,6 +100,8 @@ protected:
 	void OnBellRemoved();
 	UFUNCTION(BlueprintImplementableEvent, Category="Night|Bell")
 	void OnBellRestored();
+	UFUNCTION(BlueprintImplementableEvent, Category="Night|Bell")
+	void OnBellTied();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night|Bell")
 	TObjectPtr<USceneComponent> Root;
@@ -103,6 +113,7 @@ protected:
 	└ SwingPivot  매달린 지점 - 울릴 때 이것이 회전
 	  ├ Mesh      종 몸체 (bell03)
 	  ├ Clapper   추 (bell02)
+	  ├ TiedRope  종에 감긴 줄 (bell_rope) - 게임 중엔 숨겨져 있다가 묶이면 보임
 	  └ InteractBox  E 상호작용 조준 영역
 	치울 때 SwingPivot 아래 전부 숨김 - 이름표 등 남길 컴포넌트는 Root에 붙일 것
 	*/
@@ -117,6 +128,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night|Bell")
 	TObjectPtr<UStaticMeshComponent> Clapper;
+
+	// 에디터에선 보여서 위치를 맞출 수 있고, 게임 중엔 묶였을 때만 보임
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night|Bell")
+	TObjectPtr<UStaticMeshComponent> TiedRope;
 
 	// 상호작용 시선 트레이스용 - 메시 콜리전 유무와 상관없이 종 몸체를 조준하면 잡힘
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Night|Bell")
@@ -187,12 +202,17 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Night|Bell")
 	FText RemovePrompt;
 
+	UPROPERTY(EditAnywhere, Category="Night|Bell")
+	FText TiePrompt;
+
 private:
 	void Break();
 	void Remove();
+	void Tie();
 	void SetSwingPartsPresent(bool bPresent);
 	void UpdateNameTag();
 	void ApplyMirror();
+	void SyncFromChildActorTemplate();
 	void PlayRingSound();
 	void PlayOverlapRing();
 	void StopRingSound();

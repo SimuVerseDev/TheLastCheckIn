@@ -9,7 +9,7 @@ class ARoomActor;
 
 /*
 로비 bell pull system - 빈 방이나 해금 안 된 방에 연결된 종 하나가 저절로 울림
-방치하면 같은 층 투숙객이 컴플레인 전화, 종을 부수면 해결
+방치하면 같은 층 투숙객이 컴플레인 전화, 종을 부수거나 줄로 묶으면 해결
 */
 UCLASS()
 class THELASTCHECKIN_API ABellAnomaly : public AAnomalyBase
@@ -35,8 +35,9 @@ protected:
 	FText ComplaintMessage;
 
 private:
+	// 종을 부수거나 줄로 묶었을 때
 	UFUNCTION()
-	void HandleBellBroken(ABellActor* Bell);
+	void HandleBellSilenced(ABellActor* Bell);
 
 	ARoomActor* FindRoom(int32 RoomNumber) const;
 	bool CanRing(const ABellActor* Bell) const;

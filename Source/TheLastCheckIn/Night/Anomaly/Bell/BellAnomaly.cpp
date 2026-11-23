@@ -38,7 +38,8 @@ void ABellAnomaly::BeginPlay()
 	{
 		if (Bell)
 		{
-			Bell->OnBroken.AddUniqueDynamic(this, &ThisClass::HandleBellBroken);
+			Bell->OnBroken.AddUniqueDynamic(this, &ThisClass::HandleBellSilenced);
+			Bell->OnTied.AddUniqueDynamic(this, &ThisClass::HandleBellSilenced);
 		}
 	}
 }
@@ -113,9 +114,9 @@ bool ABellAnomaly::Fail()
 }
 
 /*
-울리던 종을 부숨 - 해결 (해결 알림은 매니저가 띄움)
+울리던 종을 부수거나 줄로 묶음 - 해결 (해결 알림은 매니저가 띄움)
 */
-void ABellAnomaly::HandleBellBroken(ABellActor* Bell)
+void ABellAnomaly::HandleBellSilenced(ABellActor* Bell)
 {
 	if (Bell && Bell == RingingBell)
 	{
