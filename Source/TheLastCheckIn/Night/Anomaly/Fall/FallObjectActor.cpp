@@ -10,6 +10,7 @@
 #include "Materials/MaterialInterface.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Night/Anomaly/Mirror/MirrorReflectionComponent.h"
+#include "Components/LightComponent.h"
 
 // 유니티 빌드에서 다른 cpp와 이름이 겹치지 않도록 분리
 namespace FallObjectMirror
@@ -22,6 +23,9 @@ namespace FallObjectMirror
 
 	// 부속 메시의 빈 자리 표시용 복제본 (BeginPlay에서 생성)
 	static const FName PartHintTag(TEXT("FallPartHint"));
+
+	// 멀쩡할 때만 켜지는 라이트 태그 (스탠드 조명 등)
+	static const FName LightTag(TEXT("FallLight"));
 }
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -449,6 +453,21 @@ void AFallObjectActor::ApplyState()
 			{
 				Part->SetVisibility(bPartsPresent, true);
 				Part->SetCollisionEnabled(bPartsPresent ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+			}
+		}
+	}
+
+	/*
+	라이트 (스탠드 조명 등) - "FallLight" 태그가 붙은 라이트는 멀쩡할 때만 켜지고 떨어지면 꺼짐
+	*/
+	{
+		TArray<ULightComponent*> Lights;
+		GetComponents(Lights);
+		for (ULightComponent* Light : Lights)
+		{
+			if (Light->ComponentHasTag(FallObjectMirror::LightTag))
+			{
+				Light->SetVisibility(bIntact);
 			}
 		}
 	}
