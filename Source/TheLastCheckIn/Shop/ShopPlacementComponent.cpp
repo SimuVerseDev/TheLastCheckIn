@@ -312,20 +312,35 @@ UShopPlacedProductComponent* UShopPlacementComponent::FindRelocationTarget() con
 
 bool UShopPlacementComponent::HandlePlacementPress()
 {
+	// 구매 직후 최초 배치는 기존처럼 클릭으로 확정합니다.
 	if (IsPlacing())
 	{
-		if (!RelocatingProduct) ConfirmPlacement();
+		if (!RelocatingProduct)
+		{
+			ConfirmPlacement();
+		}
 		return true;
 	}
-	if (bHoldingProduct) return true;
+
+	if (bHoldingProduct)
+	{
+		return true;
+	}
+
 	UShopPlacedProductComponent* Target = FindRelocationTarget();
-	if (!Target) return false; // Ordinary world interactions and equipped tools retain their input.
+	if (!Target)
+	{
+		// 상점 물건이 아니면 기존 상호작용이 입력을 처리합니다.
+		return false;
+	}
+
 	HoldCandidate = Target;
-	bHoldingProduct = true;
-	HoldElapsed = 0;
 	PlacementPawn = CastChecked<APlayerController>(GetOwner())->GetPawn();
-	if (!OpenControls()) { ClosePlacement(); return true; }
-	Controls->SetStatus(NSLOCTEXT("Shop", "HoldToRelocate", "좌클릭을 꾹 누르면 재배치합니다.\n누른 채 이동 · 버튼을 놓으면 배치 · Esc: 원래 자리로 복원"));
+
+	// 길게 누르는 대기 없이 즉시 재배치를 시작합니다.
+	BeginRelocation();
+
+	// 대상 물건의 클릭은 여기서 처리했으므로 소비합니다.
 	return true;
 }
 
@@ -379,7 +394,7 @@ void UShopPlacementComponent::UpdatePreview()
 	int32 Width = 0, Height = 0;
 	PC->GetViewportSize(Width, Height);
 	// Use a fixed point relative to the camera, not the hidden cursor's old desktop position.
-	if (Width <= 0 || Height <= 0 || !PC->DeprojectScreenPositionToWorld(Width * 0.60f, Height * 0.65f, Origin, Direction))
+	if (Width <= 0 || Height <= 0 || !PC->DeprojectScreenPositionToWorld(Width * 0.50f, Height * 0.5f, Origin, Direction))
 	{
 		FRotator View;
 		PC->GetPlayerViewPoint(Origin, View);
