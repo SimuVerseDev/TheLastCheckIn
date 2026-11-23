@@ -17,4 +17,7 @@ struct THELASTCHECKIN_API FAnomalyNightPlan : public FTableRowBase
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Night|Plan", meta = (ClampMin="0"))
 	int32 ExtraMax = 0;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Night|Plan")
+	TArray<FName> Pool;
 };

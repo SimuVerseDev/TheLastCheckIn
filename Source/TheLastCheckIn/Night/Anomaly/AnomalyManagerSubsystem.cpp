@@ -365,6 +365,7 @@ const FAnomalyNightPlan* UAnomalyManagerSubsystem::FindPlanRow(int32 Day, TSet<F
 		const FAnomalyNightPlan* Row = reinterpret_cast<const FAnomalyNightPlan*>(Pair.Value);
 		
 		OutLearned.Append(Row->Fixed);
+		OutLearned.Append(Row->Pool);
 		if (RowDay > BestDay)
 		{
 			BestDay = RowDay;
