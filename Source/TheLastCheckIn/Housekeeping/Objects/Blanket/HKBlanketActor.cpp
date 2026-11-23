@@ -222,6 +222,7 @@ void AHKBlanketActor::Step(float Dt)
 	const int32 Total = Positions.Num();
 	const FVector Gravity(0.0f, 0.0f, -980.05f);
 	const float MaxStep = MaxParticleSpeed * Dt;
+	const float MinStepSq = FMath::Square(RestSpeed * Dt);
 
 	for (int32 I = 0; I < Total; ++I)
 	{
@@ -238,6 +239,10 @@ void AHKBlanketActor::Step(float Dt)
 			Velocity.Y *= 1.0f - AirDrag;
 		}
 		Velocity = Velocity.GetClampedToMaxSize(MaxStep);
+		if (Velocity.SizeSquared() < MinStepSq)
+		{
+			Velocity = FVector::ZeroVector;
+		}
 		Positions[I] += Velocity + Gravity * (Dt * Dt);
 		PrevPositions[I] = Temp;
 	}
