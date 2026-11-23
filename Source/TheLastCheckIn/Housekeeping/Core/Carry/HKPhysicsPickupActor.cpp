@@ -49,7 +49,9 @@ void AHKPhysicsPickupActor::NotifyReleased(bool bThrown)
 
 bool AHKPhysicsPickupActor::CanBePickedUp() const
 {
-	return bCanBePickedUp && !IsCarried() && Mesh->IsSimulatingPhysics();
+	const UHKPlacementDirtComponent* Placement = FindComponentByClass<UHKPlacementDirtComponent>();
+	const bool bResting = Placement && !Placement->IsSnapping();
+	return bCanBePickedUp && !IsCarried() && (Mesh->IsSimulatingPhysics() || bResting);
 }
 
 /*
@@ -74,5 +76,16 @@ FText AHKPhysicsPickupActor::GetUsePrompt_Implementation(AActor* Interactor) con
 bool AHKPhysicsPickupActor::Use_Implementation(AActor* Interactor)
 {
 	UHKCarryComponent* Carry = Interactor ? Interactor->FindComponentByClass<UHKCarryComponent>() : nullptr;
-	return Carry && CanBePickedUp() && Carry->TryPickup(Mesh);
+	if (!Carry || !CanBePickedUp())
+	{
+		return false;
+	}
+	const bool bWasSimulating = Mesh->IsSimulatingPhysics();
+	Mesh->SetSimulatePhysics(true);
+	if (Carry->TryPickup(Mesh))
+	{
+		return true;
+	}
+	Mesh->SetSimulatePhysics(bWasSimulating);
+	return false;
 }
