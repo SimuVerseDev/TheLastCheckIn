@@ -96,11 +96,14 @@ void UShopPlacedProductComponent::Restore(const FTransform& Destination, bool bC
 			else Scene->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 		}
 	Actor->SetActorTransform(Destination, false, nullptr, ETeleportType::TeleportPhysics);
+	
 	for (const auto& State : SceneStates)
 		if (auto* Scene = State.Component.Get())
 			Scene->SetWorldTransform(bCancelled ? State.WorldTransform : State.WorldTransform.GetRelativeTransform(OriginalTransform) * Destination,
 				false, nullptr, ETeleportType::TeleportPhysics);
+	
 	Actor->SetActorEnableCollision(bOriginalCollision);
+	
 	for (const auto& State : SceneStates)
 		if (auto* Scene = State.Component.Get())
 		{

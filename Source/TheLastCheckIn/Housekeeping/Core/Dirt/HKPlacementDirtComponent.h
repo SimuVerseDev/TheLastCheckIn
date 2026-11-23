@@ -16,6 +16,8 @@ public:
 	
 	bool TrySnapHome();
 
+	bool IsSnapping() const { return SnapTimer.IsValid(); }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual float EvaluateDirt() const override;

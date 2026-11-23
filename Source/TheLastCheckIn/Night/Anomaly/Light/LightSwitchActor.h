@@ -1,13 +1,15 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Core/Interaction/Interactable.h"
+#include "Night/Anomaly/Light/SwitchLeverAnimation.h"
 #include "LightSwitchActor.generated.h"
 
 class ALightAnomaly;
+enum class EHotelLightMode : uint8;
 class UStaticMeshComponent;
 class UBoxComponent;
 
@@ -37,6 +39,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void Tick(float DeltaSeconds) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> SwitchMesh;
@@ -47,4 +51,14 @@ protected:
 	// 해결에 성공했을 때 BP에서 소리나 애니메이션을 재생합니다.
 	UFUNCTION(BlueprintImplementableEvent, Category = "Night|Light")
 	void OnSwitchUsed();
+
+private:
+	// Local rotation from the lever's authored up position to its down position.
+	UPROPERTY(EditDefaultsOnly, Category = "Night|Light")
+	FRotator LeverDownRotation = FRotator(-60.f, 0.f, 0.f);
+
+	UFUNCTION()
+	void HandleLightingChanged(EHotelLightMode Mode, FName AffectedZoneId);
+
+	FSwitchLeverAnimation LeverAnimation;
 };

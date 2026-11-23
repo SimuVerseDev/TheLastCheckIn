@@ -82,6 +82,7 @@ void AHKBlanketActor::Tick(float DeltaTime)
 void AHKBlanketActor::WakeUp()
 {
 	SleepTimer = 0.0f;
+	AwakeTimer = 0.0f;
 	SetActorTickEnabled(true);
 }
 
@@ -90,26 +91,32 @@ void AHKBlanketActor::UpdateSleep(float DeltaTime, float SubStep)
 	if (GrabbedIndex != INDEX_NONE || bMakingBed || SleepDelay <= 0.0f)
 	{
 		SleepTimer = 0.0f;
+		AwakeTimer = 0.0f;
 		return;
 	}
 
+	AwakeTimer += DeltaTime;
+
 	const float Threshold = SleepSpeed * SubStep;
 	const float ThresholdSq = Threshold * Threshold;
+	bool bStill = true;
 	for (int32 I = 0; I < Positions.Num(); ++I)
 	{
 		if (FVector::DistSquared(Positions[I], PrevPositions[I]) > ThresholdSq)
 		{
-			SleepTimer = 0.0f;
-			return;
+			bStill = false;
+			break;
 		}
 	}
+	SleepTimer = bStill ? SleepTimer + DeltaTime : 0.0f;
 
-	SleepTimer += DeltaTime;
-	if (SleepTimer >= SleepDelay)
+	const bool bTimedOut = MaxAwakeTime > 0.0f && AwakeTimer >= MaxAwakeTime;
+	if (SleepTimer >= SleepDelay || bTimedOut)
 	{
 		// Grab / MakeBed / Scramble 시 WakeUp으로 다시 켜짐
 		PrevPositions = Positions;
 		SleepTimer = 0.0f;
+		AwakeTimer = 0.0f;
 		SetActorTickEnabled(false);
 	}
 }
@@ -138,6 +145,26 @@ bool AHKBlanketActor::IsPlayerNearby() const
 		}
 	}
 	return false;
+}
+
+float AHKBlanketActor::GetSpreadRatio() const
+{
+	if (Positions.Num() != (SegmentsX + 1) * (SegmentsY + 1))
+	{
+		return 0.0f;
+	}
+
+	const FVector Scale = GetActorScale3D();
+	const float RestX = Size.X * Scale.X;
+	const float RestY = Size.Y * Scale.Y;
+	const FVector& C00 = Positions[ToIndex(0, 0)];
+	const FVector& C10 = Positions[ToIndex(SegmentsX, 0)];
+	const FVector& C01 = Positions[ToIndex(0, SegmentsY)];
+	const FVector& C11 = Positions[ToIndex(SegmentsX, SegmentsY)];
+
+	const float RatioX = FMath::Min(FVector::Dist(C00, C10), FVector::Dist(C01, C11)) / RestX;
+	const float RatioY = FMath::Min(FVector::Dist(C00, C01), FVector::Dist(C10, C11)) / RestY;
+	return FMath::Min(RatioX, RatioY);
 }
 
 void AHKBlanketActor::InitParticles()
@@ -215,6 +242,7 @@ void AHKBlanketActor::Step(float Dt)
 	const int32 Total = Positions.Num();
 	const FVector Gravity(0.0f, 0.0f, -980.05f);
 	const float MaxStep = MaxParticleSpeed * Dt;
+	const float MinStepSq = FMath::Square(RestSpeed * Dt);
 
 	for (int32 I = 0; I < Total; ++I)
 	{
@@ -231,6 +259,10 @@ void AHKBlanketActor::Step(float Dt)
 			Velocity.Y *= 1.0f - AirDrag;
 		}
 		Velocity = Velocity.GetClampedToMaxSize(MaxStep);
+		if (Velocity.SizeSquared() < MinStepSq)
+		{
+			Velocity = FVector::ZeroVector;
+		}
 		Positions[I] += Velocity + Gravity * (Dt * Dt);
 		PrevPositions[I] = Temp;
 	}
@@ -316,9 +348,9 @@ void AHKBlanketActor::SolveCollisions()
 	/*
 	고정된 물체(ECC_WorldStatic)와 움직이는 물체(ECC_WorldDynamic)를 대상으로 충돌을 감지, 자기자신은 제외
 	*/
-	FCollisionObjectQueryParams ObjectParams;
-	ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
-	ObjectParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+	FCollisionResponseParams ResponseParams(ECR_Ignore);
+	ResponseParams.CollisionResponse.SetResponse(ECC_WorldStatic, ECR_Block);
+	ResponseParams.CollisionResponse.SetResponse(ECC_WorldDynamic, ECR_Block);
 	
 	const FCollisionQueryParams Params(SCENE_QUERY_STAT(HKBlanketCollision), false, this);
 	
@@ -345,11 +377,11 @@ void AHKBlanketActor::SolveCollisions()
 
 		FHitResult Hit;
 		
-		bool bContact = World->LineTraceSingleByObjectType(Hit, Start, End, ObjectParams, Params);
+		bool bContact = World->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldDynamic, Params, ResponseParams);
 		if (!bContact)
 		{
 			const FVector ProbeEnd = Pos - FVector::UpVector * (SurfaceOffset + ContactTolerance);
-			bContact = World->LineTraceSingleByObjectType(Hit, Pos, ProbeEnd, ObjectParams, Params);
+			bContact = World->LineTraceSingleByChannel(Hit, Pos, ProbeEnd, ECC_WorldDynamic, Params, ResponseParams);
 		}
 		Contacts[I] = bContact ? 1 : 0;
 		if (!bContact)
@@ -361,7 +393,7 @@ void AHKBlanketActor::SolveCollisions()
 		const float Height = FVector::DotProduct(Pos - Hit.ImpactPoint, Normal);
 		if (Height < SurfaceOffset)
 		{
-			NewPos = ResolvePush(Hit.ImpactPoint, Normal, Pos + Normal * (SurfaceOffset - Height), ObjectParams, Params);
+			NewPos = ResolvePush(Hit.ImpactPoint, Normal, Pos + Normal * (SurfaceOffset - Height), Params, ResponseParams);
 		}
 		const FVector Slide = FVector::VectorPlaneProject(NewPos - Start, Normal);
 		if (Normal.Z >= FloorNormalZ)
@@ -381,11 +413,11 @@ void AHKBlanketActor::SolveCollisions()
 }
 
 FVector AHKBlanketActor::ResolvePush(const FVector& SurfacePoint, const FVector& Normal, const FVector& Target,
-	const FCollisionObjectQueryParams& ObjectParams, const FCollisionQueryParams& Params) const
+	const FCollisionQueryParams& Params, const FCollisionResponseParams& ResponseParams) const
 {
 	FHitResult Block;
 	const FVector From = SurfacePoint + Normal * 0.1f;
-	if (GetWorld()->LineTraceSingleByObjectType(Block, From, Target, ObjectParams, Params))
+	if (GetWorld()->LineTraceSingleByChannel(Block, From, Target, ECC_WorldDynamic, Params, ResponseParams))
 	{
 		return (SurfacePoint + Block.ImpactPoint) * 0.5f;
 	}

@@ -15,6 +15,16 @@ class UBehaviorTree;
 class AGuestPoolManager;
 class UGuestParty;
 class UGuestAnomalyComponent;
+class AGuestAIController;
+class UAnimInstance;
+class UAnimMontage;
+
+UENUM(BlueprintType)
+enum class EGuestActionMovement : uint8
+{
+	KeepMovement,
+	PauseMovement
+};
 
 UCLASS()
 class THELASTCHECKIN_API AGuestCharacter : public ACharacter, public IInteractable
@@ -109,6 +119,26 @@ public:
 	// 복귀가 취소됐을 때 이동 상태 정리
 	void ClearAnomalyReturnState();
 	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Guests|Combat")
+	void OnCrowbarHit(FVector HitDirection);
+	
+	// 공통 동작 재생 및 기존 동작 교체
+	UFUNCTION(BlueprintCallable, Category = "Guests|Action")
+	bool PlayActionMontage(
+		UAnimMontage* Montage,
+		EGuestActionMovement Movement =
+			EGuestActionMovement::PauseMovement);
+
+	// 동작 취소 및 AI 재개
+	UFUNCTION(BlueprintCallable, Category = "Guests|Action")
+	void CancelAction();
+
+	// 동작에 의한 이동 정지 여부
+	bool IsActionMovementPaused() const
+	{
+		return ActionPausedController.IsValid();
+	}
+	
 protected:
 	virtual void BeginPlay() override;
 	
@@ -167,5 +197,28 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Guests|Anomaly")
 	TObjectPtr<UGuestAnomalyComponent> AnomalyComponent;
+	
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	// 현재 몽타주의 종료 결과 전달
+	UFUNCTION(BlueprintImplementableEvent, Category = "Guests|Action")
+	void OnActionMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	
+private:
+	void SetActionPausedController(AGuestAIController* GuestController);
+
+	void HandleActionMontageEnded(
+		UAnimMontage* Montage,
+		bool bInterrupted,
+		uint32 Serial);
+
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimMontage> ActiveActionMontage;
+
+	TWeakObjectPtr<UAnimInstance> ActionAnimInstance;
+	TWeakObjectPtr<AGuestAIController> ActionPausedController;
+
+	// 이전 재생의 종료 콜백 구분
+	uint32 ActionSerial = 0;
 
 };

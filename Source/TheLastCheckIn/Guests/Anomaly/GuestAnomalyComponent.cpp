@@ -9,6 +9,7 @@
 #include "Animation/AnimMontage.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "Core/Reputation/HotelReputationSubsystem.h"
 
 UGuestAnomalyComponent::UGuestAnomalyComponent()
 {
@@ -56,6 +57,7 @@ bool UGuestAnomalyComponent::StartAnomaly(UGuestAnomalyDefinition* InDefinition,
 
     ParticipationId = NewParticipationId;
     bFinishIncidentOnReturn = false;
+    bResolutionSucceeded = false;
     CurrentDefinition = InDefinition;
     ActiveBehavior = NewBehavior;
     Phase = EGuestAnomalyPhase::Active;
@@ -121,6 +123,24 @@ void UGuestAnomalyComponent::ResolveBehavior(UGuestAnomalyBehavior* Requester)
         CancelAnomaly();
         return;
     }
+    
+    // 제압 성공 기록
+    bResolutionSucceeded = true;
+
+    // 빙의 해제 평판도 증가
+    if (UHotelReputationSubsystem* Reputation =
+        GetWorld()->GetSubsystem<UHotelReputationSubsystem>())
+    {
+        Reputation->AddReputation(EReputationReason::PossessionCleared);
+    }
+
+    OnResolved.Broadcast(this);
+
+    // 알림 이후 복귀 상태 확인
+    if (Phase != EGuestAnomalyPhase::ReturningToRoom)
+    {
+        return;
+    }
 
     if (MontageDuration > 0.0f)
     {
@@ -137,7 +157,7 @@ void UGuestAnomalyComponent::ResolveBehavior(UGuestAnomalyBehavior* Requester)
         BeginReturnToRoom();
     }
 
-    // OnResolved는 객실 도착 후에 알림
+ 
 }
 
 bool UGuestAnomalyComponent::CanStartFor(UGuestAnomalyDefinition* InDefinition, AActor* ContextActor) const
@@ -430,8 +450,7 @@ void UGuestAnomalyComponent::NotifyReturnedToRoom()
         FinishIncident();
         return;
     }
-
-    OnResolved.Broadcast(this);
+    
 }
 
 void UGuestAnomalyComponent::HandleReturnTimeout()

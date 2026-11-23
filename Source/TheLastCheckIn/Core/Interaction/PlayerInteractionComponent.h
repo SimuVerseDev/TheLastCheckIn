@@ -40,6 +40,9 @@ public:
 		return GetActiveInteraction() != nullptr;
 	}
 
+	// 현재 진행 중인 상호작용 액터를 다른 컴포넌트에서도 조회합니다.
+	AActor* GetActiveInteraction();
+
 protected:
 	UPROPERTY(EditAnywhere, Category="Interaction",  meta=(ClampMin=0, Units="cm"))
 	float InteractRange = 250.0f;
@@ -76,7 +79,6 @@ private:
 	void ShowDebugPrompt() const;
 	void HandleInteractStarted();
 	void ExecuteInteraction(AActor* Target);
-	AActor* GetActiveInteraction();
 	void HandleUseStarted();
 	void HandleUseCompleted();
 

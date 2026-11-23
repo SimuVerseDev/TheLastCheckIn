@@ -243,7 +243,7 @@ void UTutorialSubsystem::UnbindGameplayEvents()
 void UTutorialSubsystem::HandleRoomCleaned(AHKRoomVolume* Volume, float Cleanliness)
 {
 	// This threshold only completes the tutorial objective; remaining dirt stays.
-	constexpr float RequiredCleanliness = 50.0f;
+	constexpr float RequiredCleanliness = 60.0f;
 	if (!IsTutorialActive() || CurrentStep != ETutorialStep::CleanRoom || !IsValid(Volume)
 		|| !CleaningVolumes.Contains(Volume) || Cleanliness < RequiredCleanliness) return;
 	const ARoomActor* Room = Volume->GetLinkedRoom();
@@ -296,7 +296,7 @@ FText UTutorialSubsystem::GetObjectiveText() const
 		return NSLOCTEXT("Tutorial", "Purchase205Desktop", "205호 해금하기\n컴퓨터 → 관리 → 해금목록 → 구매");
 	case ETutorialStep::CheckInGuest:
 		return FText::Format(NSLOCTEXT("Tutorial", "CheckInTeams", "5팀의 손님 체크인 ({0}/5)"), FText::AsNumber(CheckedInStays.Num()));
-	case ETutorialStep::AnomalyPresentation: return NSLOCTEXT("Tutorial", "Anomaly", "주변의 이상현상 살펴보기");
+		
 	case ETutorialStep::ReadBoardMemo: return NSLOCTEXT("Tutorial", "Memo", "보드 메모 확인하기");
 	case ETutorialStep::ViewCCTV:
 		return FText::Format(NSLOCTEXT("Tutorial", "CCTVContinuousHour", "CCTV 연속 1시간 시청하기 ({0}/60분)"),

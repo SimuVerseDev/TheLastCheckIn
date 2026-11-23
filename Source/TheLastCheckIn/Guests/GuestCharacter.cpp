@@ -15,6 +15,8 @@
 #include "CollisionShape.h"
 #include "CheckIn/CheckInCounter.h"
 #include "Rooms/RoomActor.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
 
 AGuestCharacter::AGuestCharacter()
 {
@@ -209,6 +211,9 @@ bool AGuestCharacter::DeactivateToPool()
 		GuestController->StopGuestAI();
 		GuestController->SetActorTickEnabled(false);
 	}
+	
+	// 풀 반환 시 동작 정리
+	CancelAction();
 
 	// 이동과 애니메이션 업데이트 정지
 	GetCharacterMovement()->StopMovementImmediately();
@@ -611,4 +616,136 @@ void AGuestCharacter::ClearAnomalyReturnState()
 	
 	GuestState = EGuestState::Staying;
 	MoveTarget = nullptr;
+}
+
+bool AGuestCharacter::PlayActionMontage(
+    UAnimMontage* Montage,
+    EGuestActionMovement Movement)
+{
+    if (!IsValid(Montage) ||
+        GuestState == EGuestState::Inactive ||
+        GuestState == EGuestState::ExitCompleted)
+    {
+        return false;
+    }
+
+    UAnimInstance* AnimInstance =
+        GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+
+    if (!IsValid(AnimInstance))
+    {
+        return false;
+    }
+
+    AGuestAIController* GuestController = nullptr;
+
+    if (Movement == EGuestActionMovement::PauseMovement)
+    {
+        GuestController = Cast<AGuestAIController>(GetController());
+
+        if (!IsValid(GuestController))
+        {
+            return false;
+        }
+    }
+
+    const uint32 Serial = ++ActionSerial;
+
+    // 외형 교체 전 애니메이션 인스턴스 정리
+    if (UAnimInstance* PreviousInstance = ActionAnimInstance.Get())
+    {
+        if (PreviousInstance != AnimInstance &&
+            IsValid(ActiveActionMontage.Get()))
+        {
+            PreviousInstance->Montage_Stop(
+                0.1f, ActiveActionMontage.Get());
+        }
+    }
+
+    SetActionPausedController(GuestController);
+
+    if (AnimInstance->Montage_Play(Montage, 1.0f) <= 0.0f)
+    {
+        CancelAction();
+        return false;
+    }
+
+    ActiveActionMontage = Montage;
+    ActionAnimInstance = AnimInstance;
+
+    FOnMontageEnded EndDelegate;
+    EndDelegate.BindUObject(
+        this,
+        &AGuestCharacter::HandleActionMontageEnded,
+        Serial);
+
+    AnimInstance->Montage_SetEndDelegate(EndDelegate, Montage);
+
+    return true;
+}
+
+void AGuestCharacter::CancelAction()
+{
+    ++ActionSerial;
+
+    UAnimMontage* Montage = ActiveActionMontage.Get();
+    UAnimInstance* AnimInstance = ActionAnimInstance.Get();
+
+    ActiveActionMontage = nullptr;
+    ActionAnimInstance.Reset();
+
+    if (IsValid(AnimInstance) && IsValid(Montage))
+    {
+        AnimInstance->Montage_Stop(0.1f, Montage);
+    }
+
+    SetActionPausedController(nullptr);
+}
+
+void AGuestCharacter::SetActionPausedController(
+    AGuestAIController* GuestController)
+{
+    AGuestAIController* PreviousGuestController =
+        ActionPausedController.Get();
+
+    ActionPausedController = GuestController;
+
+    if (IsValid(PreviousGuestController) &&
+        PreviousGuestController != GuestController)
+    {
+        PreviousGuestController->ResumeAfterAction();
+    }
+
+    if (IsValid(GuestController))
+    {
+        GuestController->PauseForAction();
+    }
+}
+
+void AGuestCharacter::HandleActionMontageEnded(
+    UAnimMontage* Montage,
+    bool bInterrupted,
+    uint32 Serial)
+{
+    if (Serial != ActionSerial)
+    {
+        return;
+    }
+
+    ActiveActionMontage = nullptr;
+    CancelAction();
+
+    OnActionMontageEnded(Montage, bInterrupted);
+}
+
+void AGuestCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    // 종료 중 이동 재개 방지
+    if (AGuestAIController* GuestController = ActionPausedController.Get())
+    {
+        GuestController->StopGuestAI();
+    }
+
+    CancelAction();
+    Super::EndPlay(EndPlayReason);
 }
