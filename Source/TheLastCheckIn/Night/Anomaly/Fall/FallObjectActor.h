@@ -101,11 +101,32 @@ protected:
 
 	/*
 	물리
-	true: 멀쩡한 동안에도 물리 적용 - 부딪치면 쓰러짐 (스탠드 조명, 화분)
+	true: 멀쩡한 동안 LMB로 들 수 있는 오브젝트 (스탠드 조명, 화분) - BP_HK_TableLamp와 같은 방식
+	      평소엔 물리 꺼진 채 고정, 잡는 순간 물리 켬, 원래 자리 근처에 내려놓으면 제자리 스냅
 	false: 떨어질 때만 물리를 켬 - 벽에 걸린 것 (벽걸이 거울, 액자), 액터 정면(X+)이 벽 반대쪽을 향하게 배치
 	*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Fall|Physics")
 	bool bSimulateWhileIntact = true;
+
+	/*
+	들기 - BP_HK_TableLamp(AHKPhysicsPickupActor + HKPlacementDirtComponent)와 같은 값
+	*/
+	// 들고 있는 동안 기울기 없이 똑바로 세움
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Fall|Carry")
+	bool bUprightWhileCarried = true;
+
+	// 내려놓았을 때 원래 자리와 이 수평 거리 안이면 제자리 스냅
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Fall|Carry", meta=(ClampMin="0", Units="cm"))
+	float SnapDistance = 30.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Fall|Carry", meta=(ClampMin="0", Units="cm"))
+	float SnapHeight = 150.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Fall|Carry", meta=(ClampMin="0", ClampMax="180", Units="deg"))
+	float SnapAngle = 25.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Fall|Carry", meta=(ClampMin="0.01", Units="s"))
+	float SnapDuration = 0.2f;
 
 	/*
 	true: 이상현상 때 잔해가 물리로 떨어져 쓰러짐
@@ -171,6 +192,14 @@ private:
 	UFUNCTION()
 	void HandleBagDisposed(ATrashBagActor* DisposedBag);
 
+	// 플레이어가 들고 있던 메시를 놓음 - 던지지 않았으면 제자리 스냅 시도
+	UFUNCTION()
+	void HandleCarryReleased(UPrimitiveComponent* Component, bool bThrown);
+
+	bool TrySnapIntactHome();
+	void TickIntactSnap();
+	void StopIntactSnap();
+
 	ATrashBagActor* GetBagHeldBy(const AActor* Interactor) const;
 	void ApplyState();
 	void Settle();
@@ -190,6 +219,14 @@ private:
 	bool bFalling = false;
 
 	FTimerHandle SettleTimer;
+
+	// 멀쩡한 오브젝트 제자리 스냅 (내려놓았을 때)
+	FTimerHandle IntactSnapTimer;
+	FTransform IntactSnapStart;
+	float IntactSnapStartTime = 0.0f;
+
+	// 들고 있는 플레이어의 Carry - 놓을 때 알림 받기용
+	TWeakObjectPtr<class UHKCarryComponent> BoundCarry;
 
 	// 배치된 원래 위치 (Root 기준)
 	FTransform IntactHome;

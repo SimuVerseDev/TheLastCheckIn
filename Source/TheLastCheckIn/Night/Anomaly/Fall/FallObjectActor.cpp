@@ -153,7 +153,13 @@ bool AFallObjectActor::Fall()
 	bFalling = true;
 	bFellTonight = true;
 
-	// 플레이어가 들고 있으면 먼저 놓게 함
+	// 제자리 스냅 중이면 중단, 놓기 알림은 끊고 (놓는 순간 스냅되지 않도록) 들고 있으면 먼저 놓게 함
+	StopIntactSnap();
+	if (UHKCarryComponent* Carry = BoundCarry.Get())
+	{
+		Carry->OnReleased.RemoveDynamic(this, &ThisClass::HandleCarryReleased);
+	}
+	BoundCarry.Reset();
 	ReleaseFromCarrier();
 
 	// 플레이어가 멀쩡한 오브젝트를 밀거나 옮겨 놨으면 잔해도 그만큼 옮긴 자리에서 시작
@@ -203,6 +209,7 @@ bool AFallObjectActor::Restore()
 		return false;
 	}
 	State = EFallObjectState::Intact;
+	StopIntactSnap();
 	ResetIntactMesh();
 	ResetBrokenMesh();
 	ApplyState();
@@ -318,7 +325,107 @@ bool AFallObjectActor::Use_Implementation(AActor* Interactor)
 {
 	UHKCarryComponent* Carry = Interactor ? Interactor->FindComponentByClass<UHKCarryComponent>() : nullptr;
 	UStaticMeshComponent* Target = GetCarriableMesh();
-	return Carry && Target && Carry->TryPickup(Target);
+	if (!Carry || !Target || Carry->IsCarrying())
+	{
+		return false;
+	}
+
+	/*
+	AHKPhysicsPickupActor::Use와 같은 흐름 - 물리를 켜고 잡음, 실패하면 되돌림
+	bUprightWhileCarried: HKCarry는 AHKPhysicsPickupActor만 세워서 들기 때문에 잡기 직전에 똑바로 세워 같은 결과를 냄
+	*/
+	const bool bIntact = Target == IntactMesh;
+	const bool bWasSimulating = Target->IsSimulatingPhysics();
+	const FRotator WasRotation = Target->GetComponentRotation();
+	if (bIntact && bUprightWhileCarried)
+	{
+		Target->SetWorldRotation(FRotator(0.0f, WasRotation.Yaw, 0.0f), false, nullptr, ETeleportType::TeleportPhysics);
+	}
+	Target->SetSimulatePhysics(true);
+	if (!Carry->TryPickup(Target))
+	{
+		Target->SetSimulatePhysics(bWasSimulating);
+		Target->SetWorldRotation(WasRotation, false, nullptr, ETeleportType::TeleportPhysics);
+		return false;
+	}
+
+	if (bIntact)
+	{
+		Carry->OnReleased.AddUniqueDynamic(this, &ThisClass::HandleCarryReleased);
+		BoundCarry = Carry;
+	}
+	return true;
+}
+
+/*
+들고 있던 멀쩡한 오브젝트를 놓음 - BP_HK_TableLamp처럼 던지지 않았으면 원래 자리 근처일 때 제자리 스냅
+*/
+void AFallObjectActor::HandleCarryReleased(UPrimitiveComponent* Component, bool bThrown)
+{
+	if (Component != IntactMesh)
+	{
+		return;
+	}
+	if (UHKCarryComponent* Carry = BoundCarry.Get())
+	{
+		Carry->OnReleased.RemoveDynamic(this, &ThisClass::HandleCarryReleased);
+	}
+	BoundCarry.Reset();
+
+	if (!bThrown && State == EFallObjectState::Intact)
+	{
+		TrySnapIntactHome();
+	}
+}
+
+/*
+UHKPlacementDirtComponent::TrySnapHome과 같은 판정 - 수평 거리, 높이 차, 기울기
+*/
+bool AFallObjectActor::TrySnapIntactHome()
+{
+	if (IntactSnapTimer.IsValid())
+	{
+		return false;
+	}
+
+	const FTransform Home = IntactHome * Root->GetComponentTransform();
+	const FTransform Current = IntactMesh->GetComponentTransform();
+	const FVector Delta = Current.GetLocation() - Home.GetLocation();
+	const float Tilt = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(
+		FVector::DotProduct(Current.GetRotation().GetUpVector(), Home.GetRotation().GetUpVector()), -1.0f, 1.0f)));
+	if (Delta.Size2D() > SnapDistance || FMath::Abs(Delta.Z) > SnapHeight || Tilt > SnapAngle)
+	{
+		return false;
+	}
+
+	// 이동 중엔 물리 끄기 - 끝나면 제자리에 고정 (물리 꺼진 채)
+	IntactMesh->SetSimulatePhysics(false);
+	IntactSnapStart = Current;
+	IntactSnapStartTime = GetWorld()->GetTimeSeconds();
+	GetWorldTimerManager().SetTimer(IntactSnapTimer, this, &ThisClass::TickIntactSnap, 0.01f, true);
+	return true;
+}
+
+void AFallObjectActor::TickIntactSnap()
+{
+	const FTransform Home = IntactHome * Root->GetComponentTransform();
+	const float Alpha = FMath::Clamp((GetWorld()->GetTimeSeconds() - IntactSnapStartTime) / FMath::Max(SnapDuration, 0.01f), 0.0f, 1.0f);
+	const float Eased = FMath::InterpEaseOut(0.0f, 1.0f, Alpha, 2.0f);
+
+	IntactMesh->SetWorldLocationAndRotation(
+		FMath::Lerp(IntactSnapStart.GetLocation(), Home.GetLocation(), Eased),
+		FQuat::Slerp(IntactSnapStart.GetRotation(), Home.GetRotation(), Eased));
+
+	if (Alpha >= 1.0f)
+	{
+		StopIntactSnap();
+		ResetIntactMesh();
+	}
+}
+
+void AFallObjectActor::StopIntactSnap()
+{
+	GetWorldTimerManager().ClearTimer(IntactSnapTimer);
 }
 
 /*
@@ -367,14 +474,10 @@ void AFallObjectActor::ResetBrokenMesh()
 */
 void AFallObjectActor::ResetIntactMesh()
 {
+	// BP_HK_TableLamp(HKPlacementDirtComponent)처럼 제자리에서는 물리를 끈 채 고정 - 잡는 순간 Use에서 켬
 	IntactMesh->SetSimulatePhysics(false);
 	IntactMesh->AttachToComponent(Root, FAttachmentTransformRules::KeepWorldTransform);
 	IntactMesh->SetRelativeTransform(IntactHome);
-	if (bSimulateWhileIntact)
-	{
-		IntactMesh->SetSimulatePhysics(true);
-		IntactMesh->PutAllRigidBodiesToSleep();
-	}
 }
 
 /*
@@ -386,16 +489,16 @@ UStaticMeshComponent* AFallObjectActor::GetCarriableMesh() const
 	{
 		return nullptr;
 	}
-	UStaticMeshComponent* Target = nullptr;
 	if (State == EFallObjectState::Intact)
 	{
-		Target = IntactMesh;
+		// 고정돼 있어도(물리 꺼짐) 들 수 있음 - 제자리 스냅 중에는 불가
+		return bSimulateWhileIntact && !IntactSnapTimer.IsValid() ? IntactMesh.Get() : nullptr;
 	}
-	else if (State == EFallObjectState::Broken)
+	if (State == EFallObjectState::Broken)
 	{
-		Target = BrokenMesh;
+		return BrokenMesh->IsSimulatingPhysics() ? BrokenMesh.Get() : nullptr;
 	}
-	return Target && Target->IsSimulatingPhysics() ? Target : nullptr;
+	return nullptr;
 }
 
 bool AFallObjectActor::CanBeCarried() const
@@ -458,14 +561,15 @@ void AFallObjectActor::ApplyState()
 	}
 
 	/*
-	라이트 (스탠드 조명 등) - "FallLight" 태그가 붙은 라이트는 멀쩡할 때만 켜지고 떨어지면 꺼짐
+	라이트 (스탠드 조명 등) - IntactMesh에 붙어 있거나 "FallLight" 태그가 붙은 라이트는 멀쩡할 때만 켜지고 떨어지면 꺼짐
+	배치된 인스턴스에 태그가 안 넘어오는 경우가 있어 부착 관계로도 판단
 	*/
 	{
 		TArray<ULightComponent*> Lights;
 		GetComponents(Lights);
 		for (ULightComponent* Light : Lights)
 		{
-			if (Light->ComponentHasTag(FallObjectMirror::LightTag))
+			if (Light->IsAttachedTo(IntactMesh) || Light->ComponentHasTag(FallObjectMirror::LightTag))
 			{
 				Light->SetVisibility(bIntact);
 			}
