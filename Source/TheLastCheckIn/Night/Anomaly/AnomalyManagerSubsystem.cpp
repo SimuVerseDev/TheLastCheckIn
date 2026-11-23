@@ -211,10 +211,6 @@ void UAnomalyManagerSubsystem::HandleTimeAdvanced(double PreviousSeconds, double
 
 void UAnomalyManagerSubsystem::HandlePhaseChanged(EHotelPhase OldPhase, EHotelPhase NewPhase)
 {
-	if (NewPhase == EHotelPhase::Rest)
-	{
-		PlanOmen();
-	}
 	if (NewPhase == EHotelPhase::Settlement)
 	{
 		FailRunningAnomalies();
@@ -326,6 +322,8 @@ void UAnomalyManagerSubsystem::HandleDayStarted(int32 Day)
 		LastNightIds.Add(Id);
 	}
 	UE_LOG(LogAnomaly, Log, TEXT("[NightPlan] Day %d: %s"), Day, *FString::JoinBy(Tonight, TEXT(", "), [](const FName& N) { return N.ToString(); }));
+
+	PlanOmen();
 }
 
 /*
@@ -377,21 +375,21 @@ const FAnomalyNightPlan* UAnomalyManagerSubsystem::FindPlanRow(int32 Day, TSet<F
 }
 
 /*
-Rest 진입 시 오늘 밤 예정된(아직 시작 전) 이상현상의 예고를 하나 예약
+아침에 오늘 밤 예정된 이상현상의 예고를 하나 골라 낮(06~20시) 중에 예약
 */
 void UAnomalyManagerSubsystem::PlanOmen()
 {
 	PlannedOmen.Reset();
 
 	const UHotelPhaseSettings* Settings = UHotelPhaseSettings::Get();
+	const double DayStart = GetNightSeconds(PlanDay, Settings->DayStartHour);
 	const double RestStart = GetNightSeconds(PlanDay, Settings->RestStartHour);
-	const double NightStart = GetNightSeconds(PlanDay, Settings->NightStartHour);
 
 	TArray<AOmenBase*> Candidates;
 	for (TActorIterator<AOmenBase> It(GetWorld()); It; ++It)
 	{
 		AAnomalyBase* Anomaly = FindAnomaly(It->GetRelatedAnomalyId());
-		if (Anomaly && PlannedStartSeconds.Contains(Anomaly)) // 아직 시작 전인 것만
+		if (Anomaly && PlannedStartSeconds.Contains(Anomaly)) // 오늘 밤 예약된 것만
 		{
 			Candidates.Add(*It);
 		}
@@ -404,10 +402,10 @@ void UAnomalyManagerSubsystem::PlanOmen()
 
 	AOmenBase* Omen = Candidates[FMath::RandRange(0, Candidates.Num() - 1)];
 	AAnomalyBase* Anomaly = FindAnomaly(Omen->GetRelatedAnomalyId());
-	const double Latest = FMath::Min(NightStart, PlannedStartSeconds[Anomaly]); // 본편보다 먼저
+	const double Latest = FMath::Min(RestStart, PlannedStartSeconds[Anomaly]); // 낮 안에, 본편보다 먼저
 
 	PlannedOmen = Omen;
-	PlannedOmenSeconds = FMath::FRandRange(RestStart, FMath::Max(RestStart, Latest));
+	PlannedOmenSeconds = FMath::FRandRange(DayStart, FMath::Max(DayStart, Latest));
 	UE_LOG(LogAnomaly, Log, TEXT("[Omen] Day %d: %s 예고 예약"), PlanDay, *Omen->GetRelatedAnomalyId().ToString());
 }
 

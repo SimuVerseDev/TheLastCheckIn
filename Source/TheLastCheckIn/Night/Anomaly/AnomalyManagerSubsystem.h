@@ -67,7 +67,7 @@ private:
 	TSet<FName> LastNightIds;
 
 	/*
-	예고 (Rest 시간에 오늘 밤 이상현상 암시)
+	예고 (낮 시간에 오늘 밤 이상현상 암시)
 	*/
 	void PlanOmen();
 
