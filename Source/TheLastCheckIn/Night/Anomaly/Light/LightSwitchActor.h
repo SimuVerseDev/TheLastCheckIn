@@ -12,6 +12,7 @@ class ALightAnomaly;
 enum class EHotelLightMode : uint8;
 class UStaticMeshComponent;
 class UBoxComponent;
+class UCameraComponent;
 
 UCLASS()
 class THELASTCHECKIN_API ALightSwitchActor
@@ -47,6 +48,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UBoxComponent> InteractionBox;
+
+	// 상호작용할 때 사용할 카메라
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UCameraComponent> ViewCamera;
 
 	// 해결에 성공했을 때 BP에서 소리나 애니메이션을 재생합니다.
 	UFUNCTION(BlueprintImplementableEvent, Category = "Night|Light")

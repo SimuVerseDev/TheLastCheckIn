@@ -8,6 +8,21 @@
 #include "AnomalyLightComponent.generated.h"
 
 class ULightComponent;
+class UMeshComponent;
+class UMaterialInterface;
+class UMaterialInstanceDynamic;
+
+USTRUCT()
+struct FAnomalyLightMaterialState
+{
+	GENERATED_BODY()
+
+	UPROPERTY() TObjectPtr<UMeshComponent> Mesh;
+	UPROPERTY() TObjectPtr<UMaterialInterface> OriginalMaterial;
+	UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> DynamicMaterial;
+	int32 MaterialIndex = INDEX_NONE;
+	TMap<FName, float> OriginalScalars;
+};
 
 // 발광 재질도 함께 변경하고 싶을 때 BP에서 연결할 알림입니다.
 // 0 = 소등, 1 = 원래 발광 상태
@@ -39,6 +54,10 @@ public:
 		meta = (ClampMin = "0.02", Units = "s"))
 	float MaxFlickerInterval = 0.35f;
 
+	// Only existing scalar parameters are controlled; shared material assets are never modified.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Night|Light")
+	TArray<FName> EmissiveScalarParameters = { TEXT("Emissive_Intensity"), TEXT("EmissiveStrength") };
+
 	UPROPERTY(BlueprintAssignable, Category = "Night|Light")
 	FAnomalyLightOutputChanged OnLightOutputChanged;
 	
@@ -68,6 +87,9 @@ private:
 	// 같은 액터에 들어 있는 조명들을 보관합니다.
 	TArray<TWeakObjectPtr<ULightComponent>> Lights;
 	TArray<bool> OriginalVisibility;
+
+	UPROPERTY(Transient)
+	TArray<FAnomalyLightMaterialState> MaterialStates;
 
 	FTimerHandle FlickerTimer;
 

@@ -58,5 +58,6 @@ public:
 		{ EReputationReason::AnomalyGuestHandled, 30 },
 		{ EReputationReason::PossessionCleared, 25 },
 		{ EReputationReason::NormalGuestAttacked, -50 },
+		{ EReputationReason::LightAnomalyResolved, 30 },
 	};
 };

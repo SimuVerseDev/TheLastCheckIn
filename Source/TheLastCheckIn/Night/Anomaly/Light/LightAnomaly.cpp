@@ -10,6 +10,7 @@
 #include "Phone/HotelPhoneActor.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
+#include "Core/Reputation/HotelReputationSubsystem.h"
 
 ALightAnomaly::ALightAnomaly()
 {
@@ -239,6 +240,12 @@ bool ALightAnomaly::Resolve()
 	if (!Super::Resolve())
 	{
 		return false;
+	}
+	
+	if (UHotelReputationSubsystem* Reputation =
+	GetWorld()->GetSubsystem<UHotelReputationSubsystem>())
+	{
+		Reputation->AddReputation(EReputationReason::LightAnomalyResolved);
 	}
 
 	if (bCancelComplaint)

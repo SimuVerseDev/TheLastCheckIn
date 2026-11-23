@@ -8,6 +8,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Camera/CameraComponent.h"
+#include "Camera/CameraActor.h"
 
 ACircuitBreakerActor::ACircuitBreakerActor()
 {
@@ -18,6 +20,14 @@ ACircuitBreakerActor::ACircuitBreakerActor()
 		TEXT("BreakerMesh"));
 
 	SetRootComponent(BreakerMesh);
+	
+	ViewCamera = CreateDefaultSubobject<UCameraComponent>(
+	TEXT("ViewCamera"));
+
+	ViewCamera->SetupAttachment(BreakerMesh);
+	ViewCamera->bUsePawnControlRotation = false;
+	ViewCamera->SetFieldOfView(60.0f);
+	
 	BreakerMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	InteractionBox = CreateDefaultSubobject<UBoxComponent>(
