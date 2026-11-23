@@ -1,4 +1,5 @@
 #include "Night/Anomaly/Bell/BellActor.h"
+#include "Night/Anomaly/Bell/BellRopeItem.h"
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
@@ -46,6 +47,14 @@ ABellActor::ABellActor()
 	Clapper->SetMobility(EComponentMobility::Movable);
 	Clapper->SetRelativeLocation(-BellActorDefaults::PivotLocation);
 
+	// 몸체와 같은 기준으로 배치 - 피벗 아래라 좌우 반전도 함께 적용됨
+	TiedRope = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TiedRope"));
+	TiedRope->SetupAttachment(SwingPivot);
+	TiedRope->SetMobility(EComponentMobility::Movable);
+	TiedRope->SetRelativeLocation(-BellActorDefaults::PivotLocation);
+	TiedRope->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	TiedRope->SetHiddenInGame(true);
+
 	/*
 	상호작용 트레이스(Visibility)만 막고 이동이나 물리에는 관여하지 않음
 	피벗 아래에 있어 같이 흔들리고, 종을 치우면 다른 부품과 함께 꺼짐
@@ -67,6 +76,7 @@ ABellActor::ABellActor()
 
 	BreakPrompt = NSLOCTEXT("Anomaly", "BellBreak", "종 부수기");
 	RemovePrompt = NSLOCTEXT("Anomaly", "BellRemove", "부서진 종 치우기");
+	TiePrompt = NSLOCTEXT("Anomaly", "BellTie", "줄로 묶기");
 }
 
 /*
@@ -126,6 +136,8 @@ void ABellActor::ApplyMirror()
 void ABellActor::BeginPlay()
 {
 	Super::BeginPlay();
+	// 에디터에서 Child Actor로 저장된 값이 예전 상태로 남아 있어도 게임 시작 시 다시 맞춤
+	ApplyMirror();
 	UpdateNameTag();
 	RingAudio->OnAudioFinished.AddUniqueDynamic(this, &ThisClass::HandleRingSoundFinished);
 	OriginalMesh = Mesh->GetStaticMesh();
@@ -263,7 +275,7 @@ void ABellActor::StopRinging()
 
 void ABellActor::RestoreBell()
 {
-	if (BellState != EBellState::Removed && BellState != EBellState::Broken)
+	if (BellState != EBellState::Removed && BellState != EBellState::Broken && BellState != EBellState::Tied)
 	{
 		return;
 	}
@@ -274,6 +286,8 @@ void ABellActor::RestoreBell()
 	}
 	SwingPivot->SetRelativeRotation(PivotHomeRotation);
 	SetSwingPartsPresent(true);
+	// 피벗 아래를 다시 보이게 하면서 같이 드러난 줄은 숨김
+	TiedRope->SetHiddenInGame(true);
 	OnBellRestored();
 }
 
@@ -302,6 +316,44 @@ void ABellActor::Interact_Implementation(AActor* Interactor)
 /*
 울리는 종을 부숨 - 소리 멈추고 부서진 메시로 교체, 이상현상 해결 신호
 */
+/*
+줄을 든 채 울리는 종을 조준하면 LMB로 묶기
+*/
+bool ABellActor::CanUse_Implementation(AActor* Interactor) const
+{
+	return BellState == EBellState::Ringing && ABellRopeItem::FindHeldBy(Interactor) != nullptr;
+}
+
+FText ABellActor::GetUsePrompt_Implementation(AActor* Interactor) const
+{
+	return TiePrompt;
+}
+
+bool ABellActor::Use_Implementation(AActor* Interactor)
+{
+	if (!CanUse_Implementation(Interactor))
+	{
+		return false;
+	}
+	Tie();
+	return true;
+}
+
+/*
+울리는 종을 줄로 묶음 - 소리와 흔들림을 멈추고 줄을 보이게 함, 이상현상 해결 신호
+묶인 종은 계속 그대로 - 다시 울리지 않고 부수거나 치울 수도 없음
+*/
+void ABellActor::Tie()
+{
+	BellState = EBellState::Tied;
+	StopRingSound();
+	SetActorTickEnabled(false);
+	SwingPivot->SetRelativeRotation(PivotHomeRotation);
+	TiedRope->SetHiddenInGame(false);
+	OnBellTied();
+	OnTied.Broadcast(this);
+}
+
 void ABellActor::Break()
 {
 	BellState = EBellState::Broken;
