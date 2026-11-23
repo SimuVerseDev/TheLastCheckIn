@@ -3,6 +3,7 @@
 #include "Night/Anomaly/AnomalyBase.h"
 #include "Night/Settlement/DailySettlementSubsystem.h"
 #include "Night/Anomaly/AnomalyNightPlan.h"
+#include "Night/Omen/OmenBase.h"
 #include "Engine/DataTable.h"
 #include "Core/GameFlow/HotelPhaseSubsystem.h"
 #include "Core/GameFlow/HotelPhaseSettings.h"
@@ -144,6 +145,15 @@ HandleTimeAdvanced -> Fail -> HandleStartFailed
 void UAnomalyManagerSubsystem::HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds)
 {
 	/*
+	예약된 예고 재생
+	*/
+	if (AOmenBase* Omen = PlannedOmen.Get(); Omen && CurrentSeconds >= PlannedOmenSeconds)
+	{
+		PlannedOmen.Reset();
+		Omen->PlayOmen();
+	}
+
+	/*
 	예약 시각이 지난 이상현상 시작
 	*/
 	TArray<AAnomalyBase*> ToStart;
@@ -201,10 +211,15 @@ void UAnomalyManagerSubsystem::HandleTimeAdvanced(double PreviousSeconds, double
 
 void UAnomalyManagerSubsystem::HandlePhaseChanged(EHotelPhase OldPhase, EHotelPhase NewPhase)
 {
+	if (NewPhase == EHotelPhase::Rest)
+	{
+		PlanOmen();
+	}
 	if (NewPhase == EHotelPhase::Settlement)
 	{
 		FailRunningAnomalies();
 		PlannedStartSeconds.Reset();
+		PlannedOmen.Reset();
 	}
 }
 
@@ -234,6 +249,7 @@ void UAnomalyManagerSubsystem::FailRunningAnomalies()
 void UAnomalyManagerSubsystem::HandleDayStarted(int32 Day)
 {
 	PlannedStartSeconds.Reset();
+	PlannedOmen.Reset();
 	PlanDay = Day;
 	FixedTonight.Reset();
 	SpareIds.Reset();
@@ -358,6 +374,41 @@ const FAnomalyNightPlan* UAnomalyManagerSubsystem::FindPlanRow(int32 Day, TSet<F
 		}
 	}
 	return Best;
+}
+
+/*
+Rest 진입 시 오늘 밤 예정된(아직 시작 전) 이상현상의 예고를 하나 예약
+*/
+void UAnomalyManagerSubsystem::PlanOmen()
+{
+	PlannedOmen.Reset();
+
+	const UHotelPhaseSettings* Settings = UHotelPhaseSettings::Get();
+	const double RestStart = GetNightSeconds(PlanDay, Settings->RestStartHour);
+	const double NightStart = GetNightSeconds(PlanDay, Settings->NightStartHour);
+
+	TArray<AOmenBase*> Candidates;
+	for (TActorIterator<AOmenBase> It(GetWorld()); It; ++It)
+	{
+		AAnomalyBase* Anomaly = FindAnomaly(It->GetRelatedAnomalyId());
+		if (Anomaly && PlannedStartSeconds.Contains(Anomaly)) // 아직 시작 전인 것만
+		{
+			Candidates.Add(*It);
+		}
+	}
+	if (Candidates.IsEmpty())
+	{
+		UE_LOG(LogAnomaly, Log, TEXT("[Omen] Day %d: 예고 후보 없음"), PlanDay);
+		return;
+	}
+
+	AOmenBase* Omen = Candidates[FMath::RandRange(0, Candidates.Num() - 1)];
+	AAnomalyBase* Anomaly = FindAnomaly(Omen->GetRelatedAnomalyId());
+	const double Latest = FMath::Min(NightStart, PlannedStartSeconds[Anomaly]); // 본편보다 먼저
+
+	PlannedOmen = Omen;
+	PlannedOmenSeconds = FMath::FRandRange(RestStart, FMath::Max(RestStart, Latest));
+	UE_LOG(LogAnomaly, Log, TEXT("[Omen] Day %d: %s 예고 예약"), PlanDay, *Omen->GetRelatedAnomalyId().ToString());
 }
 
 bool UAnomalyManagerSubsystem::PlanStart(AAnomalyBase* Anomaly, int32 Day, double NotBefore)

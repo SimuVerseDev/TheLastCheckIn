@@ -10,6 +10,7 @@ class AAnomalyBase;
 class UGameClockSubsystem;
 class UHotelPhaseSubsystem;
 class UDailySettlementSubsystem;
+class AOmenBase;
 
 struct FAnomalyNightPlan;
 
@@ -64,4 +65,12 @@ private:
 	TArray<FName> SpareIds;
 	
 	TSet<FName> LastNightIds;
+
+	/*
+	예고 (Rest 시간에 오늘 밤 이상현상 암시)
+	*/
+	void PlanOmen();
+
+	TWeakObjectPtr<AOmenBase> PlannedOmen;
+	double PlannedOmenSeconds = 0.0;
 };
