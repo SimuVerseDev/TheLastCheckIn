@@ -2,6 +2,7 @@
 #include "Night/Anomaly/Bell/BellRopeItem.h"
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/ChildActorComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -85,8 +86,37 @@ ABellActor::ABellActor()
 void ABellActor::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
+	SyncFromChildActorTemplate();
 	ApplyMirror();
 	UpdateNameTag();
+}
+
+/*
+종 판(BP_RoomBellSet)의 Child Actor로 생성됐을 때, 칸별 RoomNumber와 bMirrored를 BP 쪽 원본 템플릿에서 가져옴
+게임 시작 시 Child Actor가 템플릿 없이 기본값으로 다시 생성되는 경우가 있어서 필요
+종 판 밖에 단독으로 놓인 종은 자기 값을 그대로 씀
+*/
+void ABellActor::SyncFromChildActorTemplate()
+{
+	const UChildActorComponent* ParentChildActor = Cast<UChildActorComponent>(GetParentComponent());
+	if (!ParentChildActor)
+	{
+		return;
+	}
+	const ABellActor* Template = Cast<ABellActor>(ParentChildActor->GetChildActorTemplate());
+	if (!Template || Template == this)
+	{
+		if (const UChildActorComponent* Archetype = Cast<UChildActorComponent>(ParentChildActor->GetArchetype()))
+		{
+			Template = Cast<ABellActor>(Archetype->GetChildActorTemplate());
+		}
+	}
+	if (!Template || Template == this)
+	{
+		return;
+	}
+	RoomNumber = Template->RoomNumber;
+	bMirrored = Template->bMirrored;
 }
 
 /*
@@ -137,6 +167,7 @@ void ABellActor::BeginPlay()
 {
 	Super::BeginPlay();
 	// 에디터에서 Child Actor로 저장된 값이 예전 상태로 남아 있어도 게임 시작 시 다시 맞춤
+	SyncFromChildActorTemplate();
 	ApplyMirror();
 	UpdateNameTag();
 	RingAudio->OnAudioFinished.AddUniqueDynamic(this, &ThisClass::HandleRingSoundFinished);

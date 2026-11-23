@@ -212,6 +212,7 @@ private:
 	void SetSwingPartsPresent(bool bPresent);
 	void UpdateNameTag();
 	void ApplyMirror();
+	void SyncFromChildActorTemplate();
 	void PlayRingSound();
 	void PlayOverlapRing();
 	void StopRingSound();
