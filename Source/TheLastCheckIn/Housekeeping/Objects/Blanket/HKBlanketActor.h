@@ -37,6 +37,9 @@ public:
 	{
 		return Positions;
 	}
+
+	float GetSpreadRatio() const;
+
 	void Scramble(FRandomStream& Random, const FVector& Center, float MaxOffset);
 	
 	void MakeBed(const FTransform& Target, float Duration);

@@ -65,6 +65,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|MakeBed")
 	bool bAutoMakeBed = true;
+
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|MakeBed", meta=(ClampMin=0, ClampMax=1))
+	float SpreadRatio = 0.85f;
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Dirt|MakeBed", meta=(Units="deg"))
 	float MadeBlanketYaw = 90.0f;
@@ -80,6 +83,7 @@ private:
 	TObjectPtr<UBoxComponent> BedArea;
 	
 	void CheckBedMade();
+	bool IsSpreadOnBed() const;
 	FTimerHandle MadeCheckTimer;
 	
 	// DEBUG

@@ -128,7 +128,7 @@ void UHKBedMakeEvaluator::CheckBedMade()
 	{
 		return;
 	}
-	if (GetRawDirt() > Tolerance)
+	if (GetRawDirt() > Tolerance && !IsSpreadOnBed())
 	{
 		return;
 	}
@@ -140,4 +140,22 @@ void UHKBedMakeEvaluator::CheckBedMade()
 	const FVector Location = BedArea->GetComponentLocation() + BedArea->GetUpVector() * BedArea->GetScaledBoxExtent().Z;
 	const FQuat Rotation = BedArea->GetComponentQuat() * FQuat(FVector::UpVector, FMath::DegreesToRadians(MadeBlanketYaw));
 	Blanket->MakeBed(FTransform(Rotation, Location), MakeBedDuration);
+}
+
+bool UHKBedMakeEvaluator::IsSpreadOnBed() const
+{
+	if (!Blanket || !BedArea || Blanket->GetSpreadRatio() < SpreadRatio)
+	{
+		return false;
+	}
+
+	const TArray<FVector>& Positions = Blanket->GetParticlePositions();
+	if (Positions.IsEmpty())
+	{
+		return false;
+	}
+
+	const FVector Center = BedArea->GetComponentTransform().InverseTransformPosition(Positions[Positions.Num() / 2]);
+	const FVector Extent = BedArea->GetUnscaledBoxExtent();
+	return FMath::Abs(Center.X) <= Extent.X && FMath::Abs(Center.Y) <= Extent.Y;
 }

@@ -147,6 +147,26 @@ bool AHKBlanketActor::IsPlayerNearby() const
 	return false;
 }
 
+float AHKBlanketActor::GetSpreadRatio() const
+{
+	if (Positions.Num() != (SegmentsX + 1) * (SegmentsY + 1))
+	{
+		return 0.0f;
+	}
+
+	const FVector Scale = GetActorScale3D();
+	const float RestX = Size.X * Scale.X;
+	const float RestY = Size.Y * Scale.Y;
+	const FVector& C00 = Positions[ToIndex(0, 0)];
+	const FVector& C10 = Positions[ToIndex(SegmentsX, 0)];
+	const FVector& C01 = Positions[ToIndex(0, SegmentsY)];
+	const FVector& C11 = Positions[ToIndex(SegmentsX, SegmentsY)];
+
+	const float RatioX = FMath::Min(FVector::Dist(C00, C10), FVector::Dist(C01, C11)) / RestX;
+	const float RatioY = FMath::Min(FVector::Dist(C00, C01), FVector::Dist(C10, C11)) / RestY;
+	return FMath::Min(RatioX, RatioY);
+}
+
 void AHKBlanketActor::InitParticles()
 {
 	const int32 CountX = SegmentsX + 1;
