@@ -1,7 +1,14 @@
 ﻿#include "Night/Anomaly/Knock/HorseshoeActor.h"
 #include "Core/GameFlow/HotelPhaseSubsystem.h"
 #include "Night/Anomaly/Knock/KnockDoorActor.h"
+#include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
+
+AHorseshoeActor::AHorseshoeActor()
+{
+	bRestUntilPickedUp = true;
+	Mesh->BodyInstance.bUseCCD = true;
+}
 
 void AHorseshoeActor::BeginPlay()
 {
