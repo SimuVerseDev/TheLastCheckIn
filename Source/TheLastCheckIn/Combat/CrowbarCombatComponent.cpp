@@ -13,6 +13,8 @@
 #include "GameFramework/Pawn.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 
 UCrowbarCombatComponent::UCrowbarCombatComponent()
 {
@@ -319,6 +321,12 @@ void UCrowbarCombatComponent::PerformHit()
             Color,
             false,
             0.5f);
+    }
+    
+    if (bHit && ImpactSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(
+            this, ImpactSound, Hit.ImpactPoint);
     }
 
     AGuestCharacter* Guest =
