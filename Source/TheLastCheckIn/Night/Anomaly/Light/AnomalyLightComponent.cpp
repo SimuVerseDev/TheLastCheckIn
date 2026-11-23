@@ -5,6 +5,8 @@
 #include "TheLastCheckIn.h"
 
 #include "Components/LightComponent.h"
+#include "Components/MeshComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Kismet/GameplayStatics.h"
@@ -129,6 +131,46 @@ void UAnomalyLightComponent::CaptureOriginalState()
 		OriginalVisibility.Add(Light->IsVisible());
 	}
 
+	MaterialStates.Reset();
+	TArray<UMeshComponent*> Meshes;
+	GetOwner()->GetComponents<UMeshComponent>(Meshes);
+	for (UMeshComponent* Mesh : Meshes)
+	{
+		if (!IsValid(Mesh)) continue;
+		for (int32 Slot = 0; Slot < Mesh->GetNumMaterials(); ++Slot)
+		{
+			UMaterialInterface* Original = Mesh->GetMaterial(Slot);
+			if (!IsValid(Original)) continue;
+
+			TMap<FName, float> Scalars;
+			for (FName Parameter : EmissiveScalarParameters)
+			{
+				float Value = 0.0f;
+				if (!Parameter.IsNone() && Original->GetScalarParameterValue(FMaterialParameterInfo(Parameter), Value))
+				{
+					Scalars.Add(Parameter, Value);
+				}
+			}
+			if (Scalars.IsEmpty()) continue;
+
+			// A MID cannot be another MID's parent. Copy any existing runtime overrides
+			// into our own instance so other lamps using the source are unaffected.
+			auto* ExistingDynamic = Cast<UMaterialInstanceDynamic>(Original);
+			UMaterialInterface* Parent = ExistingDynamic ? ExistingDynamic->Parent.Get() : Original;
+			auto* Dynamic = UMaterialInstanceDynamic::Create(Parent, this);
+			if (!Dynamic) continue;
+			if (ExistingDynamic) Dynamic->CopyParameterOverrides(ExistingDynamic);
+
+			FAnomalyLightMaterialState& State = MaterialStates.AddDefaulted_GetRef();
+			State.Mesh = Mesh;
+			State.MaterialIndex = Slot;
+			State.OriginalMaterial = Original;
+			State.DynamicMaterial = Dynamic;
+			State.OriginalScalars = MoveTemp(Scalars);
+			Mesh->SetMaterial(Slot, Dynamic);
+		}
+	}
+
 	bHasSnapshot = true;
 
 	if (Lights.IsEmpty())
@@ -152,7 +194,16 @@ void UAnomalyLightComponent::ApplyOutput(bool bOn)
 		}
 	}
 
-	// 필요하면 BP에서 전구의 발광 재질도 변경합니다.
+	for (const FAnomalyLightMaterialState& State : MaterialStates)
+	{
+		if (!IsValid(State.DynamicMaterial)) continue;
+		for (const auto& Scalar : State.OriginalScalars)
+		{
+			State.DynamicMaterial->SetScalarParameterValue(Scalar.Key, bOn ? Scalar.Value : 0.0f);
+		}
+	}
+
+	// Additional Blueprint effects can follow the same output state.
 	OnLightOutputChanged.Broadcast(bOn ? 1.0f : 0.0f);
 }
 
@@ -170,6 +221,15 @@ void UAnomalyLightComponent::RestoreOriginalState()
 			Light->SetVisibility(OriginalVisibility[Index]);
 		}
 	}
+
+	for (const FAnomalyLightMaterialState& State : MaterialStates)
+	{
+		if (IsValid(State.Mesh) && State.Mesh->GetMaterial(State.MaterialIndex) == State.DynamicMaterial)
+		{
+			State.Mesh->SetMaterial(State.MaterialIndex, State.OriginalMaterial);
+		}
+	}
+	MaterialStates.Reset();
 
 	bHasSnapshot = false;
 	bOutputOn = true;

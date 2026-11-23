@@ -10,6 +10,7 @@
 #include "Core/Time/GameClockSubsystem.h"
 #include "Core/Time/GameTimeMath.h"
 #include "EngineUtils.h"
+#include "Night/Anomaly/Light/LightAnomaly.h"
 
 void UAnomalyManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -130,12 +131,17 @@ void UAnomalyManagerSubsystem::HandleAnomalyStateChanged(AAnomalyBase* Anomaly, 
 	{
 		StartSeconds.Remove(Anomaly);
 	}
+
 	RecordResult(Anomaly);
+
 	if (NewState == EAnomalyState::Resolved)
 	{
 		UAnomalyNoticeWidget::Show(this,
-			FText::Format(NSLOCTEXT("Anomaly", "ResolvedNotice", "{0} 해결"), Anomaly->DisplayName));
+			FText::Format(
+				NSLOCTEXT("Anomaly", "ResolvedNotice", "{0} 해결"),
+				Anomaly->DisplayName));
 	}
+
 }
 
 /*

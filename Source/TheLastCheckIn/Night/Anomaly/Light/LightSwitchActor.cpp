@@ -8,6 +8,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Camera/CameraComponent.h"
 
 ALightSwitchActor::ALightSwitchActor()
 {
@@ -18,6 +19,13 @@ ALightSwitchActor::ALightSwitchActor()
 		TEXT("SwitchMesh"));
 
 	SetRootComponent(SwitchMesh);
+	
+	ViewCamera = CreateDefaultSubobject<UCameraComponent>(
+	TEXT("ViewCamera"));
+
+	ViewCamera->SetupAttachment(SwitchMesh);
+	ViewCamera->bUsePawnControlRotation = false;
+	ViewCamera->SetFieldOfView(60.0f);
 
 	// 상호작용 판정은 아래의 박스가 담당합니다.
 	SwitchMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);

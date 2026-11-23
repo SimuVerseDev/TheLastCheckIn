@@ -16,4 +16,5 @@ enum class EReputationReason : uint8
 	AnomalyGuestHandled,
 	PossessionCleared,
 	NormalGuestAttacked,
+	LightAnomalyResolved,
 };
