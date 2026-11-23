@@ -7,6 +7,7 @@
 class AHKBlanketActor;
 class UPhysicsHandleComponent;
 class USceneComponent;
+class UHKTrashBinComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnPickedUp, UPrimitiveComponent*, Component);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHKOnReleased, UPrimitiveComponent*, Component, bool, bThrown);
@@ -47,6 +48,10 @@ public:
 	UFUNCTION(BlueprintPure, Category="Housekeeping|Trash")
 	USceneComponent* GetTrashAbsorbTarget() const;
 	
+	// 현재 들고 있는 쓰레기통의 용량 컴포넌트를 찾습니다.
+	UFUNCTION(BlueprintPure, Category="Housekeeping|Trash")
+	UHKTrashBinComponent* GetHeldTrashBin() const;
+	
 	UFUNCTION(BlueprintCallable, Category="Housekeeping|Trash")
 	void SetTrashAbsorbTarget(USceneComponent* Target)
 	{
@@ -54,10 +59,7 @@ public:
 	}
 	
 	UFUNCTION(BlueprintPure, Category="Housekeeping|Trash")
-	bool CanAbsorbTrash() const
-	{
-		return GetTrashAbsorbTarget() != nullptr;
-	}
+	bool CanAbsorbTrash() const;
 	
 	/*
 	IInteractionExtension
