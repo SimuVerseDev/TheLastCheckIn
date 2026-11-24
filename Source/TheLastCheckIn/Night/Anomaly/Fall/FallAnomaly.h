@@ -19,6 +19,7 @@ class AFallObjectActor;
 - 정산 시작 직전(PenaltyLeadMinutes 전) 오늘 밤 떨어졌는데 봉투에 담지 않은 것마다 Complaint, 다음 날부터는 방치해도 감소 없음
 - 상점에서 산 RefillProductId 상품이 빈 자리 SnapRadius 안에 놓이면 그 자리를 원래 오브젝트로 복구(다시 떨어질 수 있음)하고 CleanRoomAssigned
   설치 확정, 상점 재배치, 들고 와서 놓기 모두 같은 방식 - 멀리 놓은 상품은 일반 가구로 남음
+- 제자리에서 깨진 것(거울)은 치웠는지와 상관없이 다음 날 아침 원래 상태로 돌아옴 (평판 보너스 없음)
 */
 UCLASS()
 class THELASTCHECKIN_API AFallAnomaly : public AAnomalyBase
@@ -62,6 +63,9 @@ private:
 
 	UFUNCTION()
 	void HandlePhaseChanged(EHotelPhase OldPhase, EHotelPhase NewPhase);
+
+	UFUNCTION()
+	void HandleDayStarted(int32 Day);
 
 	UFUNCTION()
 	void HandlePurchaseConfirmed(FName ProductId, AActor* Product);
