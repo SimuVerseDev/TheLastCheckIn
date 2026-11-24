@@ -10,6 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraComponent.h"
 #include "Camera/CameraActor.h"
+#include "Night/Anomaly/Light/LightInteractionCameraComponent.h"
 
 ACircuitBreakerActor::ACircuitBreakerActor()
 {
@@ -27,6 +28,8 @@ ACircuitBreakerActor::ACircuitBreakerActor()
 	ViewCamera->SetupAttachment(BreakerMesh);
 	ViewCamera->bUsePawnControlRotation = false;
 	ViewCamera->SetFieldOfView(60.0f);
+	ViewCamera->SetRelativeLocation(FVector(-120.0f, 0.0f, 0.0f));
+	CameraSequence = CreateDefaultSubobject<ULightInteractionCameraComponent>(TEXT("CameraSequence"));
 	
 	BreakerMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
@@ -48,6 +51,7 @@ void ACircuitBreakerActor::BeginPlay()
 {
 	Super::BeginPlay();
 	LeverAnimation.Initialize(*this, FName(TEXT("PowerPanel_switch")));
+	for (UStaticMeshComponent* Lever : LeverAnimation.GetMeshes()) LeverComponentNames.Add(Lever->GetFName());
 
 	if (!IsValid(Anomaly))
 	{
@@ -87,14 +91,14 @@ void ACircuitBreakerActor::Tick(float DeltaSeconds)
 
 void ACircuitBreakerActor::HandleLightingChanged(EHotelLightMode Mode, FName AffectedZoneId)
 {
-	const bool bDown = Mode == EHotelLightMode::Blackout;
-	LeverAnimation.SetDown(*this, bDown, LeverDownRotation);
+	if (!bCompletingInteraction) ResetLeverPuzzle();
 }
 
 bool ACircuitBreakerActor::CanInteract_Implementation(
 	AActor* Interactor) const
 {
 	return IsValid(Anomaly)
+		&& CameraSequence && CameraSequence->CanStart(Interactor)
 		&& Anomaly->GetState() == EAnomalyState::Escalated
 		&& Anomaly->LightingMode == EHotelLightMode::Blackout;
 }
@@ -114,8 +118,52 @@ void ACircuitBreakerActor::Interact_Implementation(
 		return;
 	}
 
-	if (Anomaly->TryRestoreFromBreaker())
+	UCameraComponent* Camera = IsValid(InteractionCamera) ? InteractionCamera->GetCameraComponent() : ViewCamera.Get();
+	CameraSequence->LeverViewTime = 1.0f;
+	CameraSequence->StartLeverInteraction(Interactor, Camera, LeverAnimation.GetMeshes(),
+		FLightLeverClick::CreateUObject(this, &ThisClass::HandleLeverClick));
+}
+
+void ACircuitBreakerActor::ResetLeverPuzzle()
+{
+	CurrentStep = 0;
+	LeverAnimation.SetDown(*this, false, LeverDownRotation);
+}
+
+bool ACircuitBreakerActor::HandleLeverClick(UStaticMeshComponent* Lever)
+{
+	if (!IsValid(Anomaly) || Anomaly->GetState() != EAnomalyState::Escalated
+		|| Anomaly->LightingMode != EHotelLightMode::Blackout) return false;
+	const int32 Number = LeverComponentNames.IndexOfByKey(Lever->GetFName()) + 1;
+	if (Number == 0) return false;
+	if (CorrectLeverOrder.IsEmpty())
 	{
-		OnBreakerUsed();
+		const bool bDown = !LeverAnimation.IsDown(Lever);
+		LeverAnimation.SetLeverDown(*this, Lever, bDown, LeverDownRotation);
+		OnLeverOperated(Number, bDown, true);
+		return false;
 	}
+	// Reject malformed sequences rather than accidentally resolving an incomplete panel.
+	TSet<int32> Unique;
+	for (int32 Entry : CorrectLeverOrder)
+	{
+		if (Entry < 1 || Entry > LeverComponentNames.Num() || Unique.Contains(Entry)) return false;
+		Unique.Add(Entry);
+	}
+	if (Unique.Num() != LeverComponentNames.Num() || !CorrectLeverOrder.IsValidIndex(CurrentStep)) return false;
+	if (CorrectLeverOrder[CurrentStep] != Number)
+	{
+		ResetLeverPuzzle();
+		OnLeverOperated(Number, false, false);
+		return false;
+	}
+	LeverAnimation.SetLeverDown(*this, Lever, true, LeverDownRotation);
+	++CurrentStep;
+	OnLeverOperated(Number, true, true);
+	if (CurrentStep != CorrectLeverOrder.Num() || IsActorBeingDestroyed()) return false;
+	bCompletingInteraction = true;
+	const bool bSolved = IsValid(Anomaly) && Anomaly->TryRestoreFromBreaker();
+	bCompletingInteraction = false;
+	if (bSolved) OnBreakerUsed();
+	return bSolved;
 }
