@@ -84,7 +84,6 @@ void AHKBlanketActor::WakeUp()
 	SleepTimer = 0.0f;
 	AwakeTimer = 0.0f;
 	SetActorTickEnabled(true);
-	OnGrabbed.Broadcast(this);
 }
 
 void AHKBlanketActor::UpdateSleep(float DeltaTime, float SubStep)
@@ -450,6 +449,7 @@ void AHKBlanketActor::Grab(int32 ParticleIndex)
 		GrabbedIndex = ParticleIndex;
 		GrabTarget = Positions[ParticleIndex];
 		WakeUp();
+		OnGrabbed.Broadcast(this); 
 	}
 }
 
