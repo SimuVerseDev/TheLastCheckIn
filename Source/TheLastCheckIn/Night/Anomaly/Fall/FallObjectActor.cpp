@@ -208,13 +208,31 @@ bool AFallObjectActor::Restore()
 	{
 		return false;
 	}
+	RestoreToIntact();
+	return true;
+}
+
+bool AFallObjectActor::RestoreForNewDay()
+{
+	if (bFallOnBreak || State == EFallObjectState::Intact)
+	{
+		return false;
+	}
+	// Bag은 지우지 않음 - 아직 들고 있는 봉투의 E 입력을 이 액터가 계속 전달해야 함
+	bFellTonight = false;
+	RestoreToIntact();
+	UE_LOG(LogAnomaly, Log, TEXT("[Fall] '%s' 다음 날 복구"), *GetName());
+	return true;
+}
+
+void AFallObjectActor::RestoreToIntact()
+{
 	State = EFallObjectState::Intact;
 	StopIntactSnap();
 	ResetIntactMesh();
 	ResetBrokenMesh();
 	ApplyState();
 	OnRestored();
-	return true;
 }
 
 void AFallObjectActor::SetSlotHintVisible(bool bVisible)
@@ -438,6 +456,11 @@ void AFallObjectActor::HandleBagDisposed(ATrashBagActor* DisposedBag)
 		return;
 	}
 	Bag.Reset();
+	// 봉투를 버리기 전에 다음 날 복구된 경우(거울) - 봉투만 사라지고 오브젝트는 그대로
+	if (State != EFallObjectState::Bagged)
+	{
+		return;
+	}
 	State = EFallObjectState::Empty;
 	ApplyState();
 	OnCleared();

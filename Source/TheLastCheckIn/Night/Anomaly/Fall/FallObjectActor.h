@@ -16,7 +16,7 @@ enum class EFallObjectState : uint8
 	Intact,  // 제자리에 멀쩡히 있음
 	Broken,  // 떨어져서 잔해 상태 - E 홀드로 봉투에 담기
 	Bagged,  // 잔해를 봉투에 담음 - 봉투를 쓰레기통에 버려야 제거 완료
-	Empty    // 제거 완료, 빈 자리 - 상점에서 사서 설치하면 Intact로 복구
+	Empty    // 제거 완료, 빈 자리 - 상점에서 사서 설치하면 Intact로 복구 (거울은 다음 날 저절로 복구)
 };
 
 /*
@@ -44,6 +44,13 @@ public:
 	// 상점 재배치로 원래 상태로 복구
 	UFUNCTION(BlueprintCallable, Category="Night|Fall")
 	bool Restore();
+
+	/*
+	제자리에서 깨지는 것(bFallOnBreak = false, 벽걸이 거울)만 - 치웠는지와 상관없이 원래 상태로 복구
+	다음 날 아침 AFallAnomaly가 호출, 교체가 아니라 평판 보너스 없음
+	*/
+	UFUNCTION(BlueprintCallable, Category="Night|Fall")
+	bool RestoreForNewDay();
 
 	UFUNCTION(BlueprintPure, Category="Night|Fall")
 	EFallObjectState GetFallState() const { return State; }
@@ -131,6 +138,7 @@ protected:
 	/*
 	true: 이상현상 때 잔해가 물리로 떨어져 쓰러짐
 	false: 떨어지지 않고 제자리에서 깨짐 (벽걸이 거울 등) - BrokenMesh가 BP에 배치한 자리에 그대로 나타나고 바로 치우기 가능
+	       치우든 안 치우든 다음 날 아침 원래 상태로 돌아옴 (상점 교체 없음)
 	*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Night|Fall|Physics")
 	bool bFallOnBreak = true;
@@ -202,6 +210,7 @@ private:
 
 	ATrashBagActor* GetBagHeldBy(const AActor* Interactor) const;
 	void ApplyState();
+	void RestoreToIntact();
 	void Settle();
 	void ResetIntactMesh();
 	void ResetBrokenMesh();
