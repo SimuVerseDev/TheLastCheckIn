@@ -56,6 +56,7 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Day Slot Hours", meta = (ClampMin = "0", ClampMax = "23"))
 	int32 EveningStartHour = 18;
 	
-	UPROPERTY(Config, EditAnywhere, Category = "Days", meta = (RequiredAssetDataTags = "RowStructure=/Script/TheLastCheckIn.AnomalyNightPlan"))
-	TSoftObjectPtr<UDataTable> AnomalyNightPlanTable;
+	// 이상현상·예고·공포 연출 고정 시간표 (FAnomalyScheduleRow)
+	UPROPERTY(Config, EditAnywhere, Category = "Days", meta = (RequiredAssetDataTags = "RowStructure=/Script/TheLastCheckIn.AnomalyScheduleRow"))
+	TSoftObjectPtr<UDataTable> AnomalyScheduleTable;
 };
