@@ -449,6 +449,7 @@ void AHKBlanketActor::Grab(int32 ParticleIndex)
 		GrabbedIndex = ParticleIndex;
 		GrabTarget = Positions[ParticleIndex];
 		WakeUp();
+		OnGrabbed.Broadcast(this); 
 	}
 }
 
