@@ -57,6 +57,14 @@
 		{
 			"Name": "WaveformEditor",
 			"Enabled": true
+		},
+		{
+			"Name": "MetaHumanCharacter",
+			"Enabled": true
+		},
+		{
+			"Name": "MetaHumanGenerator",
+			"Enabled": true
 		}
 	]
 }
