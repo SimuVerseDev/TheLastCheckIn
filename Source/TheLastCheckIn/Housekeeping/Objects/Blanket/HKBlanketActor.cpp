@@ -84,6 +84,7 @@ void AHKBlanketActor::WakeUp()
 	SleepTimer = 0.0f;
 	AwakeTimer = 0.0f;
 	SetActorTickEnabled(true);
+	OnGrabbed.Broadcast(this);
 }
 
 void AHKBlanketActor::UpdateSleep(float DeltaTime, float SubStep)

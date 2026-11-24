@@ -5,6 +5,9 @@
 #include "HKBlanketActor.generated.h"
 class UProceduralMeshComponent;
 class UMaterialInterface;
+class AHKBlanketActor;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnBlanketGrabbed, AHKBlanketActor*, Blanket);
+
 struct FCollisionQueryParams;
 struct FCollisionResponseParams;
 UCLASS()
@@ -24,6 +27,10 @@ public:
 	{
 		return GrabbedIndex != INDEX_NONE;
 	}
+	
+	UPROPERTY(BlueprintAssignable, Category="Housekeeping|Blanket")
+	FHKOnBlanketGrabbed OnGrabbed;
+	
 	FVector GetParticleLocation(int32 ParticleIndex) const
 	{
 		return Positions.IsValidIndex(ParticleIndex) ? Positions[ParticleIndex] : GetActorLocation();
