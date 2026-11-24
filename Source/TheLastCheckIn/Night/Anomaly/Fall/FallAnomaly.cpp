@@ -43,6 +43,7 @@ void AFallAnomaly::BeginPlay()
 	if (UHotelPhaseSubsystem* Phase = World->GetSubsystem<UHotelPhaseSubsystem>())
 	{
 		Phase->OnPhaseChanged.AddUniqueDynamic(this, &ThisClass::HandlePhaseChanged);
+		Phase->OnDayStarted.AddUniqueDynamic(this, &ThisClass::HandleDayStarted);
 	}
 	if (UShopPurchaseSubsystem* Shop = World->GetSubsystem<UShopPurchaseSubsystem>())
 	{
@@ -64,6 +65,7 @@ void AFallAnomaly::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		if (UHotelPhaseSubsystem* Phase = World->GetSubsystem<UHotelPhaseSubsystem>())
 		{
 			Phase->OnPhaseChanged.RemoveAll(this);
+			Phase->OnDayStarted.RemoveAll(this);
 		}
 		if (UShopPurchaseSubsystem* Shop = World->GetSubsystem<UShopPurchaseSubsystem>())
 		{
@@ -172,6 +174,20 @@ void AFallAnomaly::HandlePhaseChanged(EHotelPhase OldPhase, EHotelPhase NewPhase
 		PendingFalls.Reset();
 		// 시간 건너뛰기 등으로 정산 직전 판정을 놓친 경우 대비 - 이미 판정한 오브젝트는 표시가 지워져 두 번 깎이지 않음
 		ApplyNightPenalty();
+	}
+}
+
+/*
+아침 - 제자리에서 깨진 것(거울)을 원래 상태로 되돌림, 나머지는 RestoreForNewDay가 걸러냄
+*/
+void AFallAnomaly::HandleDayStarted(int32 Day)
+{
+	for (AFallObjectActor* Object : FallObjects)
+	{
+		if (IsValid(Object))
+		{
+			Object->RestoreForNewDay();
+		}
 	}
 }
 
