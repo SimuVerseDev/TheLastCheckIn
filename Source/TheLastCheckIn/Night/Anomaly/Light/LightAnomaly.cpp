@@ -11,6 +11,9 @@
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "Core/Reputation/HotelReputationSubsystem.h"
+#include "Night/Anomaly/Light/AnomalyLightComponent.h"
+#include "Engine/RectLight.h"
+#include "EngineUtils.h"
 
 ALightAnomaly::ALightAnomaly()
 {
@@ -46,6 +49,7 @@ ALightAnomaly::ALightAnomaly()
 void ALightAnomaly::BeginPlay()
 {
 	Super::BeginPlay();
+	ConnectRectLights();
 
 	Clock = GetWorld()->GetSubsystem<UGameClockSubsystem>();
 
@@ -92,6 +96,11 @@ void ALightAnomaly::EndPlay(
 	}
 
 	SetLightingMode(EHotelLightMode::Normal);
+	for (const auto& Weak : AutoConnectedRectLights)
+	{
+		if (UAnomalyLightComponent* Component = Weak.Get()) Component->DestroyComponent();
+	}
+	AutoConnectedRectLights.Reset();
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -312,6 +321,8 @@ void ALightAnomaly::HandleTimeAdvanced(
 
 void ALightAnomaly::SetLightingMode(EHotelLightMode NewMode)
 {
+	// Pick up lights loaded since BeginPlay before broadcasting the new state.
+	if (NewMode != EHotelLightMode::Normal) ConnectRectLights();
 	LightingMode = NewMode;
 
 	if (NewMode == EHotelLightMode::Normal)
@@ -320,6 +331,24 @@ void ALightAnomaly::SetLightingMode(EHotelLightMode NewMode)
 	}
 
 	OnLightingChanged.Broadcast(LightingMode, ActiveZoneId);
+}
+
+void ALightAnomaly::ConnectRectLights()
+{
+	if (!bAutoConnectRectLights || !GetWorld()) return;
+	AutoConnectedRectLights.RemoveAll([](const auto& Weak) { return !Weak.IsValid(); });
+	for (TActorIterator<ARectLight> It(GetWorld()); It; ++It)
+	{
+		ARectLight* Light = *It;
+		// Preserve any existing zone-specific setup and avoid two controllers on the same light.
+		if (!IsValid(Light) || Light->FindComponentByClass<UAnomalyLightComponent>()) continue;
+		auto* Output = NewObject<UAnomalyLightComponent>(Light, NAME_None, RF_Transient);
+		Output->Anomaly = this;
+		// No ZoneId: standalone fill lights follow blackout/recovery, not unrelated zone flicker.
+		Light->AddInstanceComponent(Output);
+		Output->RegisterComponent();
+		AutoConnectedRectLights.Add(Output);
+	}
 }
 
 void ALightAnomaly::RefreshComplaintMessage()

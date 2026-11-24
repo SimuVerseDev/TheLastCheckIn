@@ -9,6 +9,7 @@ class FSwitchLeverAnimation
 public:
 	void Initialize(AActor& Owner, FName LeverMeshName)
 	{
+		Levers.Reset();
 		TInlineComponentArray<UStaticMeshComponent*> Meshes(&Owner);
 		for (UStaticMeshComponent* Mesh : Meshes)
 		{
@@ -16,47 +17,64 @@ public:
 			{
 				Mesh->SetMobility(EComponentMobility::Movable);
 				const FQuat Up = Mesh->GetRelativeRotation().Quaternion();
-				Levers.Add({Mesh, Up, Up});
+				Levers.Add({Mesh, Up, Up, Up});
 			}
+		}
+		Levers.Sort([](const FLever& A, const FLever& B) { return A.Mesh->GetName() < B.Mesh->GetName(); });
+	}
+
+	TArray<UStaticMeshComponent*> GetMeshes() const
+	{
+		TArray<UStaticMeshComponent*> Result;
+		for (const FLever& Lever : Levers) if (Lever.Mesh.IsValid()) Result.Add(Lever.Mesh.Get());
+		return Result;
+	}
+
+	bool IsDown(UStaticMeshComponent* Mesh) const
+	{
+		for (const FLever& Lever : Levers) if (Lever.Mesh.Get() == Mesh) return Lever.bDown;
+		return false;
+	}
+
+	void SetLeverDown(AActor& Owner, UStaticMeshComponent* Mesh, bool bDown, const FRotator& DownRotation)
+	{
+		for (FLever& Lever : Levers)
+		{
+			if (Lever.Mesh.Get() != Mesh || Lever.bDown == bDown) continue;
+			Lever.bDown = bDown;
+			Lever.Start = Mesh->GetRelativeRotation().Quaternion();
+			Lever.Target = Lever.Up * (bDown ? DownRotation.Quaternion() : FQuat::Identity);
+			Lever.Elapsed = 0.f;
+			Lever.bAnimating = true;
+			Owner.SetActorTickEnabled(true);
 		}
 	}
 
 	void SetDown(AActor& Owner, bool bDown, const FRotator& DownRotation)
 	{
-		if (Levers.IsEmpty() || bDown == bIsDown)
+		for (const FLever& Lever : Levers)
 		{
-			return;
+			if (UStaticMeshComponent* Mesh = Lever.Mesh.Get()) SetLeverDown(Owner, Mesh, bDown, DownRotation);
 		}
-
-		bIsDown = bDown;
-		Elapsed = 0.f;
-		RotationOffset = bDown ? DownRotation.Quaternion() : FQuat::Identity;
-		for (FLever& Lever : Levers)
-		{
-			if (const UStaticMeshComponent* Mesh = Lever.Mesh.Get())
-			{
-				Lever.Start = Mesh->GetRelativeRotation().Quaternion();
-			}
-		}
-		Owner.SetActorTickEnabled(true);
 	}
 
 	void Tick(AActor& Owner, float DeltaSeconds)
 	{
 		constexpr float TravelTime = 0.15f;
-		Elapsed += DeltaSeconds;
-		const float Alpha = FMath::Clamp(Elapsed / TravelTime, 0.f, 1.f);
-		for (const FLever& Lever : Levers)
+		bool bAnyAnimating = false;
+		for (FLever& Lever : Levers)
 		{
+			if (!Lever.bAnimating) continue;
+			Lever.Elapsed += DeltaSeconds;
+			const float Alpha = FMath::Clamp(Lever.Elapsed / TravelTime, 0.f, 1.f);
 			if (UStaticMeshComponent* Mesh = Lever.Mesh.Get())
 			{
-				Mesh->SetRelativeRotation(FQuat::Slerp(Lever.Start, Lever.Up * RotationOffset, Alpha));
+				Mesh->SetRelativeRotation(FQuat::Slerp(Lever.Start, Lever.Target, Alpha));
 			}
+			Lever.bAnimating = Alpha < 1.f && Lever.Mesh.IsValid();
+			bAnyAnimating |= Lever.bAnimating;
 		}
-		if (Alpha >= 1.f)
-		{
-			Owner.SetActorTickEnabled(false);
-		}
+		Owner.SetActorTickEnabled(bAnyAnimating);
 	}
 
 private:
@@ -65,10 +83,11 @@ private:
 		TWeakObjectPtr<UStaticMeshComponent> Mesh;
 		FQuat Up;
 		FQuat Start;
+		FQuat Target;
+		float Elapsed = 0.f;
+		bool bDown = false;
+		bool bAnimating = false;
 	};
 
 	TArray<FLever> Levers;
-	FQuat RotationOffset = FQuat::Identity;
-	float Elapsed = 0.f;
-	bool bIsDown = false;
 };
