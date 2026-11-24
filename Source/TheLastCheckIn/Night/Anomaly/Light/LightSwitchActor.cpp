@@ -9,6 +9,7 @@
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraComponent.h"
+#include "Night/Anomaly/Light/LightInteractionCameraComponent.h"
 
 ALightSwitchActor::ALightSwitchActor()
 {
@@ -26,6 +27,8 @@ ALightSwitchActor::ALightSwitchActor()
 	ViewCamera->SetupAttachment(SwitchMesh);
 	ViewCamera->bUsePawnControlRotation = false;
 	ViewCamera->SetFieldOfView(60.0f);
+	ViewCamera->SetRelativeLocation(FVector(-60.0f, 0.0f, 0.0f));
+	CameraSequence = CreateDefaultSubobject<ULightInteractionCameraComponent>(TEXT("CameraSequence"));
 
 	// 상호작용 판정은 아래의 박스가 담당합니다.
 	SwitchMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -87,8 +90,7 @@ void ALightSwitchActor::Tick(float DeltaSeconds)
 
 void ALightSwitchActor::HandleLightingChanged(EHotelLightMode Mode, FName AffectedZoneId)
 {
-	const bool bDown = Mode == EHotelLightMode::Blackout
-		|| (Mode == EHotelLightMode::Flickering && !ZoneId.IsNone() && ZoneId == AffectedZoneId);
+	const bool bDown = Mode == EHotelLightMode::Flickering && !ZoneId.IsNone() && ZoneId == AffectedZoneId;
 	LeverAnimation.SetDown(*this, bDown, LeverDownRotation);
 }
 
@@ -96,6 +98,7 @@ bool ALightSwitchActor::CanInteract_Implementation(
 	AActor* Interactor) const
 {
 	return IsValid(Anomaly)
+		&& CameraSequence && CameraSequence->CanStart(Interactor)
 		&& !ZoneId.IsNone()
 		&& Anomaly->GetState() == EAnomalyState::Active
 		&& Anomaly->LightingMode == EHotelLightMode::Flickering
@@ -117,8 +120,16 @@ void ALightSwitchActor::Interact_Implementation(
 		return;
 	}
 
-	if (Anomaly->TryResolveFromSwitch(ZoneId))
+	CameraSequence->LeverViewTime = 1.0f;
+	CameraSequence->StartLeverInteraction(Interactor, ViewCamera, LeverAnimation.GetMeshes(),
+		FLightLeverClick::CreateWeakLambda(this, [this](UStaticMeshComponent* Lever)
 	{
-		OnSwitchUsed();
-	}
+		if (IsValid(Anomaly) && Anomaly->TryResolveFromSwitch(ZoneId))
+		{
+			LeverAnimation.SetDown(*this, false, LeverDownRotation);
+			OnSwitchUsed();
+			return true;
+		}
+		return false;
+	}));
 }

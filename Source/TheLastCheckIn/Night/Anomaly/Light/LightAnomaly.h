@@ -7,6 +7,7 @@
 #include "LightAnomaly.generated.h"
 
 class UGameClockSubsystem;
+class UAnomalyLightComponent;
 
 // 조명에 적용할 상태
 UENUM(BlueprintType)
@@ -67,6 +68,10 @@ public:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Night|Light")
 	FName ActiveZoneId = NAME_None;
 
+	// Standalone RectLight actors also follow whole-hotel blackouts, even outside light zones.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Night|Light")
+	bool bAutoConnectRectLights = true;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -96,6 +101,8 @@ private:
 	void HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds);
 
 	void SetLightingMode(EHotelLightMode NewMode);
+	void ConnectRectLights();
+	TArray<TWeakObjectPtr<UAnomalyLightComponent>> AutoConnectedRectLights;
 	
 	// HotelPhoneActor의 C++ 이벤트에 연결합니다.
 	// 일반 C++ 델리게이트이므로 UFUNCTION을 붙이지 않습니다.
