@@ -20,8 +20,7 @@ class THELASTCHECKIN_API AHKTrashDisposalActor
 
 public:
 	AHKTrashDisposalActor();
-
-	// E 상호작용 대신 Use(좌클릭)를 사용합니다.
+	
 	virtual bool CanInteract_Implementation(
 		AActor* Interactor) const override;
 
@@ -49,12 +48,10 @@ protected:
 	*/
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Trash|Sound")
 	TObjectPtr<USoundBase> EmptySound;
-
-	// 비우기에 성공했을 때 BP에서 소리나 효과를 재생할 수 있습니다.
+	
 	UFUNCTION(BlueprintImplementableEvent, Category="Housekeeping|Trash")
 	void OnTrashEmptied(int32 RemovedAmount);
 
 private:
-	// 플레이어의 물리 핸들이 실제로 들고 있는 쓰레기통을 찾습니다.
 	UHKTrashBinComponent* FindHeldTrashBin(AActor* Interactor) const;
 };
