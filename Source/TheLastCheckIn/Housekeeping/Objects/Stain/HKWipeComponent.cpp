@@ -5,12 +5,25 @@
 #include "Components/PrimitiveComponent.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+#include "Components/AudioComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
+#include "UObject/ConstructorHelpers.h"
 
 UHKWipeComponent::UHKWipeComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	PrimaryComponentTick.TickGroup = TG_PostPhysics;
+
+	/*
+	sound
+	*/
+	static ConstructorHelpers::FObjectFinder<USoundBase> WipeFinder(TEXT("/Game/HouseKeeping/Sounds/SW_HK_Wipe"));
+	if (WipeFinder.Succeeded())
+	{
+		WipeLoopSound = WipeFinder.Object;
+	}
 }
 
 void UHKWipeComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -61,6 +74,17 @@ void UHKWipeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	Body->SetWorldLocationAndRotation(Location, Rotation, false, nullptr, ETeleportType::TeleportPhysics);
 
 	StainActor->GetStain()->AddWipe(Moved * ToolComponent->GetWipeMultiplier());
+
+	/*
+	sound
+	*/
+	if (WipeAudio)
+	{
+		const float Speed = DeltaTime > 0.0f ? Moved / DeltaTime : 0.0f;
+		const float Target = FMath::Clamp(Speed / FullVolumeSpeed, 0.0f, 1.0f);
+		WipeVolume = FMath::FInterpTo(WipeVolume, Target, DeltaTime, VolumeInterpSpeed);
+		WipeAudio->SetVolumeMultiplier(FMath::Max(WipeVolume, 0.001f));
+	}
 }
 
 bool UHKWipeComponent::BeginWipe(AHKStainActor* InStain, UHKWipeToolComponent* InTool)
@@ -85,7 +109,23 @@ bool UHKWipeComponent::BeginWipe(AHKStainActor* InStain, UHKWipeToolComponent* I
 	LookLockedPC = PC;
 	bWiping = true;
 	SetComponentTickEnabled(true);
+
+	if (WipeLoopSound)
+	{
+		WipeVolume = 0.0f;
+		WipeAudio = UGameplayStatics::SpawnSound2D(this, WipeLoopSound, 0.001f);
+	}
 	return true;
+}
+
+void UHKWipeComponent::StopWipeSound()
+{
+	if (WipeAudio)
+	{
+		WipeAudio->FadeOut(0.15f, 0.0f);
+		WipeAudio = nullptr;
+	}
+	WipeVolume = 0.0f;
 }
 
 void UHKWipeComponent::EndWipe()
@@ -103,6 +143,7 @@ void UHKWipeComponent::EndWipe()
 	{
 		PC->SetIgnoreLookInput(false);
 	}
+	StopWipeSound();
 	bWiping = false;
 	LookLockedPC.Reset();
 	Stain.Reset();

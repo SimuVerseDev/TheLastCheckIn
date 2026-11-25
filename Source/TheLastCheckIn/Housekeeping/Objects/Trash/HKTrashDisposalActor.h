@@ -10,6 +10,7 @@
 class UStaticMeshComponent;
 class UBoxComponent;
 class UHKTrashBinComponent;
+class USoundBase;
 
 UCLASS()
 class THELASTCHECKIN_API AHKTrashDisposalActor
@@ -42,6 +43,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Housekeeping|Trash")
 	FText EmptyPrompt;
+
+	/*
+	sound
+	*/
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Trash|Sound")
+	TObjectPtr<USoundBase> EmptySound;
 
 	// 비우기에 성공했을 때 BP에서 소리나 효과를 재생할 수 있습니다.
 	UFUNCTION(BlueprintImplementableEvent, Category="Housekeeping|Trash")

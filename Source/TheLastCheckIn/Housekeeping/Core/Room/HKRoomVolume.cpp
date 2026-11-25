@@ -14,6 +14,8 @@
 #include "EngineUtils.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 #include "Rooms/RoomActor.h"
 
 AHKRoomVolume::AHKRoomVolume()
@@ -35,6 +37,21 @@ AHKRoomVolume::AHKRoomVolume()
 	if (StainFinder.Succeeded())
 	{
 		StainClass = StainFinder.Class;
+	}
+
+	/*
+	sound
+	*/
+	static ConstructorHelpers::FObjectFinder<USoundBase> MilestoneFinder(TEXT("/Game/HouseKeeping/Sounds/SW_HK_CleanMilestone"));
+	static ConstructorHelpers::FObjectFinder<USoundBase> FullFinder(TEXT("/Game/HouseKeeping/Sounds/SW_HK_Clean100"));
+	if (MilestoneFinder.Succeeded())
+	{
+		CleanlinessSounds.Add(60, MilestoneFinder.Object);
+		CleanlinessSounds.Add(90, MilestoneFinder.Object);
+	}
+	if (FullFinder.Succeeded())
+	{
+		CleanlinessSounds.Add(100, FullFinder.Object);
 	}
 }
 
@@ -324,15 +341,18 @@ void AHKRoomVolume::Evaluate()
 			WeightedDirt += Dirt->GetWeight() * Dirt->GetDirt();
 		}
 	}
+	if (WeightedDirt <= 0.0f)
+	{
+		FinishCleaning();
+		return;
+	}
+	const float OldCleanliness = Cleanliness;
 	SetCleanliness(100.0f * (1.0f - FMath::Clamp(WeightedDirt / TotalWeight, 0.0f, 1.0f)));
+	PlayCleanlinessSound(OldCleanliness, Cleanliness);
 	if (bShowDebug && GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()), EvaluateInterval + 0.1f, FColor::Cyan,
 			FString::Printf(TEXT("[%s] 청결도 %.0f"), *GetActorNameOrLabel(), Cleanliness));
-	}
-	if (WeightedDirt <= 0.0f)
-	{
-		FinishCleaning();
 	}
 }
 
@@ -349,7 +369,9 @@ void AHKRoomVolume::FinishCleaning()
 	TotalWeight = 0.0f;
 	bDirty = false;
 	GetWorldTimerManager().ClearTimer(EvaluateTimer);
+	const float OldCleanliness = Cleanliness;
 	SetCleanliness(100.0f);
+	PlayCleanlinessSound(OldCleanliness, Cleanliness);
 	OnRoomCleaned.Broadcast(this);
 	
 	/*
@@ -359,6 +381,27 @@ void AHKRoomVolume::FinishCleaning()
 	{
 		GEngine->AddOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()), 3.0f, FColor::Green,
 			FString::Printf(TEXT("[%s] 청결도 100 - 정리 완료"), *GetActorNameOrLabel()));
+	}
+}
+
+/*
+sound
+*/
+void AHKRoomVolume::PlayCleanlinessSound(float OldValue, float NewValue) const
+{
+	int32 Best = INDEX_NONE;
+	USoundBase* BestSound = nullptr;
+	for (const TPair<int32, TObjectPtr<USoundBase>>& Pair : CleanlinessSounds)
+	{
+		if (OldValue < Pair.Key && NewValue >= Pair.Key && Pair.Key > Best && Pair.Value)
+		{
+			Best = Pair.Key;
+			BestSound = Pair.Value;
+		}
+	}
+	if (BestSound)
+	{
+		UGameplayStatics::PlaySound2D(this, BestSound);
 	}
 }
 
