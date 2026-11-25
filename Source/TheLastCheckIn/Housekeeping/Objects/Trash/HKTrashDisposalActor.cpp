@@ -21,8 +21,7 @@ AHKTrashDisposalActor::AHKTrashDisposalActor()
 		TEXT("DisposalMesh"));
 
 	SetRootComponent(DisposalMesh);
-
-	// 메인 쓰레기통의 외형은 실제 장애물로 사용합니다.
+	
 	DisposalMesh->SetCollisionProfileName(TEXT("BlockAll"));
 	DisposalMesh->SetSimulatePhysics(false);
 
@@ -30,8 +29,7 @@ AHKTrashDisposalActor::AHKTrashDisposalActor()
 		TEXT("InteractionBox"));
 
 	InteractionBox->SetupAttachment(DisposalMesh);
-
-	// 실제 메시 크기에 맞게 BP에서 조절합니다.
+	
 	InteractionBox->SetBoxExtent(FVector(50.0f, 50.0f, 70.0f));
 	InteractionBox->SetRelativeLocation(FVector(0.0f, 0.0f, 70.0f));
 

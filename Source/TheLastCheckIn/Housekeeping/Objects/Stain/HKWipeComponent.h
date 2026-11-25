@@ -42,6 +42,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Wipe", meta=(ClampMin=0, Units="cm"))
 	float MouseSensitivity = 2.0f;
+	
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Wipe", meta=(ClampMin=0, Units="cm"))
+	float WallMargin = 10.0f;
 
 	/*
 	sound
