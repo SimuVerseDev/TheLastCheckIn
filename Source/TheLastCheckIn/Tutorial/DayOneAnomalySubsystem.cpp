@@ -13,6 +13,8 @@
 #include "GameFramework/PlayerController.h"
 #include "Sound/SoundAttenuation.h"
 #include "Math/RotationMatrix.h"
+#include "Memo/MemoSubsystem.h"
+#include "Camera/PlayerCameraManager.h"
 
 namespace
 {
@@ -24,6 +26,7 @@ namespace
 void UDayOneAnomalySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+	Collection.InitializeDependency<UMemoSubsystem>();
 	Clock = Collection.InitializeDependency<UGameClockSubsystem>();
 	Phase = Collection.InitializeDependency<UHotelPhaseSubsystem>();
 	Clock->OnTimeAdvanced.AddDynamic(this, &ThisClass::HandleTimeAdvanced);
@@ -109,6 +112,7 @@ void UDayOneAnomalySubsystem::SetCCTVViewing(bool bViewing)
 	}
 
 	UpdateShadowVisibility();
+	CheckShadowWitness();
 }
 
 void UDayOneAnomalySubsystem::SetPlayerInStaffRoom(bool bInside)
@@ -248,6 +252,15 @@ void UDayOneAnomalySubsystem::StartPresentation(
 	Entry.State = EDayOneAnomalyState::Active;
 	Entry.StartedAtSeconds = Now;
 	Entry.EndAtSeconds = EndAt;
+	
+// 조명은 로비에 있을 때 시작하므로 이를 목격으로 인정합니다.
+// 노크는 플레이어 근처에서 재생이 시작된 것을 청취로 인정합니다.
+// 형체는 CCTV 시야 검사를 통과해야 목격으로 인정합니다.
+if (Presentation == EDayOneAnomaly::LobbyFlicker
+	|| Presentation == EDayOneAnomaly::DoorKnock)
+{
+	ReportPresentationWitnessed(Presentation);
+}
 
 	OnPresentationStarted.Broadcast(Presentation);
 }
@@ -556,6 +569,7 @@ void UDayOneAnomalySubsystem::StopShadowPresentation()
     }
 
     ActiveShadowFigure.Reset();
+	ShadowVisibleSinceSeconds = -1.0;
 }
 
 void UDayOneAnomalySubsystem::ConfigureDoorKnock(
@@ -784,4 +798,129 @@ void UDayOneAnomalySubsystem::StopDoorKnock()
     ActiveKnockActor.Reset();
     ActiveKnockAudio.Reset();
     NextDoorKnockSeconds = 0.0;
+}
+
+void UDayOneAnomalySubsystem::ReportPresentationWitnessed(
+    EDayOneAnomaly Presentation)
+{
+    if (WitnessedPresentations.Contains(Presentation))
+    {
+        return;
+    }
+
+    FName EventId;
+
+    switch (Presentation)
+    {
+    case EDayOneAnomaly::LobbyFlicker:
+        EventId = TEXT("DayOne.LightWitnessed");
+        break;
+
+    case EDayOneAnomaly::ShadowFigure:
+        EventId = TEXT("DayOne.ShadowWitnessed");
+        break;
+
+    case EDayOneAnomaly::DoorKnock:
+        EventId = TEXT("DayOne.KnockHeard");
+        break;
+
+    default:
+        return;
+    }
+
+    UMemoSubsystem* Memos =
+        GetWorld()->GetSubsystem<UMemoSubsystem>();
+
+    if (!Memos)
+    {
+        return;
+    }
+
+    WitnessedPresentations.Add(Presentation);
+    Memos->ReportMemoEvent(EventId);
+}
+
+void UDayOneAnomalySubsystem::CheckShadowWitness()
+{
+    const EDayOneAnomaly Id = EDayOneAnomaly::ShadowFigure;
+
+    if (WitnessedPresentations.Contains(Id))
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    AShadowFigureActor* Figure = ActiveShadowFigure.Get();
+    APlayerController* PC =
+        World ? World->GetFirstPlayerController() : nullptr;
+
+    if (!bViewingCCTV
+        || GetProgress(Id).State != EDayOneAnomalyState::Active
+        || !Figure
+        || !Figure->IsPresent()
+        || !PC
+        || !PC->PlayerCameraManager)
+    {
+        ShadowVisibleSinceSeconds = -1.0;
+        return;
+    }
+
+    FVector Center;
+    FVector Extent;
+    Figure->GetActorBounds(false, Center, Extent);
+
+    FVector2D ScreenPosition;
+    int32 Width = 0;
+    int32 Height = 0;
+    PC->GetViewportSize(Width, Height);
+
+    const bool bOnScreen =
+        Width > 0 && Height > 0
+        && PC->ProjectWorldLocationToScreen(Center, ScreenPosition)
+        && ScreenPosition.X >= 0.0
+        && ScreenPosition.X <= Width
+        && ScreenPosition.Y >= 0.0
+        && ScreenPosition.Y <= Height;
+
+    if (!bOnScreen)
+    {
+        ShadowVisibleSinceSeconds = -1.0;
+        return;
+    }
+
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(Figure);
+
+    if (APawn* Pawn = PC->GetPawn())
+    {
+        Params.AddIgnoredActor(Pawn);
+    }
+
+    FHitResult Hit;
+
+    const bool bBlocked = World->LineTraceSingleByChannel(
+        Hit,
+        PC->PlayerCameraManager->GetCameraLocation(),
+        Center,
+        ECC_Visibility,
+        Params);
+
+    if (bBlocked)
+    {
+        ShadowVisibleSinceSeconds = -1.0;
+        return;
+    }
+
+    const double Now = World->GetTimeSeconds();
+
+    if (ShadowVisibleSinceSeconds < 0.0)
+    {
+        ShadowVisibleSinceSeconds = Now;
+    }
+
+    // CCTV 화면 안에서 가려지지 않은 상태를 0.5초 유지하면 목격.
+    if (Now - ShadowVisibleSinceSeconds >= 0.5)
+    {
+        ReportPresentationWitnessed(Id);
+    }
 }

@@ -183,4 +183,12 @@ private:
 	// 플레이어 주변에서 처음 선택한 실제 발생 위치
 	FVector DoorKnockWorldLocation = FVector::ZeroVector;
 	
+	void ReportPresentationWitnessed(EDayOneAnomaly Presentation);
+	void CheckShadowWitness();
+
+	TSet<EDayOneAnomaly> WitnessedPresentations;
+
+	// CCTV에서 형체가 연속해서 보이기 시작한 월드 시간
+	double ShadowVisibleSinceSeconds = -1.0;
+	
 };
