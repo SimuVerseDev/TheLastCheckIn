@@ -5,6 +5,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Housekeeping/Objects/Trash/HKTrashBinComponent.h"
 #include "Components/SceneComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 AHKTrashActor::AHKTrashActor()
 {
@@ -50,6 +51,10 @@ void AHKTrashActor::Tick(float DeltaTime)
 
 	if (Alpha >= 1.0f)
 	{
+		if (DropInSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, DropInSound, End);
+		}
 		BP_OnAbsorbed();
 		/*
 		null인데 returnPool호출 시 크래시 방지용
@@ -104,6 +109,10 @@ bool AHKTrashActor::Absorb(USceneComponent* Target)
 	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SetActorTickEnabled(true);
 
+	if (PickupSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, PickupSound, AbsorbStartLocation);
+	}
 	return true;
 }
 

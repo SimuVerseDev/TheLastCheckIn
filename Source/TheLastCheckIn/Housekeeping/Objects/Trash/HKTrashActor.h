@@ -4,6 +4,7 @@
 #include "HKTrashActor.generated.h"
 class UHKTrashDirtComponent;
 class UMaterialInterface;
+class USoundBase;
 
 UENUM(BlueprintType)
 enum class EHKTrashState : uint8
@@ -77,6 +78,15 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Trash", meta=(ClampMin=0.05, Units="s"))
 	float AbsorbDuration = 0.35f;
+
+	/*
+	sound
+	*/
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Trash|Sound")
+	TObjectPtr<USoundBase> PickupSound;
+
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Trash|Sound")
+	TObjectPtr<USoundBase> DropInSound;
 	
 	/*
 	Design
