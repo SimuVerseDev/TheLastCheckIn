@@ -6,6 +6,7 @@
 #include "Components/VerticalBox.h"
 #include "Components/Image.h"
 #include "Engine/World.h"
+#include "Core/Reputation/UI/ReputationHUDSubsystem.h"
 
 void UTutorialQuestWidget::NativeConstruct()
 {
@@ -15,6 +16,11 @@ void UTutorialQuestWidget::NativeConstruct()
 	{
 		Tutorial->OnStepChanged.AddUniqueDynamic(this, &ThisClass::HandleStepChanged);
 		Tutorial->OnProgressChanged.AddUniqueDynamic(this, &ThisClass::RefreshQuest);
+	}
+	HUDSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UReputationHUDSubsystem>() : nullptr;
+	if (HUDSubsystem)
+	{
+		HUDSubsystem->OnHUDVisibilityChanged.AddUObject(this, &ThisClass::HandleHUDVisibilityChanged);
 	}
 	FadeAlpha = 0.0f;
 	SetRenderOpacity(0.0f);
@@ -29,7 +35,17 @@ void UTutorialQuestWidget::NativeDestruct()
 		Tutorial->OnProgressChanged.RemoveAll(this);
 	}
 	Tutorial = nullptr;
+	if (HUDSubsystem)
+	{
+		HUDSubsystem->OnHUDVisibilityChanged.RemoveAll(this);
+	}
+	HUDSubsystem = nullptr;
 	Super::NativeDestruct();
+}
+
+void UTutorialQuestWidget::HandleHUDVisibilityChanged(bool bVisible)
+{
+	RefreshQuest();
 }
 
 void UTutorialQuestWidget::HandleStepChanged(ETutorialStep OldStep, ETutorialStep NewStep)
@@ -54,7 +70,8 @@ void UTutorialQuestWidget::RefreshQuest()
 	if (IsDesignTime()) return;
 	const bool bActive = Tutorial && Tutorial->IsTutorialActive();
 	const bool bCompletionNotice = Tutorial && Tutorial->ShouldShowCompletionNotice();
-	SetVisibility(bActive || bCompletionNotice ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	const bool bHUDVisible = !HUDSubsystem || HUDSubsystem->IsHUDVisible();
+	SetVisibility((bActive || bCompletionNotice) && bHUDVisible ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	if (!bActive && !bCompletionNotice) return;
 
 	constexpr int32 TotalSteps = 5;

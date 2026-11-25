@@ -6,6 +6,8 @@
 
 class UReputationHUDWidget;
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnHUDVisibilityChanged, bool);
+
 // Shows the reputation HUD on the local player's screen without touching the shared PlayerController.
 UCLASS()
 class THELASTCHECKIN_API UReputationHUDSubsystem : public UWorldSubsystem
@@ -18,8 +20,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Game|Reputation")
 	void SetHUDVisible(bool bVisible);
 
+	UFUNCTION(BlueprintPure, Category = "Game|Reputation")
+	bool IsHUDVisible() const { return bHUDVisible; }
+
+	FOnHUDVisibilityChanged OnHUDVisibilityChanged;
+
 private:
 	void CreateHUD();
 
 	UPROPERTY() TObjectPtr<UReputationHUDWidget> HUDWidget;
+	bool bHUDVisible = true;
 };

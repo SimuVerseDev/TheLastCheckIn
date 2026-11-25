@@ -9,6 +9,7 @@
 
 class UTextBlock;
 class UVerticalBox;
+class UReputationHUDSubsystem;
 
 // Presentation only. Creation and viewport placement are owned by the caller.
 UCLASS()
@@ -33,6 +34,8 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Tutorial") float FadeInTime = 0.8f;
 private:
 	UFUNCTION() void HandleStepChanged(ETutorialStep OldStep, ETutorialStep NewStep);
+	void HandleHUDVisibilityChanged(bool bVisible);
 	UPROPERTY(Transient) TObjectPtr<UTutorialSubsystem> Tutorial;
+	UPROPERTY(Transient) TObjectPtr<UReputationHUDSubsystem> HUDSubsystem;
 	float FadeAlpha = 1.0f;
 };
