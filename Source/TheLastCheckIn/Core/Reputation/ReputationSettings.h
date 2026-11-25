@@ -6,6 +6,7 @@
 #include "ReputationSettings.generated.h"
 
 class UReputationHUDWidget;
+class USoundBase;
 
 UCLASS(Config = Game, DefaultConfig, meta = (DisplayName = "Hotel Reputation"))
 class THELASTCHECKIN_API UReputationSettings : public UDeveloperSettings
@@ -44,6 +45,13 @@ public:
 	*/
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UReputationHUDWidget> HUDWidgetClass;
+
+	/*
+	평판이 아래에서 위로 이 값을 넘는 순간 재생 (내려갔다 다시 넘으면 또 재생)
+	한 번에 여러 개를 넘으면 가장 높은 값의 소리만 재생
+	*/
+	UPROPERTY(Config, EditAnywhere, Category = "Sound")
+	TMap<int32, TSoftObjectPtr<USoundBase>> MilestoneSounds;
 
 	UPROPERTY(Config, EditAnywhere, Category = "Deltas")
 	TMap<EReputationReason, int32> ReasonDeltas =
