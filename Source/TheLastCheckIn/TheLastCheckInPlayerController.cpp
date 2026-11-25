@@ -25,7 +25,11 @@ void ATheLastCheckInPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	
+	if (IsLocalPlayerController() && PlayerCameraManager)
+	{
+		PlayerCameraManager->StartCameraFade(1.0f, 0.0f, 2.0f, FLinearColor::Black, false, false);
+	}
+
 	// only spawn touch controls on local player controllers
 	if (IsLocalPlayerController() && ShouldUseTouchControls())
 	{

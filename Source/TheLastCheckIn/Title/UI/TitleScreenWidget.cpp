@@ -25,6 +25,7 @@ void UTitleScreenWidget::HandleNewGame()
 		PC->SetInputMode(FInputModeGameOnly());
 		PC->SetShowMouseCursor(false);
 	}
+	RemoveFromParent();
 	UGameplayStatics::OpenLevelBySoftObjectPtr(this, GameLevel);
 }
 
