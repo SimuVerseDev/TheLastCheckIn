@@ -340,7 +340,7 @@ void AGuestScheduleManager::HandlePartyRoomAssigned(UGuestParty* Party)
     const UHotelPhaseSettings* PhaseSettings = UHotelPhaseSettings::Get();
 
     const int32 CheckoutMinuteOfDay = FMath::RandRange(
-        PhaseSettings->DayStartHour * 60,
+        9 * 60,
         PhaseSettings->MiddayStartHour * 60);
 
     Party->SetCheckoutTime(NextDayStart + GameTime::MinutesToSeconds(CheckoutMinuteOfDay));
