@@ -1,4 +1,4 @@
-﻿#include "GuestCharacter.h"
+#include "GuestCharacter.h"
 #include "TheLastCheckIn.h"
 #include "GuestAIController.h"
 #include "Data/GuestDataTypes.h"
@@ -10,6 +10,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/World.h"
+#include "Engine/TargetPoint.h"
 #include "EngineUtils.h"
 #include "CollisionQueryParams.h"
 #include "CollisionShape.h"
@@ -17,16 +18,19 @@
 #include "Rooms/RoomActor.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
+#include "FoodService/Buffet/BuffetStation.h"
+#include "FoodService/GuestDiningComponent.h"
 
 AGuestCharacter::AGuestCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
-	
+
 	AIControllerClass = AGuestAIController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
-	
-	AnomalyComponent = CreateDefaultSubobject<UGuestAnomalyComponent>
-	(TEXT("AnomalyComponent"));
+
+	AnomalyComponent = CreateDefaultSubobject<UGuestAnomalyComponent>(TEXT("AnomalyComponent"));
+
+	DiningComponent = CreateDefaultSubobject<UGuestDiningComponent>(TEXT("DiningComponent"));
 }
 
 
@@ -88,10 +92,56 @@ bool AGuestCharacter::NotifyDestinationReached(AActor* ReachedTarget)
 		}
 		break;
 
+	case EGuestState::MovingToBuffetQueue:
+		{
+			if (!Cast<ATargetPoint>(ReachedTarget))
+			{
+				return false;
+			}
+
+			GuestState = EGuestState::WaitingInBuffetQueue;
+			const FRotator FacingRotation(0.0f, ReachedTarget->GetActorRotation().Yaw, 0.0f);
+			SetActorRotation(FacingRotation);
+			if (AController* GuestController = GetController())
+			{
+				GuestController->SetControlRotation(FacingRotation);
+			}
+			break;
+		}
+
+	case EGuestState::MovingToBuffet:
+		{
+			const ABuffetStation* Station =
+				Cast<ABuffetStation>(ReachedTarget);
+
+			if (!IsValid(Station))
+			{
+				return false;
+			}
+
+			GuestState = EGuestState::WaitingAtBuffet;
+
+			const FRotator FacingRotation =
+				Station->GetServingRotation();
+
+			SetActorRotation(FacingRotation);
+
+			if (AController* GuestController = GetController())
+			{
+				GuestController->SetControlRotation(FacingRotation);
+			}
+
+			break;
+		}
+
+	case EGuestState::ReturningFromBuffet:
+		GuestState = EGuestState::Staying;
+		break;
+
 	default:
 		return false;
 	}
-	
+
 	GetCharacterMovement()->StopMovementImmediately();
 
 	if (AGuestAIController* GuestController =Cast<AGuestAIController>(GetController()))
@@ -150,13 +200,13 @@ AActor* CounterTarget, const FDataTableRowHandle& InGuestTypeRow)
 		DeactivateToPool();
 		return false;
 	}
-	
+
 
 	// 카운터 도착 판정에 사용하는 목적지도 갱신
 	InitialMoveTarget = CounterTarget;
 	MoveTarget = CounterTarget;
 	GuestState = EGuestState::MovingToCounter;
-	
+
 	// 아직 숨겨진 상태에서 새 외형 적용
 	OnPrepareGuestAppearance();
 
@@ -164,7 +214,7 @@ AActor* CounterTarget, const FDataTableRowHandle& InGuestTypeRow)
 	SetActorEnableCollision(true);
 
 	GetMesh()->SetComponentTickEnabled(true);
-	
+
 	// BP에서 추가할 외형 컴포넌트도 활성화
 	OnGuestAppearanceActiveChanged(true);
 
@@ -172,10 +222,10 @@ AActor* CounterTarget, const FDataTableRowHandle& InGuestTypeRow)
 	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 
 	GuestController->SetActorTickEnabled(true);
-	
+
 
 	return true;
-	
+
 }
 
 bool AGuestCharacter::DeactivateToPool()
@@ -192,14 +242,19 @@ bool AGuestCharacter::DeactivateToPool()
 	{
 		return false;
 	}
-	
+
+	if (IsValid(DiningComponent))
+	{
+		DiningComponent->ResetForPool();
+	}
+
 	if (IsValid(AnomalyComponent))
 	{
 		AnomalyComponent->CancelAnomaly();
 	}
-	
+
 	ReleaseMoveLocation();
-	
+
 	GetWorldTimerManager().ClearTimer(PoolReturnTimerHandle);
 	GuestState = EGuestState::Inactive;
 
@@ -211,7 +266,7 @@ bool AGuestCharacter::DeactivateToPool()
 		GuestController->StopGuestAI();
 		GuestController->SetActorTickEnabled(false);
 	}
-	
+
 	// 풀 반환 시 동작 정리
 	CancelAction();
 
@@ -221,7 +276,7 @@ bool AGuestCharacter::DeactivateToPool()
 	GetCharacterMovement()->SetComponentTickEnabled(false);
 
 	GetMesh()->SetComponentTickEnabled(false);
-	
+
 	//BP에서 추가할 외형 컴포넌트도 비활성화
 	OnGuestAppearanceActiveChanged(false);
 
@@ -269,16 +324,16 @@ void AGuestCharacter::Interact_Implementation(AActor* Interactor)
 void AGuestCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	if (bStartInPool)
 	{
 		GuestState = EGuestState::Inactive;
 		DeactivateToPool();
 		return;
 	}
-	
+
 	ApplyGuestData(GuestTypeRow);
-	
+
 }
 
 void AGuestCharacter::ReturnToPool()
@@ -336,7 +391,7 @@ bool AGuestCharacter::CancelPoolActivation()
 	}
 
 	GuestState = EGuestState::Inactive;
-	
+
 	return DeactivateToPool();
 }
 
@@ -377,7 +432,7 @@ bool AGuestCharacter::BeginMoveTo(AActor* Target, EGuestState MovingState)
 	{
 		return false;
 	}
-	
+
 	if (IsValid(AnomalyComponent))
 	{
 		AnomalyComponent->CancelAnomaly();
@@ -433,9 +488,24 @@ bool AGuestCharacter::CanReserveMoveLocation(const FVector& Location) const
 			return false;
 		}
 	}
+	else if (GuestState == EGuestState::MovingToBuffetQueue)
+	{
+		const ATargetPoint* QueuePoint = Cast<ATargetPoint>(Destination);
+		if (!IsValid(QueuePoint))
+		{
+			return false;
+		}
+
+		const FVector SlotLocation = QueuePoint->GetActorLocation();
+		if (FVector::DistSquared2D(Location, SlotLocation) > FMath::Square(10.0)
+			|| FMath::Abs(Location.Z - SlotLocation.Z) > 200.0)
+		{
+			return false;
+		}
+	}
 	else
 	{
-		// 객실·로비 등은 기존 EQS 도착 영역 검사.
+		// 객실·로비·음식 이용 자리는 EQS 도착 영역을 검사한다.
 		UBoxComponent* ArrivalArea = nullptr;
 		TInlineComponentArray<UBoxComponent*> Boxes(Destination);
 
@@ -613,7 +683,7 @@ void AGuestCharacter::ClearAnomalyReturnState()
 	{
 		return;
 	}
-	
+
 	GuestState = EGuestState::Staying;
 	MoveTarget = nullptr;
 }

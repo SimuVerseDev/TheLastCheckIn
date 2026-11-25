@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
@@ -6,24 +6,34 @@
 
 //손님의 현재 행동 단계
 UENUM(BlueprintType)
-enum class EGuestState : uint8 
+enum class EGuestState : uint8
 {
 	MovingToCounter UMETA(DisplayName = "Moving To Counter"),
 	WaitingForCheckIn UMETA(DisplayName = "Waiting for Check In"),
 	MovingToRoom UMETA(DisplayName = "Moving To Room"),
 	Staying UMETA(DisplayName = "Staying"),
-	
+
 	MovingToLobby UMETA(DisplayName = "Moving To Lobby"),
 	ReadyToExit UMETA(DisplayName = "Ready to Exit"),
-	
+
 	MovingToExit UMETA(DisplayName = "Moving To Exit"),
 	ExitCompleted UMETA(DisplayName = "Exit Completed"),
-	
+
 	WaitingForCheckoutRequest UMETA(DisplayName = "Waiting For Checkout Request"),
-	
+
+
+	MovingToBuffet UMETA(DisplayName = "Moving To Buffet"),
+	WaitingAtBuffet UMETA(DisplayName = "Waiting At Buffet"),
+	ReturningFromBuffet UMETA(DisplayName = "Returning From Buffet"),
+
 	//풀 대기 상태
 	Inactive UMETA(DisplayName = "Inactive"),
-	
+
+	// 배정받은 식당 줄 위치로 이동 중
+	MovingToBuffetQueue UMETA(DisplayName = "Moving To Buffet Queue"),
+	// 식당 줄에서 차례를 기다리는 중
+	WaitingInBuffetQueue UMETA(DisplayName = "Waiting In Buffet Queue"),
+
 };
 
 // 손님의 퇴실 방식 선택지 (자동, 플레이어의 요청, 랜덤) :
@@ -40,12 +50,12 @@ USTRUCT(BlueprintType)
 struct THELASTCHECKIN_API FGuestBehaviorRow : public FTableRowBase
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Checkout")
 	EGuestCheckoutPolicy CheckoutPolicy = EGuestCheckoutPolicy::Random;
-	
+
 	// 손님의 잔류 확률
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Checkout", 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Checkout",
 		meta=(ClampMin ="0.0", ClampMax ="1.0"))
 	float StayBehindChance = 0.0f;
 };
@@ -55,13 +65,11 @@ USTRUCT(BlueprintType)
 struct THELASTCHECKIN_API FGuestTypeRow : public FTableRowBase
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement",
 		meta = (ClampMin ="0.0"))
-	float WalkSpeed =200.0f;
-	
+	float WalkSpeed = 200.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Behavior")
 	FDataTableRowHandle BehaviorRow;
 };
-
-
