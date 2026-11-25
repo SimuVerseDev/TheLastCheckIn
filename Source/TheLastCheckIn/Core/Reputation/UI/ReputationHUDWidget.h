@@ -8,6 +8,7 @@
 class UTextBlock;
 class UHotelReputationSubsystem;
 class UHotelEconomySubsystem;
+class UGameClockSubsystem;
 
 // Always-on reputation/capital HUD. Provides a native layout; a Widget Blueprint may optionally replace it.
 UCLASS()
@@ -22,14 +23,19 @@ protected:
 	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> ReputationText;
 	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> StarText;
 	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> CapitalText;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> DayText;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> TimeText;
 
 private:
 	UFUNCTION() void HandleReputationChanged(int32 OldValue, int32 NewValue, EReputationReason Reason);
 	UFUNCTION() void HandleReputationDepleted();
 	UFUNCTION() void HandleCapitalChanged(float NewCapital);
+	UFUNCTION() void HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds);
 	void Refresh();
+	void RefreshClock();
 	void BuildDefaultLayout();
 
 	UPROPERTY() TObjectPtr<UHotelReputationSubsystem> Reputation;
 	UPROPERTY() TObjectPtr<UHotelEconomySubsystem> Economy;
+	UPROPERTY() TObjectPtr<UGameClockSubsystem> Clock;
 };

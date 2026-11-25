@@ -1,6 +1,8 @@
 #include "Core/Reputation/UI/ReputationHUDWidget.h"
 #include "Core/Reputation/HotelReputationSubsystem.h"
+#include "Core/Reputation/ReputationSettings.h"
 #include "Core/Economy/HotelEconomySubsystem.h"
+#include "Core/Time/GameClockSubsystem.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/HorizontalBox.h"
@@ -84,7 +86,13 @@ void UReputationHUDWidget::NativeConstruct()
 	{
 		Economy->OnCapitalChanged.AddUniqueDynamic(this, &ThisClass::HandleCapitalChanged);
 	}
+	Clock = World ? World->GetSubsystem<UGameClockSubsystem>() : nullptr;
+	if (Clock)
+	{
+		Clock->OnTimeAdvanced.AddUniqueDynamic(this, &ThisClass::HandleTimeAdvanced);
+	}
 	Refresh();
+	RefreshClock();
 }
 
 void UReputationHUDWidget::NativeDestruct()
@@ -97,6 +105,10 @@ void UReputationHUDWidget::NativeDestruct()
 	if (Economy)
 	{
 		Economy->OnCapitalChanged.RemoveDynamic(this, &ThisClass::HandleCapitalChanged);
+	}
+	if (Clock)
+	{
+		Clock->OnTimeAdvanced.RemoveDynamic(this, &ThisClass::HandleTimeAdvanced);
 	}
 	Super::NativeDestruct();
 }
@@ -126,14 +138,51 @@ void UReputationHUDWidget::Refresh()
 		}
 		if (StarText)
 		{
-			StarText->SetText(Reputation->IsFired()
-				? LOCTEXT("Fired", "해고됨")
-				: FText::Format(LOCTEXT("Star", "{0}성 호텔"), FText::AsNumber(Reputation->GetStarLevel())));
+			if (Reputation->IsFired())
+			{
+				StarText->SetText(LOCTEXT("Fired", "해고됨"));
+			}
+			else
+			{
+				const UReputationSettings* Settings = UReputationSettings::Get();
+				const int32 MaxStar = FMath::Max(1, Settings->MaxReputation / Settings->ReputationPerStar);
+				const int32 Star = FMath::Clamp(Reputation->GetStarLevel(), 0, MaxStar);
+				FString Stars;
+				for (int32 i = 0; i < MaxStar; ++i)
+				{
+					Stars.AppendChar(i < Star ? TEXT('★') : TEXT('☆'));
+				}
+				StarText->SetText(FText::FromString(Stars));
+			}
 		}
 	}
 	if (Economy && CapitalText)
 	{
 		CapitalText->SetText(FText::AsNumber(FMath::RoundToInt64(Economy->GetCapital())));
+	}
+}
+
+void UReputationHUDWidget::HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds)
+{
+	RefreshClock();
+}
+
+void UReputationHUDWidget::RefreshClock()
+{
+	if (!Clock)
+	{
+		return;
+	}
+	const int32 Hour = Clock->GetHour();
+	const int32 Hour12 = Hour % 12 == 0 ? 12 : Hour % 12;
+	if (DayText)
+	{
+		DayText->SetText(FText::FromString(FString::Printf(TEXT("DAY %02d"), Clock->GetDay())));
+	}
+	if (TimeText)
+	{
+		TimeText->SetText(FText::FromString(FString::Printf(TEXT("%02d:%02d %s"),
+			Hour12, Clock->GetMinute(), Hour < 12 ? TEXT("AM") : TEXT("PM"))));
 	}
 }
 

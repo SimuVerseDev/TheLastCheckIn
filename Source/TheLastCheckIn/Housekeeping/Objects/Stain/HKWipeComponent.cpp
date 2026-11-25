@@ -60,16 +60,37 @@ void UHKWipeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	float MouseX = 0.0f;
 	float MouseY = 0.0f;
 	PC->GetInputMouseDelta(MouseX, MouseY);
+	const FVector Center = StainActor->GetWipeCenter() + Normal * ToolComponent->GetSurfaceOffset();
 	FVector2D NewOffset = WipeOffset + FVector2D(MouseX, MouseY) * MouseSensitivity;
 	const float Radius = StainActor->GetWipeRadius();
 	if (NewOffset.Size() > Radius)
 	{
 		NewOffset = NewOffset.GetSafeNormal() * Radius;
 	}
+
+	/*
+	얼룩 중심 → 목표 지점 사이에 벽이 있으면 벽 앞(WallMargin)에서 멈춤
+	*/
+	if (!NewOffset.IsNearlyZero())
+	{
+		const FVector Dir = (Right * NewOffset.X + Up * NewOffset.Y).GetSafeNormal();
+		const FVector TraceEnd = Center + Dir * (NewOffset.Size() + WallMargin);
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(HKWipeWallClamp), false);
+		Params.AddIgnoredActor(GetOwner());
+		Params.AddIgnoredActor(Body->GetOwner());
+		Params.AddIgnoredActor(StainActor);
+		FHitResult Hit;
+		if (GetWorld()->LineTraceSingleByObjectType(Hit, Center, TraceEnd, FCollisionObjectQueryParams(ECC_WorldStatic), Params))
+		{
+			const float Allowed = FMath::Max(Hit.Distance - WallMargin, 0.0f);
+			NewOffset = NewOffset.GetSafeNormal() * FMath::Min(NewOffset.Size(), Allowed);
+		}
+	}
+
 	const float Moved = FVector2D::Distance(NewOffset, WipeOffset);
 	WipeOffset = NewOffset;
 
-	const FVector Location = StainActor->GetWipeCenter() + Right * WipeOffset.X + Up * WipeOffset.Y + Normal * ToolComponent->GetSurfaceOffset();
+	const FVector Location = Center + Right * WipeOffset.X + Up * WipeOffset.Y;
 	const FRotator Rotation = FRotationMatrix::MakeFromZX(Normal, Up).Rotator();
 	Body->SetWorldLocationAndRotation(Location, Rotation, false, nullptr, ETeleportType::TeleportPhysics);
 
