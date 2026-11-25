@@ -18,6 +18,8 @@ class UGuestAnomalyComponent;
 class AGuestAIController;
 class UAnimInstance;
 class UAnimMontage;
+class UGuestDiningComponent;
+
 
 UENUM(BlueprintType)
 enum class EGuestActionMovement : uint8
@@ -31,6 +33,7 @@ class THELASTCHECKIN_API AGuestCharacter : public ACharacter, public IInteractab
 {
 	GENERATED_BODY()
 	friend class UGuestParty;
+	friend class UGuestDiningComponent;
 public:
 	AGuestCharacter();
 	
@@ -139,6 +142,12 @@ public:
 		return ActionPausedController.IsValid();
 	}
 	
+	UFUNCTION(BlueprintPure, Category = "Guests|Dining")
+	UGuestDiningComponent* GetDiningComponent() const
+	{
+		return DiningComponent.Get();
+	}
+	
 protected:
 	virtual void BeginPlay() override;
 	
@@ -197,6 +206,9 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Guests|Anomaly")
 	TObjectPtr<UGuestAnomalyComponent> AnomalyComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Guests|Dining")
+	TObjectPtr<UGuestDiningComponent> DiningComponent;
 	
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
