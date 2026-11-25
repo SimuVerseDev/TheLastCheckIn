@@ -78,6 +78,12 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Guests|Party")
     bool TryAssignRoom(ARoomActor* Room);
+    
+    // 체크인을 마치고 투숙 중인 일행
+    bool IsStaying() const
+    {
+        return State == EGuestPartyState::Staying;
+    }
 
     bool CanRequestCheckout() const;
 

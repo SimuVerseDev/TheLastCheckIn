@@ -9,6 +9,7 @@
 #include "CollisionShape.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/World.h"
+#include "Engine/TargetPoint.h"
 #include "GuestCharacter.h"
 #include "Guests/GuestCrowdFollowingComponent.h"
 #include "Navigation/CrowdFollowingComponent.h"
@@ -61,24 +62,36 @@ bool AGuestAIController::StartGuestAI(AActor* StartTarget)
 
 	const bool bUseCounterSlot =
 		Guest->GetGuestState() == EGuestState::MovingToCounter;
+	const bool bUseQueuePoint =
+		Guest->GetGuestState() == EGuestState::MovingToBuffetQueue;
+	const bool bUseFixedLocation = bUseCounterSlot || bUseQueuePoint;
 
 	BlackboardComponent->SetValueAsObject(
 		TEXT("TargetActor"), StartTarget);
 
+	// 기존 BT의 고정 위치 이동 경로를 카운터와 식당 줄에서 함께 사용한다.
 	BlackboardComponent->SetValueAsBool(
-		TEXT("UseCounterSlot"), bUseCounterSlot);
+		TEXT("UseCounterSlot"), bUseFixedLocation);
 
-	if (bUseCounterSlot)
+	if (bUseFixedLocation)
 	{
-		const ACheckInCounter* Counter =
-			Cast<ACheckInCounter>(StartTarget);
-
 		FTransform Slot;
-
-		if (!IsValid(Counter) ||
-			!Counter->GetSlotTransformForGuest(Guest, Slot))
+		if (bUseCounterSlot)
 		{
-			return false;
+			const ACheckInCounter* Counter = Cast<ACheckInCounter>(StartTarget);
+			if (!IsValid(Counter) || !Counter->GetSlotTransformForGuest(Guest, Slot))
+			{
+				return false;
+			}
+		}
+		else
+		{
+			const ATargetPoint* QueuePoint = Cast<ATargetPoint>(StartTarget);
+			if (!IsValid(QueuePoint))
+			{
+				return false;
+			}
+			Slot = QueuePoint->GetActorTransform();
 		}
 
 		UNavigationSystemV1* Nav =
@@ -129,7 +142,7 @@ bool AGuestAIController::StartGuestAI(AActor* StartTarget)
 		GetWorldTimerManager().SetTimer(FinalApproachTimerHandle, this,
 			&AGuestAIController::CheckFinalApproach, FinalApproachCheckInterval, true);
 	}
-	
+
 	PauseForAction();
 
 	return true;
@@ -174,7 +187,7 @@ void AGuestAIController::StopGuestAI()
 	}
 
 	ClearFocus(EAIFocusPriority::Gameplay);
-	
+
 	// 종료된 AI의 일시정지 상태 정리
 	ResumeAfterAction();
 }
@@ -227,22 +240,28 @@ void AGuestAIController::CheckFinalApproach()
 	AGuestCharacter* Guest = Cast<AGuestCharacter>(GetPawn());
 	UCrowdFollowingComponent* Crowd = Cast<UCrowdFollowingComponent>(GetPathFollowingComponent());
 	const UBlackboardComponent* BlackboardComponent = GetBlackboardComponent();
-	if (!IsValid(Guest) || !IsValid(Crowd) ||
-		!IsValid(BlackboardComponent) || GetMoveStatus() != EPathFollowingStatus::Moving ||
-		!BlackboardComponent->IsVectorValueSet(TEXT("MoveLocation")))
+	if (!IsValid(Guest) ||
+		!IsValid(Crowd) ||
+		!IsValid(BlackboardComponent)
+		|| GetMoveStatus() != EPathFollowingStatus::Moving
+		||!BlackboardComponent->IsVectorValueSet(TEXT("MoveLocation")))
 	{
 		NearGoalStallStartedAt = -1.0;
 		return;
 	}
 
 	const EGuestState State = Guest->GetGuestState();
-	if (State != EGuestState::MovingToRoom && State != EGuestState::MovingToLobby &&
-		State != EGuestState::MovingToExit)
+
+	if (State != EGuestState::MovingToRoom
+		&& State != EGuestState::MovingToLobby
+		&& State != EGuestState::MovingToExit
+		&& State != EGuestState::MovingToBuffetQueue
+		&& State != EGuestState::MovingToBuffet
+		&& State != EGuestState::ReturningFromBuffet)
 	{
 		NearGoalStallStartedAt = -1.0;
 		return;
 	}
-
 	const UCapsuleComponent* Capsule = Guest->GetCapsuleComponent();
 	const float Radius = Capsule->GetScaledCapsuleRadius();
 	const float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
