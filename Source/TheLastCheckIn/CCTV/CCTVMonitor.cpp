@@ -10,6 +10,7 @@
 #include "InputActionValue.h"
 #include "Engine/LocalPlayer.h"
 #include "Tutorial/TutorialSubsystem.h"
+#include "Core/Reputation/UI/ReputationHUDSubsystem.h"
 #include "Engine/World.h"
 
 ACCTVMonitor::ACCTVMonitor()
@@ -92,6 +93,10 @@ void ACCTVMonitor::OpenPad(APlayerController* PC)
 	ViewingPC = PC;
 	PC->SetIgnoreMoveInput(true);
 	PC->SetIgnoreLookInput(true);
+	if (UReputationHUDSubsystem* HUD = GetWorld()->GetSubsystem<UReputationHUDSubsystem>())
+	{
+		HUD->SetHUDVisible(false);
+	}
 	PadWidget->PlayPadUp();
 }
 
@@ -132,6 +137,10 @@ void ACCTVMonitor::HandlePadCovered()
 void ACCTVMonitor::HandlePadLowered()
 {
 	bTransitioning = false;
+	if (UReputationHUDSubsystem* HUD = GetWorld()->GetSubsystem<UReputationHUDSubsystem>())
+	{
+		HUD->SetHUDVisible(true);
+	}
 	UnbindCCTVInput();
 	if (APlayerController* PC = ViewingPC.Get())
 	{
