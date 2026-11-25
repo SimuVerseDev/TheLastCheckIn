@@ -6,7 +6,6 @@
 #include "ReputationSettings.generated.h"
 
 class UReputationHUDWidget;
-class USoundBase;
 
 UCLASS(Config = Game, DefaultConfig, meta = (DisplayName = "Hotel Reputation"))
 class THELASTCHECKIN_API UReputationSettings : public UDeveloperSettings
@@ -45,12 +44,6 @@ public:
 	*/
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UReputationHUDWidget> HUDWidgetClass;
-
-	/*
-	sound
-	*/
-	UPROPERTY(Config, EditAnywhere, Category = "Sound")
-	TMap<int32, TSoftObjectPtr<USoundBase>> MilestoneSounds;
 
 	UPROPERTY(Config, EditAnywhere, Category = "Deltas")
 	TMap<EReputationReason, int32> ReasonDeltas =

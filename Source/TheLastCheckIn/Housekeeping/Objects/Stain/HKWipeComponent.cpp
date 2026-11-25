@@ -7,12 +7,23 @@
 #include "GameFramework/PlayerController.h"
 #include "Components/AudioComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
+#include "UObject/ConstructorHelpers.h"
 
 UHKWipeComponent::UHKWipeComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	PrimaryComponentTick.TickGroup = TG_PostPhysics;
+
+	/*
+	sound
+	*/
+	static ConstructorHelpers::FObjectFinder<USoundBase> WipeFinder(TEXT("/Game/HouseKeeping/Sounds/SW_HK_Wipe"));
+	if (WipeFinder.Succeeded())
+	{
+		WipeLoopSound = WipeFinder.Object;
+	}
 }
 
 void UHKWipeComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)

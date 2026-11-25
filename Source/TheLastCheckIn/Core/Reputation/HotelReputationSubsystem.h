@@ -63,7 +63,6 @@ private:
 	UFUNCTION()
 	void HandleDayStarted(int32 Day);
 	void ApplyDelta(int32 Delta, EReputationReason Reason);
-	void PlayMilestoneSound(int32 OldValue, int32 NewValue) const;
 	UPROPERTY() TObjectPtr<UHotelPhaseSubsystem> Phase;
 	UPROPERTY() TObjectPtr<UDailySettlementSubsystem> Settlement;
 	int32 Reputation = 0;

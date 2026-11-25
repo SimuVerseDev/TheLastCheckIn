@@ -8,6 +8,7 @@ class AHKStainActor;
 class ARoomActor;
 class UBoxComponent;
 class UHKDirtComponent;
+class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHKOnCleanlinessChanged, AHKRoomVolume*, Room, float, Cleanliness);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHKOnRoomCleaned, AHKRoomVolume*, Room);
@@ -108,7 +109,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Room|Stain", meta=(ClampMin=0, Units="cm"))
 	float FloorHeightTolerance = 10.0f;
 
+	/*
+	sound
+	*/
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Room|Sound")
+	TMap<int32, TObjectPtr<USoundBase>> CleanlinessSounds;
+
 private:
+	void PlayCleanlinessSound(float OldValue, float NewValue) const;
 	void CollectCandidates(TArray<UHKDirtComponent*>& OutCandidates) const;
 	void SpawnTrash(FRandomStream& Random);
 	bool FindTrashSpawnTransform(FRandomStream& Random, FTransform& OutTransform) const;

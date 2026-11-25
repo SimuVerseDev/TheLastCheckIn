@@ -9,6 +9,9 @@
 #include "Components/PrimitiveComponent.h"
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "Housekeeping/Core/Carry/HKCarryComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
+#include "UObject/ConstructorHelpers.h"
 
 AHKTrashDisposalActor::AHKTrashDisposalActor()
 {
@@ -47,6 +50,15 @@ AHKTrashDisposalActor::AHKTrashDisposalActor()
 		"Housekeeping",
 		"EmptyTrashBinPrompt",
 		"쓰레기통 비우기");
+
+	/*
+	sound
+	*/
+	static ConstructorHelpers::FObjectFinder<USoundBase> EmptyFinder(TEXT("/Game/HouseKeeping/Sounds/SW_HK_TrashDrop"));
+	if (EmptyFinder.Succeeded())
+	{
+		EmptySound = EmptyFinder.Object;
+	}
 }
 
 bool AHKTrashDisposalActor::CanInteract_Implementation(
@@ -86,6 +98,10 @@ bool AHKTrashDisposalActor::Use_Implementation(
 		return false;
 	}
 
+	if (EmptySound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, EmptySound, GetActorLocation());
+	}
 	OnTrashEmptied(RemovedAmount);
 	return true;
 }

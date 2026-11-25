@@ -2,8 +2,6 @@
 #include "Core/Reputation/ReputationSettings.h"
 #include "Core/GameFlow/HotelPhaseSubsystem.h"
 #include "Night/Settlement/DailySettlementSubsystem.h"
-#include "Kismet/GameplayStatics.h"
-#include "Sound/SoundBase.h"
 
 void UHotelReputationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -97,8 +95,7 @@ void UHotelReputationSubsystem::ApplyDelta(int32 Delta, EReputationReason Reason
 		return;
 	}
 	OnReputationChanged.Broadcast(OldValue, Reputation, Reason);
-	PlayMilestoneSound(OldValue, Reputation);
-
+	
 	const int32 NewStar = GetStarLevel();
 	if (NewStar != OldStar)
 	{
@@ -117,31 +114,3 @@ void UHotelReputationSubsystem::ApplyDelta(int32 Delta, EReputationReason Reason
 	}
 }
 
-
-/*
-sound
-*/
-void UHotelReputationSubsystem::PlayMilestoneSound(int32 OldValue, int32 NewValue) const
-{
-	if (NewValue <= OldValue)
-	{
-		return;
-	}
-	int32 Best = INDEX_NONE;
-	const TSoftObjectPtr<USoundBase>* BestSound = nullptr;
-	for (const TPair<int32, TSoftObjectPtr<USoundBase>>& Pair : UReputationSettings::Get()->MilestoneSounds)
-	{
-		if (OldValue < Pair.Key && NewValue >= Pair.Key && Pair.Key > Best)
-		{
-			Best = Pair.Key;
-			BestSound = &Pair.Value;
-		}
-	}
-	if (BestSound)
-	{
-		if (USoundBase* Sound = BestSound->LoadSynchronous())
-		{
-			UGameplayStatics::PlaySound2D(this, Sound);
-		}
-	}
-}
