@@ -14,6 +14,8 @@
 #include "Guests/Party/GuestParty.h"
 #include "Rooms/RoomActor.h"
 #include "Tutorial/TutorialSubsystem.h"
+#include "FoodService/Buffet/BuffetStation.h"
+#include "FoodService/GuestDiningComponent.h"
 
 AGuestScheduleManager::AGuestScheduleManager()
 {
@@ -93,9 +95,7 @@ void AGuestScheduleManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
     Super::EndPlay(EndPlayReason);
 }
 
-void AGuestScheduleManager::HandleTimeAdvanced(
-    double PreviousSeconds,
-    double CurrentSeconds)
+void AGuestScheduleManager::HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds)
 {
     for (int32 Index = ActiveParties.Num() - 1;
          Index >= 0;
@@ -124,6 +124,7 @@ void AGuestScheduleManager::HandleTimeAdvanced(
         }
     }
 
+    UpdateBreakfast(CurrentSeconds);
     TryAdmitGuest(CurrentSeconds);
 }
 
@@ -340,7 +341,7 @@ void AGuestScheduleManager::HandlePartyRoomAssigned(UGuestParty* Party)
     const UHotelPhaseSettings* PhaseSettings = UHotelPhaseSettings::Get();
 
     const int32 CheckoutMinuteOfDay = FMath::RandRange(
-        PhaseSettings->DayStartHour * 60,
+        9 * 60,
         PhaseSettings->MiddayStartHour * 60);
 
     Party->SetCheckoutTime(NextDayStart + GameTime::MinutesToSeconds(CheckoutMinuteOfDay));
@@ -364,5 +365,84 @@ void AGuestScheduleManager::HandlePartyCheckedIn(UGuestParty* Party)
         인당 부과 * 성급 배율
         */
         Economy->AddIncome(Room->GetBaseRoomRate() * Party->GetSize() * Multiplier);
+    }
+}
+
+void AGuestScheduleManager::UpdateBreakfast(double CurrentSeconds)
+{
+    const double SecondsOfDay = GameTime::GetSecondsOfDay(CurrentSeconds);
+    const double StartSeconds = GameTime::HoursToSeconds(BreakfastStartHour);
+    const double EndSeconds = GameTime::HoursToSeconds(BreakfastEndHour);
+
+    const bool bBreakfastOpen =
+        bEnableBreakfast
+        && StartSeconds < EndSeconds
+        && SecondsOfDay >= StartSeconds
+        && SecondsOfDay < EndSeconds;
+
+    TArray<AGuestCharacter*> Guests;
+
+    for (const TObjectPtr<UGuestParty>& Party : ActiveParties)
+    {
+        if (!IsValid(Party.Get()))
+        {
+            continue;
+        }
+
+        for (AGuestCharacter* Guest : Party->GetMembers())
+        {
+            if (IsValid(Guest) && !Guest->IsActorBeingDestroyed())
+            {
+                Guests.AddUnique(Guest);
+            }
+        }
+    }
+
+    // 영업 종료 후에도 대기 종료와 객실 복귀를 처리한다.
+    for (AGuestCharacter* Guest : Guests)
+    {
+        if (!IsValid(Guest) || Guest->IsActorBeingDestroyed())
+        {
+            continue;
+        }
+
+        UGuestDiningComponent* Dining =
+            Guest->GetDiningComponent();
+
+        if (IsValid(Dining))
+        {
+            Dining->AdvanceBreakfast(
+                CurrentSeconds,
+                bBreakfastOpen);
+        }
+    }
+
+    if (!bBreakfastOpen)
+    {
+        return;
+    }
+
+    // 매번 같은 손님이 먼저 예약하지 않도록 순서를 섞는다.
+    for (int32 Index = Guests.Num() - 1; Index > 0; --Index)
+    {
+        Guests.Swap(Index, FMath::RandRange(0, Index));
+    }
+
+    for (AGuestCharacter* Guest : Guests)
+    {
+        if (!IsValid(Guest) || Guest->IsActorBeingDestroyed())
+        {
+            continue;
+        }
+
+        UGuestDiningComponent* Dining =
+            Guest->GetDiningComponent();
+
+        if (IsValid(Dining))
+        {
+            Dining->TryStartBreakfast(
+                BreakfastBuffets,
+                CurrentSeconds);
+        }
     }
 }

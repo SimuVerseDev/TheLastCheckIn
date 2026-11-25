@@ -12,6 +12,7 @@
 #include "Core/Time/GameTimeMath.h"
 #include "EngineUtils.h"
 #include "Night/Anomaly/Light/LightAnomaly.h"
+#include "Scare/ScareBase.h"
 
 void UAnomalyManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -52,7 +53,7 @@ void UAnomalyManagerSubsystem::Deinitialize()
 	}
 	Anomalies.Reset();
 	StartSeconds.Reset();
-	PlannedStartSeconds.Reset();
+	PlannedEvents.Reset();
 	Super::Deinitialize();
 }
 
@@ -70,25 +71,6 @@ bool UAnomalyManagerSubsystem::StartAnomalyById(FName AnomalyId)
 {
 	AAnomalyBase* Anomaly = FindAnomaly(AnomalyId);
 	return Anomaly && Anomaly->StartAnomaly();
-}
-
-AAnomalyBase* UAnomalyManagerSubsystem::StartRandomAnomaly()
-{
-	TArray<AAnomalyBase*> Candidates;
-	for (const TWeakObjectPtr<AAnomalyBase>& Weak : Anomalies)
-	{
-		AAnomalyBase* Anomaly = Weak.Get();
-		if (Anomaly && !Anomaly->IsRunning())
-		{
-			Candidates.Add(Anomaly);
-		}
-	}
-	if (Candidates.IsEmpty())
-	{
-		return nullptr;
-	}
-	AAnomalyBase* Picked = Candidates[FMath::RandRange(0, Candidates.Num() - 1)];
-	return Picked->StartAnomaly() ? Picked : nullptr;
 }
 
 AAnomalyBase* UAnomalyManagerSubsystem::FindAnomaly(FName AnomalyId) const
@@ -145,51 +127,20 @@ void UAnomalyManagerSubsystem::HandleAnomalyStateChanged(AAnomalyBase* Anomaly, 
 
 }
 
-/*
-HandleTimeAdvanced -> Fail -> HandleStartFailed
-*/
 void UAnomalyManagerSubsystem::HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds)
 {
 	/*
-	예약된 예고 재생
+	예약 시각이 지난 이벤트 실행 (PlannedEvents는 시각순 정렬 상태)
 	*/
-	if (AOmenBase* Omen = PlannedOmen.Get(); Omen && CurrentSeconds >= PlannedOmenSeconds)
+	TArray<FPlannedEvent> Due;
+	while (!PlannedEvents.IsEmpty() && CurrentSeconds >= PlannedEvents[0].Seconds)
 	{
-		PlannedOmen.Reset();
-		Omen->PlayOmen();
+		Due.Add(PlannedEvents[0]);
+		PlannedEvents.RemoveAt(0);
 	}
-
-	/*
-	예약 시각이 지난 이상현상 시작
-	*/
-	TArray<AAnomalyBase*> ToStart;
-	for (auto It = PlannedStartSeconds.CreateIterator(); It; ++It)
+	for (const FPlannedEvent& Event : Due)
 	{
-		AAnomalyBase* Anomaly = It.Key().Get();
-		if (!Anomaly)
-		{
-			It.RemoveCurrent();
-			continue;
-		}
-		if (CurrentSeconds >= It.Value())
-		{
-			ToStart.Add(Anomaly);
-			It.RemoveCurrent();
-		}
-	}
-	for (AAnomalyBase* Anomaly : ToStart)
-	{
-		/*
-		bool bStarted = Anomaly->StartAnomaly();
-		if (!bStarted)
-		{
-			HandleStartFailed(Anomaly, CurrentSeconds);
-		}
-		*/
-		if (!Anomaly->StartAnomaly())
-		{
-			HandleStartFailed(Anomaly, CurrentSeconds);
-		}
+		FireEvent(Event, CurrentSeconds);
 	}
 
 	/*
@@ -220,8 +171,7 @@ void UAnomalyManagerSubsystem::HandlePhaseChanged(EHotelPhase OldPhase, EHotelPh
 	if (NewPhase == EHotelPhase::Settlement)
 	{
 		FailRunningAnomalies();
-		PlannedStartSeconds.Reset();
-		PlannedOmen.Reset();
+		PlannedEvents.Reset();
 	}
 }
 
@@ -250,214 +200,121 @@ void UAnomalyManagerSubsystem::FailRunningAnomalies()
 
 void UAnomalyManagerSubsystem::HandleDayStarted(int32 Day)
 {
-	PlannedStartSeconds.Reset();
-	PlannedOmen.Reset();
+	PlannedEvents.Reset();
 	PlanDay = Day;
-	FixedTonight.Reset();
-	SpareIds.Reset();
 
-	TSet<FName> Learned;
-	const FAnomalyNightPlan* Plan = FindPlanRow(Day, Learned);
-
-	if (!Plan)
+	const UDataTable* Table = UHotelPhaseSettings::Get()->AnomalyScheduleTable.LoadSynchronous();
+	if (!Table)
 	{
-		LastNightIds.Reset();
+		UE_LOG(LogAnomaly, Warning, TEXT("[Schedule] AnomalyScheduleTable이 설정되지 않음 (Project Settings > Hotel Phase)"));
 		return;
 	}
 
 	/*
-	고정 (소개 / 조합)
-	*/
-	TArray<FName> Tonight;
-	for (const FName& Id : Plan->Fixed)
-	{
-		Tonight.AddUnique(Id);
-	}
-
-	/*
-	복습 후보 = 소개된 것 - 오늘 고정, 어제 안 나온 것을 앞에
-	*/
-	TArray<FName> Fresh;
-	TArray<FName> Repeat;
-	for (const FName& Id : Learned)
-	{
-		if (!Tonight.Contains(Id))
-		{
-			(LastNightIds.Contains(Id) ? Repeat : Fresh).Add(Id);
-		}
-	}
-	auto Shuffle = [](TArray<FName>& Arr)
-	{
-		for (int32 i = Arr.Num() - 1; i > 0; --i)
-		{
-			Arr.Swap(i, FMath::RandRange(0, i));
-		}
-	};
-	Shuffle(Fresh);
-	Shuffle(Repeat);
-	Fresh.Append(Repeat);
-
-	const int32 ExtraMax = FMath::Max(Plan->ExtraMin, Plan->ExtraMax);
-	const int32 Extra = FMath::Min(FMath::RandRange(Plan->ExtraMin, ExtraMax), Fresh.Num());
-	for (int32 i = 0; i < Extra; ++i)
-	{
-		Tonight.Add(Fresh[i]);
-	}
-	for (int32 i = Extra; i < Fresh.Num(); ++i) // 안 뽑힌 나머지 = 대체 후보
-	{
-		SpareIds.Add(Fresh[i]);
-	}
-
-	/*
-	예약
-	*/
-	LastNightIds.Reset();
-	for (const FName& Id : Tonight)
-	{
-		AAnomalyBase* Anomaly = FindAnomaly(Id);
-		if (!Anomaly || !Anomaly->bAutoSchedule)
-		{
-			UE_LOG(LogAnomaly, Warning, TEXT("[NightPlan] Day %d: '%s' 이상현상을 찾을 수 없음"), Day, *Id.ToString());
-			continue;
-		}
-		PlanStart(Anomaly, Day);
-		if (Plan->Fixed.Contains(Id))
-		{
-			FixedTonight.Add(Anomaly);
-		}
-		LastNightIds.Add(Id);
-	}
-	UE_LOG(LogAnomaly, Log, TEXT("[NightPlan] Day %d: %s"), Day, *FString::JoinBy(Tonight, TEXT(", "), [](const FName& N) { return N.ToString(); }));
-
-	PlanOmen();
-}
-
-/*
-22시 → 당일 22:00, 3시 → 다음 날 03:00
-*/
-double UAnomalyManagerSubsystem::GetNightSeconds(int32 Day, int32 Hour) const
-{
-	const int32 DayStartHour = UHotelPhaseSettings::Get()->DayStartHour;
-	const int32 AdjustedHour = Hour < DayStartHour ? Hour + 24 : Hour;
-	return GameTime::GetDayStartSeconds(Day - 1) + GameTime::HoursToSeconds(AdjustedHour);
-}
-
-const FAnomalyNightPlan* UAnomalyManagerSubsystem::FindPlanRow(int32 Day, TSet<FName>& OutLearned) const
-{
-	OutLearned.Reset();
-	/*
-	DataTable 동기로드
-	*/
-	const UDataTable* Table = UHotelPhaseSettings::Get()->AnomalyNightPlanTable.LoadSynchronous();
-	if (!Table)
-	{
-		UE_LOG(LogAnomaly, Warning, TEXT("[NightPlan] AnomalyNightPlanTable이 설정되지 않음 (Project Settings > Hotel Phase)"));
-		return nullptr;
-	}
-	const FAnomalyNightPlan* Best = nullptr;
-	int32 BestDay = 0;
-	
-	/*
-	DT 순회
+	오늘 행만 골라 시각순 예약
 	*/
 	for (const TPair<FName, uint8*>& Pair : Table->GetRowMap())
 	{
-		int32 RowDay = 0;
-		if (!LexTryParseString(RowDay, *Pair.Key.ToString()) || RowDay > Day)
+		const FAnomalyScheduleRow* Row = reinterpret_cast<const FAnomalyScheduleRow*>(Pair.Value);
+		if (!Row || Row->Day != Day || Row->EventId.IsNone())
 		{
 			continue;
 		}
-		
-		const FAnomalyNightPlan* Row = reinterpret_cast<const FAnomalyNightPlan*>(Pair.Value);
-		
-		OutLearned.Append(Row->Fixed);
-		OutLearned.Append(Row->Pool);
-		if (RowDay > BestDay)
-		{
-			BestDay = RowDay;
-			Best = Row;
-		}
+		FPlannedEvent Event;
+		Event.Kind = Row->Kind;
+		Event.EventId = Row->EventId;
+		Event.Seconds = GetScheduleSeconds(Day, Row->Hour, Row->Minute);
+		PlannedEvents.Add(Event);
 	}
-	return Best;
+	PlannedEvents.StableSort([](const FPlannedEvent& A, const FPlannedEvent& B)
+	{
+		return A.Seconds < B.Seconds;
+	});
+
+	UE_LOG(LogAnomaly, Log, TEXT("[Schedule] Day %d: %d개 예약"), Day, PlannedEvents.Num());
 }
 
 /*
-아침에 오늘 밤 예정된 이상현상의 예고를 하나 골라 낮(06~20시) 중에 예약
+18시 → 당일 18:00, 3시 → 다음 날 03:00
 */
-void UAnomalyManagerSubsystem::PlanOmen()
+double UAnomalyManagerSubsystem::GetScheduleSeconds(int32 Day, int32 Hour, int32 Minute) const
 {
-	PlannedOmen.Reset();
-
-	const UHotelPhaseSettings* Settings = UHotelPhaseSettings::Get();
-	const double DayStart = GetNightSeconds(PlanDay, Settings->DayStartHour);
-	const double RestStart = GetNightSeconds(PlanDay, Settings->RestStartHour);
-
-	TArray<AOmenBase*> Candidates;
-	for (TActorIterator<AOmenBase> It(GetWorld()); It; ++It)
-	{
-		AAnomalyBase* Anomaly = FindAnomaly(It->GetRelatedAnomalyId());
-		if (Anomaly && PlannedStartSeconds.Contains(Anomaly)) // 오늘 밤 예약된 것만
-		{
-			Candidates.Add(*It);
-		}
-	}
-	if (Candidates.IsEmpty())
-	{
-		UE_LOG(LogAnomaly, Log, TEXT("[Omen] Day %d: 예고 후보 없음"), PlanDay);
-		return;
-	}
-
-	AOmenBase* Omen = Candidates[FMath::RandRange(0, Candidates.Num() - 1)];
-	AAnomalyBase* Anomaly = FindAnomaly(Omen->GetRelatedAnomalyId());
-	const double Latest = FMath::Min(RestStart, PlannedStartSeconds[Anomaly]); // 낮 안에, 본편보다 먼저
-
-	PlannedOmen = Omen;
-	PlannedOmenSeconds = FMath::FRandRange(DayStart, FMath::Max(DayStart, Latest));
-	UE_LOG(LogAnomaly, Log, TEXT("[Omen] Day %d: %s 예고 예약"), PlanDay, *Omen->GetRelatedAnomalyId().ToString());
+	const int32 DayStartHour = UHotelPhaseSettings::Get()->DayStartHour;
+	const int32 AdjustedHour = Hour < DayStartHour ? Hour + 24 : Hour;
+	return GameTime::GetDayStartSeconds(Day - 1)
+		+ GameTime::HoursToSeconds(AdjustedHour)
+		+ GameTime::MinutesToSeconds(Minute);
 }
 
-bool UAnomalyManagerSubsystem::PlanStart(AAnomalyBase* Anomaly, int32 Day, double NotBefore)
+void UAnomalyManagerSubsystem::FireEvent(const FPlannedEvent& Event, double CurrentSeconds)
 {
-	const double Earliest = FMath::Max(GetNightSeconds(Day, Anomaly->EarliestStartHour), NotBefore);
-	const double Latest = GetNightSeconds(Day, Anomaly->LatestStartHour);
-	if (Latest < Earliest)
+	switch (Event.Kind)
 	{
-		return false;
-	}
-	PlannedStartSeconds.Add(Anomaly, FMath::FRandRange(Earliest, Latest));
-	return true;
-}
-
-void UAnomalyManagerSubsystem::HandleStartFailed(AAnomalyBase* Anomaly, double CurrentSeconds)
-{
-	constexpr double RetryDelay = GameTime::SecondsPerHour; // 1 게임시간
-
-	/*
-	고정: 1시간 뒤 다시 시도
-	*/
-	if (FixedTonight.Contains(Anomaly))
+	case EScheduleEventKind::Anomaly:
 	{
-		if (!PlanStart(Anomaly, PlanDay, CurrentSeconds + RetryDelay))
+		AAnomalyBase* Anomaly = FindAnomaly(Event.EventId);
+		if (!Anomaly || !Anomaly->bAutoSchedule)
 		{
-			UE_LOG(LogAnomaly, Warning, TEXT("[NightPlan] '%s' 오늘 밤 시작 실패 (시간 초과)"), *Anomaly->AnomalyId.ToString());
-		}
-		return;
-	}
-
-	/*
-	복습: 남은 후보로 대체 (어제 안 나온 것부터)
-	*/
-	LastNightIds.Remove(Anomaly->AnomalyId);
-	while (!SpareIds.IsEmpty())
-	{
-		const FName Id = SpareIds[0];
-		SpareIds.RemoveAt(0);
-
-		AAnomalyBase* Spare = FindAnomaly(Id);
-		if (Spare && Spare->bAutoSchedule && !Spare->IsRunning() && PlanStart(Spare, PlanDay, CurrentSeconds))
-		{
-			LastNightIds.Add(Id);
+			UE_LOG(LogAnomaly, Warning, TEXT("[Schedule] Day %d: '%s' 이상현상을 찾을 수 없음"), PlanDay, *Event.EventId.ToString());
 			return;
 		}
+		if (!Anomaly->StartAnomaly())
+		{
+			/*
+			시작 실패 (이미 진행 중 등): 1게임시간 뒤 다시 시도
+			*/
+			FPlannedEvent Retry = Event;
+			Retry.Seconds = CurrentSeconds + GameTime::SecondsPerHour;
+			const int32 Index = PlannedEvents.IndexOfByPredicate([&Retry](const FPlannedEvent& E)
+			{
+				return E.Seconds > Retry.Seconds;
+			});
+			PlannedEvents.Insert(Retry, Index == INDEX_NONE ? PlannedEvents.Num() : Index);
+			UE_LOG(LogAnomaly, Log, TEXT("[Schedule] '%s' 시작 실패, 1시간 뒤 재시도"), *Event.EventId.ToString());
+		}
+		return;
 	}
+	case EScheduleEventKind::Omen:
+		if (!PlayOmen(Event.EventId))
+		{
+			UE_LOG(LogAnomaly, Warning, TEXT("[Schedule] Day %d: '%s' 예고를 찾을 수 없음"), PlanDay, *Event.EventId.ToString());
+		}
+		return;
+	case EScheduleEventKind::Scare:
+		if (PlayScare(Event.EventId) == 0)
+		{
+			UE_LOG(LogAnomaly, Warning, TEXT("[Schedule] Day %d: '%s' 공포 연출을 찾을 수 없음"), PlanDay, *Event.EventId.ToString());
+		}
+		return;
+	}
+}
+
+bool UAnomalyManagerSubsystem::PlayOmen(FName AnomalyId)
+{
+	for (TActorIterator<AOmenBase> It(GetWorld()); It; ++It)
+	{
+		if (It->GetRelatedAnomalyId() == AnomalyId)
+		{
+			It->PlayOmen();
+			return true;
+		}
+	}
+	return false;
+}
+
+/*
+같은 ScareId를 가진 연출 전부 실행 (예: 3일차 소녀 201~204)
+*/
+int32 UAnomalyManagerSubsystem::PlayScare(FName ScareId)
+{
+	int32 Count = 0;
+	for (TActorIterator<AScareBase> It(GetWorld()); It; ++It)
+	{
+		if (It->ScareId == ScareId)
+		{
+			It->PlayScare();
+			++Count;
+		}
+	}
+	return Count;
 }

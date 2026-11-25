@@ -4,15 +4,13 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "Core/GameFlow/Enums/HotelPhaseTypes.h"
 #include "Night/Anomaly/AnomalyTypes.h"
+#include "Night/Anomaly/AnomalyNightPlan.h"
 #include "AnomalyManagerSubsystem.generated.h"
 
 class AAnomalyBase;
 class UGameClockSubsystem;
 class UHotelPhaseSubsystem;
 class UDailySettlementSubsystem;
-class AOmenBase;
-
-struct FAnomalyNightPlan;
 
 UCLASS()
 class THELASTCHECKIN_API UAnomalyManagerSubsystem : public UWorldSubsystem
@@ -28,8 +26,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Night|Anomaly")
 	bool StartAnomalyById(FName AnomalyId);
-	UFUNCTION(BlueprintCallable, Category="Night|Anomaly")
-	AAnomalyBase* StartRandomAnomaly();
 
 	UFUNCTION(BlueprintPure, Category="Night|Anomaly")
 	AAnomalyBase* FindAnomaly(FName AnomalyId) const;
@@ -44,33 +40,29 @@ private:
 	void FailRunningAnomalies();
 	
 	UFUNCTION() void HandleDayStarted(int32 Day);
-	double GetNightSeconds(int32 Day, int32 Hour) const;
+	// Hour가 DayStartHour 이전이면 다음 날 새벽으로 계산
+	double GetScheduleSeconds(int32 Day, int32 Hour, int32 Minute) const;
 
-	TMap<TWeakObjectPtr<AAnomalyBase>, double> PlannedStartSeconds;
+	/*
+	오늘 시간표에서 예약된 이벤트 하나
+	*/
+	struct FPlannedEvent
+	{
+		EScheduleEventKind Kind = EScheduleEventKind::Anomaly;
+		FName EventId;
+		double Seconds = 0.0;
+	};
+	TArray<FPlannedEvent> PlannedEvents;
+
+	void FireEvent(const FPlannedEvent& Event, double CurrentSeconds);
+	bool PlayOmen(FName AnomalyId);
+	int32 PlayScare(FName ScareId);
 
 	UPROPERTY() TObjectPtr<UGameClockSubsystem> Clock;
 	UPROPERTY() TObjectPtr<UHotelPhaseSubsystem> Phase;
 	UPROPERTY() TObjectPtr<UDailySettlementSubsystem> Settlement;
 	UPROPERTY() TArray<TWeakObjectPtr<AAnomalyBase>> Anomalies;
 	TMap<TWeakObjectPtr<AAnomalyBase>, double> StartSeconds;
-	
-	const FAnomalyNightPlan* FindPlanRow(int32 Day, TSet<FName>&OutLearned) const;
-	
-
-	bool PlanStart(AAnomalyBase* Anomaly, int32 Day, double NotBefore = 0.0);
-	void HandleStartFailed(AAnomalyBase* Anomaly, double CurrentSeconds);
 
 	int32 PlanDay = 0;
-	TSet<TWeakObjectPtr<AAnomalyBase>> FixedTonight;
-	TArray<FName> SpareIds;
-	
-	TSet<FName> LastNightIds;
-
-	/*
-	예고 (낮 시간에 오늘 밤 이상현상 암시)
-	*/
-	void PlanOmen();
-
-	TWeakObjectPtr<AOmenBase> PlannedOmen;
-	double PlannedOmenSeconds = 0.0;
 };

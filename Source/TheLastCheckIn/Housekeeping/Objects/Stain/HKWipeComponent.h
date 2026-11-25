@@ -7,6 +7,8 @@ class AHKStainActor;
 class APlayerController;
 class UHKWipeToolComponent;
 class UPrimitiveComponent;
+class USoundBase;
+class UAudioComponent;
 
 UCLASS(ClassGroup=(Housekeeping), meta=(BlueprintSpawnableComponent))
 class THELASTCHECKIN_API UHKWipeComponent : public UActorComponent, public IInteractionExtension
@@ -41,7 +43,25 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Wipe", meta=(ClampMin=0, Units="cm"))
 	float MouseSensitivity = 2.0f;
 
+	/*
+	sound
+	*/
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Wipe|Sound")
+	TObjectPtr<USoundBase> WipeLoopSound;
+
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Wipe|Sound", meta=(ClampMin=1, Units="cm/s"))
+	float FullVolumeSpeed = 150.0f;
+
+	UPROPERTY(EditAnywhere, Category="Housekeeping|Wipe|Sound", meta=(ClampMin=0.1))
+	float VolumeInterpSpeed = 12.0f;
+
 private:
+	void StopWipeSound();
+
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> WipeAudio;
+	float WipeVolume = 0.0f;
+
 	UPrimitiveComponent* GetToolBody() const;
 	APlayerController* GetPlayerController() const;
 

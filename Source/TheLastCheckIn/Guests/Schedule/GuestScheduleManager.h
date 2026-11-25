@@ -10,6 +10,7 @@ class AGuestPoolManager;
 class AGuestCharacter;
 class ARoomActor;
 class UGuestParty;
+class ABuffetStation;
 
 UCLASS()
 class THELASTCHECKIN_API AGuestScheduleManager : public AActor
@@ -22,8 +23,7 @@ public:
 protected:
     virtual void BeginPlay() override;
 
-    virtual void EndPlay(
-        const EEndPlayReason::Type EndPlayReason) override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
     UPROPERTY(EditInstanceOnly, Category = "Schedule|References")
     TObjectPtr<AGuestPoolManager> GuestPool;
@@ -89,6 +89,21 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Schedule|Guests",
         meta = (ClampMin = "1"))
     int32 MaxArrivalIntervalMinutes = 30;
+    
+    UPROPERTY(EditAnywhere, Category = "Schedule|Breakfast")
+    bool bEnableBreakfast = true;
+
+    UPROPERTY(EditAnywhere, Category = "Schedule|Breakfast",
+        meta = (ClampMin = "0", ClampMax = "23"))
+    int32 BreakfastStartHour = 6;
+
+    UPROPERTY(EditAnywhere, Category = "Schedule|Breakfast",
+        meta = (ClampMin = "1", ClampMax = "24"))
+    int32 BreakfastEndHour = 8;
+
+    // 이 매니저가 손님을 보낼 조식 진열대
+    UPROPERTY(EditInstanceOnly, Category = "Schedule|Breakfast")
+    TArray<TObjectPtr<ABuffetStation>> BreakfastBuffets;
 
 private:
 
@@ -116,4 +131,6 @@ private:
     
     UFUNCTION()
     void HandlePartyCheckedIn(UGuestParty* Party);
+    
+    void UpdateBreakfast(double CurrentSeconds);
 };
