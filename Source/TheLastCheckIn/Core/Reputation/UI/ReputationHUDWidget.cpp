@@ -1,6 +1,7 @@
 #include "Core/Reputation/UI/ReputationHUDWidget.h"
 #include "Core/Reputation/HotelReputationSubsystem.h"
 #include "Core/Economy/HotelEconomySubsystem.h"
+#include "Core/Time/GameClockSubsystem.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/HorizontalBox.h"
@@ -84,7 +85,13 @@ void UReputationHUDWidget::NativeConstruct()
 	{
 		Economy->OnCapitalChanged.AddUniqueDynamic(this, &ThisClass::HandleCapitalChanged);
 	}
+	Clock = World ? World->GetSubsystem<UGameClockSubsystem>() : nullptr;
+	if (Clock)
+	{
+		Clock->OnTimeAdvanced.AddUniqueDynamic(this, &ThisClass::HandleTimeAdvanced);
+	}
 	Refresh();
+	RefreshClock();
 }
 
 void UReputationHUDWidget::NativeDestruct()
@@ -97,6 +104,10 @@ void UReputationHUDWidget::NativeDestruct()
 	if (Economy)
 	{
 		Economy->OnCapitalChanged.RemoveDynamic(this, &ThisClass::HandleCapitalChanged);
+	}
+	if (Clock)
+	{
+		Clock->OnTimeAdvanced.RemoveDynamic(this, &ThisClass::HandleTimeAdvanced);
 	}
 	Super::NativeDestruct();
 }
@@ -134,6 +145,30 @@ void UReputationHUDWidget::Refresh()
 	if (Economy && CapitalText)
 	{
 		CapitalText->SetText(FText::AsNumber(FMath::RoundToInt64(Economy->GetCapital())));
+	}
+}
+
+void UReputationHUDWidget::HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds)
+{
+	RefreshClock();
+}
+
+void UReputationHUDWidget::RefreshClock()
+{
+	if (!Clock)
+	{
+		return;
+	}
+	const int32 Hour = Clock->GetHour();
+	const int32 Hour12 = Hour % 12 == 0 ? 12 : Hour % 12;
+	if (DayText)
+	{
+		DayText->SetText(FText::FromString(FString::Printf(TEXT("DAY %02d"), Clock->GetDay())));
+	}
+	if (TimeText)
+	{
+		TimeText->SetText(FText::FromString(FString::Printf(TEXT("%02d:%02d %s"),
+			Hour12, Clock->GetMinute(), Hour < 12 ? TEXT("AM") : TEXT("PM"))));
 	}
 }
 
