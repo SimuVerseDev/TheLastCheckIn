@@ -43,13 +43,19 @@ void UReputationHUDSubsystem::CreateHUD()
 	if (HUDWidget)
 	{
 		HUDWidget->AddToPlayerScreen(UILayer::HUD);
+		if (!bHUDVisible)
+		{
+			HUDWidget->SetVisibility(ESlateVisibility::Collapsed);
+		}
 	}
 }
 
 void UReputationHUDSubsystem::SetHUDVisible(bool bVisible)
 {
+	bHUDVisible = bVisible;
 	if (HUDWidget)
 	{
 		HUDWidget->SetVisibility(bVisible ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	}
+	OnHUDVisibilityChanged.Broadcast(bVisible);
 }
