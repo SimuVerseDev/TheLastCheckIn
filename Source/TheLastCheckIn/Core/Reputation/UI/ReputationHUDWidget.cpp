@@ -1,5 +1,6 @@
 #include "Core/Reputation/UI/ReputationHUDWidget.h"
 #include "Core/Reputation/HotelReputationSubsystem.h"
+#include "Core/Reputation/ReputationSettings.h"
 #include "Core/Economy/HotelEconomySubsystem.h"
 #include "Core/Time/GameClockSubsystem.h"
 #include "Blueprint/WidgetTree.h"
@@ -137,9 +138,22 @@ void UReputationHUDWidget::Refresh()
 		}
 		if (StarText)
 		{
-			StarText->SetText(Reputation->IsFired()
-				? LOCTEXT("Fired", "해고됨")
-				: FText::Format(LOCTEXT("Star", "{0}성 호텔"), FText::AsNumber(Reputation->GetStarLevel())));
+			if (Reputation->IsFired())
+			{
+				StarText->SetText(LOCTEXT("Fired", "해고됨"));
+			}
+			else
+			{
+				const UReputationSettings* Settings = UReputationSettings::Get();
+				const int32 MaxStar = FMath::Max(1, Settings->MaxReputation / Settings->ReputationPerStar);
+				const int32 Star = FMath::Clamp(Reputation->GetStarLevel(), 0, MaxStar);
+				FString Stars;
+				for (int32 i = 0; i < MaxStar; ++i)
+				{
+					Stars.AppendChar(i < Star ? TEXT('★') : TEXT('☆'));
+				}
+				StarText->SetText(FText::FromString(Stars));
+			}
 		}
 	}
 	if (Economy && CapitalText)
