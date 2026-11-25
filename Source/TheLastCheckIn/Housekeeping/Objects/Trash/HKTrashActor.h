@@ -79,11 +79,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Trash", meta=(ClampMin=0.05, Units="s"))
 	float AbsorbDuration = 0.35f;
 
-	// 줍기(흡수 시작) 순간 쓰레기 위치에서 재생
+	/*
+	sound
+	*/
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Trash|Sound")
 	TObjectPtr<USoundBase> PickupSound;
 
-	// 쓰레기가 휴지통에 들어간 순간 재생
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Trash|Sound")
 	TObjectPtr<USoundBase> DropInSound;
 	

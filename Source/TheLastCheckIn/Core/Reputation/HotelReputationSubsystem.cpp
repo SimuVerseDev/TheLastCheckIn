@@ -119,7 +119,7 @@ void UHotelReputationSubsystem::ApplyDelta(int32 Delta, EReputationReason Reason
 
 
 /*
-아래에서 위로 넘은 경계 중 가장 높은 값의 소리 재생
+sound
 */
 void UHotelReputationSubsystem::PlayMilestoneSound(int32 OldValue, int32 NewValue) const
 {

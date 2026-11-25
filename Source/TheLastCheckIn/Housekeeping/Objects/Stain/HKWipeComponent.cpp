@@ -65,7 +65,7 @@ void UHKWipeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	StainActor->GetStain()->AddWipe(Moved * ToolComponent->GetWipeMultiplier());
 
 	/*
-	문지르는 속도에 따라 볼륨 (멈추면 서서히 무음)
+	sound
 	*/
 	if (WipeAudio)
 	{

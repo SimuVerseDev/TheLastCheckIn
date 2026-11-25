@@ -43,15 +43,15 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Wipe", meta=(ClampMin=0, Units="cm"))
 	float MouseSensitivity = 2.0f;
 
-	// 닦는 동안 반복 재생 (Looping 사운드), 마우스를 움직일 때만 들림
+	/*
+	sound
+	*/
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Wipe|Sound")
 	TObjectPtr<USoundBase> WipeLoopSound;
 
-	// 이 속도(cm/s) 이상 문지르면 최대 볼륨
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Wipe|Sound", meta=(ClampMin=1, Units="cm/s"))
 	float FullVolumeSpeed = 150.0f;
 
-	// 볼륨이 목표값을 따라가는 속도 (클수록 즉각 반응)
 	UPROPERTY(EditAnywhere, Category="Housekeeping|Wipe|Sound", meta=(ClampMin=0.1))
 	float VolumeInterpSpeed = 12.0f;
 
