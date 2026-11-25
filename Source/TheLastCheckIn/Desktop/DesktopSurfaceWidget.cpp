@@ -742,10 +742,10 @@ bool UDesktopSurfaceWidget::RenderLayout(UObject* Object, const FString& Filenam
 #if WITH_EDITOR
 	auto* BP = Cast<UWidgetBlueprint>(Object);
 	if (!BP || !GEditor || !FSlateApplication::IsInitialized())return false;
-	auto* W = CreateWidget<UDesktopSurfaceWidget>(GEditor->GetEditorWorldContext().World(), BP->GeneratedClass.Get());
+	auto* W = CreateWidget<UUserWidget>(GEditor->GetEditorWorldContext().World(), BP->GeneratedClass.Get());
 	if (!W)return false;
 	auto Slate = W->TakeWidget();
-	W->SelectPage(Menu, SubMenu);
+	if (auto* Desktop = Cast<UDesktopSurfaceWidget>(W)) Desktop->SelectPage(Menu, SubMenu);
 	W->ForceLayoutPrepass();
 	FAssetCompilingManager::Get().FinishAllCompilation();
 	FlushRenderingCommands();
