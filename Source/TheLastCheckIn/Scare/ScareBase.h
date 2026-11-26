@@ -20,6 +20,7 @@ public:
 	void TestPlay()
 	{
 		PlayScare();
+		Trigger();
 	}
 	
 	/*
