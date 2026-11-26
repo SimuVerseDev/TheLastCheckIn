@@ -26,14 +26,18 @@ enum class EGuestState : uint8
 	WaitingAtBuffet UMETA(DisplayName = "Waiting At Buffet"),
 	ReturningFromBuffet UMETA(DisplayName = "Returning From Buffet"),
 
-	//풀 대기 상태
+	// 풀 대기.
 	Inactive UMETA(DisplayName = "Inactive"),
 
-	// 배정받은 식당 줄 위치로 이동 중
+	// 뷔페 줄 이동과 대기.
 	MovingToBuffetQueue UMETA(DisplayName = "Moving To Buffet Queue"),
-	// 식당 줄에서 차례를 기다리는 중
 	WaitingInBuffetQueue UMETA(DisplayName = "Waiting In Buffet Queue"),
 
+	// 좌석 이동, 착석 준비, 이용, 퇴장.
+	MovingToDiningSeat UMETA(DisplayName = "Moving To Dining Seat"),
+	ReadyToSit UMETA(DisplayName = "Ready To Sit"),
+	Seated UMETA(DisplayName = "Seated"),
+	LeavingDiningSeat UMETA(DisplayName = "Leaving Dining Seat"),
 };
 
 // 손님의 퇴실 방식 선택지 (자동, 플레이어의 요청, 랜덤) :
