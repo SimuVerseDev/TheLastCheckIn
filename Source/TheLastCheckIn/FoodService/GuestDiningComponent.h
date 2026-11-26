@@ -10,6 +10,7 @@ class ADiningSeat;
 class AGuestCharacter;
 class ATargetPoint;
 class UFoodDefinition;
+class AFoodPlateActor;
 
 // 손님 한 명의 식당 이동, 착석, 주문, 객실 복귀를 관리
 UCLASS(ClassGroup = (Guests), meta = (BlueprintSpawnableComponent))
@@ -79,8 +80,15 @@ public:
 
 protected:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+    
+    // 손님 기준으로 접시를 들고 이동할 위치와 회전.
+    UPROPERTY(EditAnywhere, Category = "Dining|Breakfast")
+    FTransform BreakfastCarryTransform = FTransform(
+        FRotator::ZeroRotator,
+        FVector(40.0, 0.0, 0.0),
+        FVector::OneVector);
 
-    // 음식 지급 기능을 연결하기 전, 뷔페 앞에서 기다릴 게임 시간.
+    // 뷔페 앞에서 음식을 담는 데 사용하는 게임 시간.
     UPROPERTY(EditAnywhere, Category = "Dining|Preview",
         meta = (ClampMin = "0.1", Units = "min"))
     float BuffetWaitGameMinutes = 5.0f;
@@ -107,10 +115,17 @@ private:
 
     // 조식 줄서기.
     void UpdateQueue(double WorldNow);
+    
+    // 조식 접시 수령, 식탁 배치, 정리.
+    bool TryCollectBreakfast();
+    bool PlaceBreakfastPlateOnTable();
+    void ClearBreakfastPlate();
+
+    UPROPERTY(Transient)
+    TObjectPtr<AFoodPlateActor> BreakfastPlate;
 
     // 좌석 예약, 이동, 착석, 퇴장.
-    bool TryReserveSeat(
-        const TArray<TObjectPtr<ADiningSeat>>& Seats);
+    bool TryReserveSeat(const TArray<TObjectPtr<ADiningSeat>>& Seats);
 
     void BeginMoveToSeat();
     bool TryMoveToSeat(AGuestCharacter* Guest, ATargetPoint* ApproachPoint);

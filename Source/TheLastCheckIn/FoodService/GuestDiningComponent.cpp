@@ -1,6 +1,7 @@
 #include "FoodService/GuestDiningComponent.h"
 
 #include "Components/CapsuleComponent.h"
+#include "Components/SceneComponent.h"
 #include "Core/Time/GameClockSubsystem.h"
 #include "Core/Time/GameTimeMath.h"
 #include "Engine/TargetPoint.h"
@@ -9,6 +10,7 @@
 #include "FoodService/Buffet/BuffetStation.h"
 #include "FoodService/Data/FoodDefinition.h"
 #include "FoodService/Orders/FoodOrderSubsystem.h"
+#include "FoodService/Items/FoodPlateActor.h"
 #include "FoodService/Seats/DiningSeat.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Guests/Anomaly/GuestAnomalyComponent.h"
@@ -244,6 +246,83 @@ void UGuestDiningComponent::UpdateQueue(double WorldNow)
     QueueTarget.Reset();
     WaitUntilSeconds = -1.0;
     MoveDeadlineWorldSeconds = WorldNow + FMath::Max(1.0f, MovementTimeoutSeconds);
+}
+
+/*
+조식 접시
+*/
+bool UGuestDiningComponent::TryCollectBreakfast()
+{
+    if (MealType != EGuestMealType::Breakfast)
+    {
+        return false;
+    }
+
+    if (IsValid(BreakfastPlate.Get()))
+    {
+        return true;
+    }
+
+    AGuestCharacter* Guest = Cast<AGuestCharacter>(GetOwner());
+    ABuffetStation* Station = Buffet.Get();
+
+    if (!IsValid(Guest)
+        || !IsValid(Station)
+        || !IsValid(Guest->GetRootComponent()))
+    {
+        return false;
+    }
+
+    const FTransform PlateTransform =
+        BreakfastCarryTransform * Guest->GetActorTransform();
+
+    BreakfastPlate = Station->TryTakeServing(
+        Guest,
+        VisitId,
+        PlateTransform);
+
+    return IsValid(BreakfastPlate.Get());
+}
+
+bool UGuestDiningComponent::PlaceBreakfastPlateOnTable()
+{
+    if (MealType != EGuestMealType::Breakfast)
+    {
+        return false;
+    }
+
+    AFoodPlateActor* Plate = BreakfastPlate.Get();
+    ADiningSeat* CurrentSeat = Seat.Get();
+
+    if (!IsValid(Plate)
+        || !IsValid(CurrentSeat)
+        || !CurrentSeat->IsReservedBy(GetOwner(), SeatReservationId))
+    {
+        return false;
+    }
+
+    USceneComponent* PlatePoint = CurrentSeat->GetPlatePoint();
+
+    if (!IsValid(PlatePoint))
+    {
+        return false;
+    }
+
+    return Plate->AttachToComponent(
+        PlatePoint,
+        FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+}
+
+void UGuestDiningComponent::ClearBreakfastPlate()
+{
+    AFoodPlateActor* Plate = BreakfastPlate.Get();
+    BreakfastPlate = nullptr;
+
+    if (IsValid(Plate))
+    {
+        // 손님용 접시는 EndPlay에서 담긴 음식도 정리한다.
+        Plate->Destroy();
+    }
 }
 
 // 석식 준비와 출발
@@ -503,7 +582,14 @@ void UGuestDiningComponent::AdvanceDining(double CurrentSeconds, bool bBreakfast
             return;
         }
 
-        // 석식 주문은 실제 착석이 끝난 뒤 생성
+        if (MealType == EGuestMealType::Breakfast
+            && !PlaceBreakfastPlateOnTable())
+        {
+            BeginReturnToRoom();
+            return;
+        }
+
+        // 석식 주문은 실제 착석이 끝난 뒤 생성한다.
         if (MealType == EGuestMealType::Dinner
             && !CreateDinnerOrder(CurrentSeconds))
         {
@@ -579,6 +665,12 @@ void UGuestDiningComponent::AdvanceDining(double CurrentSeconds, bool bBreakfast
 
     if (CurrentSeconds >= WaitUntilSeconds)
     {
+        if (!TryCollectBreakfast())
+        {
+            BeginReturnToRoom();
+            return;
+        }
+
         BeginMoveToSeat();
     }
 }
@@ -639,8 +731,7 @@ void UGuestDiningComponent::BeginMoveToSeat()
     {
         BeginReturnToRoom();
     }
-
-    // 음식 자리 예약은 의자 앞에 도착했을 때 해제한다.
+    
 }
 
 bool UGuestDiningComponent::TryMoveToSeat(
@@ -1055,6 +1146,8 @@ void UGuestDiningComponent::CancelDinnerOrder(EFoodOrderCancelReason Reason)
 // 객실 복귀와 방문 정리
 void UGuestDiningComponent::BeginReturnToRoom()
 {
+    ClearBreakfastPlate();
+
     CancelDinnerOrder(EFoodOrderCancelReason::VisitEnded);
 
     bReturning = true;
@@ -1124,6 +1217,8 @@ void UGuestDiningComponent::ReleaseBuffetReservation()
 
 void UGuestDiningComponent::ClearVisit()
 {
+    ClearBreakfastPlate();
+
     CancelDinnerOrder(EFoodOrderCancelReason::VisitEnded);
 
     RestoreSeatMovement();

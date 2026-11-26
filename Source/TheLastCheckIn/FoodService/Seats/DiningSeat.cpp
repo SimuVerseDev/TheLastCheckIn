@@ -22,6 +22,12 @@ ADiningSeat::ADiningSeat()
 
     // 실제 손님 캡슐 높이에 맞춰 BP에서 조정한다.
     SeatPoint->SetRelativeLocation(FVector(0.0, 0.0, 90.0));
+
+    PlatePoint = CreateDefaultSubobject<USceneComponent>(TEXT("PlatePoint"));
+    PlatePoint->SetupAttachment(SceneRoot);
+
+    // 실제 식탁 윗면에 맞춰 BP에서 조정한다.
+    PlatePoint->SetRelativeLocation(FVector(60.0, 0.0, 75.0));
 }
 
 bool ADiningSeat::TryReserve(AActor* Guest, const FGuid& ReservationId)

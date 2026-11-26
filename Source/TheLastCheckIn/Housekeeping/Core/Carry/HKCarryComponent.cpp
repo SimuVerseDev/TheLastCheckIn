@@ -7,6 +7,7 @@
 #include "Housekeeping/Objects/Blanket/HKBlanketActor.h"
 #include "EngineUtils.h"
 #include "Core/Interaction/PlayerInteractionComponent.h"
+#include "Core/Interaction/Interactable.h"
 #include "Housekeeping/Objects/Trash/HKTrashBinComponent.h"
 #include "Components/SceneComponent.h"
 
@@ -292,11 +293,63 @@ USceneComponent* UHKCarryComponent::GetTrashAbsorbTarget() const
 	return nullptr;
 }
 
+bool UHKCarryComponent::AllowsFocusOn(AActor* Target) const
+{
+	if (!IsValid(CarriedComponent)
+		|| !IsValid(Target)
+		|| Target == CarriedComponent->GetOwner()
+		|| !Target->Implements<UInteractable>())
+	{
+		return false;
+	}
+
+	AActor* Interactor = GetOwner();
+	return IInteractable::Execute_CanInteractWhileCarrying(Target, Interactor)
+		&& IInteractable::Execute_CanInteract(Target, Interactor);
+}
+
+bool UHKCarryComponent::ReleaseForPlacement(UPrimitiveComponent* ExpectedComponent)
+{
+	if (!IsValid(ExpectedComponent)
+		|| CarriedComponent != ExpectedComponent
+		|| CarriedBlanket.IsValid())
+	{
+		return false;
+	}
+
+	// 일반 Drop과 달리 손의 이동 속도를 전달하지 않는다.
+	Release(false);
+	if (IsCarrying())
+	{
+		return false;
+	}
+
+	if (IsValid(ExpectedComponent) && ExpectedComponent->IsSimulatingPhysics())
+	{
+		ExpectedComponent->SetPhysicsLinearVelocity(FVector::ZeroVector);
+		ExpectedComponent->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+	}
+	return true;
+}
+
 void UHKCarryComponent::GetIgnoredActors(TArray<AActor*>& IgnoredActors) const
 {
+	if (IsValid(CarriedComponent))
+	{
+		AActor* HeldActor = CarriedComponent->GetOwner();
+		if (IsValid(HeldActor))
+		{
+			IgnoredActors.AddUnique(HeldActor);
+			TArray<AActor*> AttachedActors;
+			HeldActor->GetAttachedActors(AttachedActors, true, true);
+			IgnoredActors.Append(AttachedActors);
+		}
+	}
+
+	// 기존 쓰레기 투입구 예외는 유지한다.
 	if (const USceneComponent* Target = GetTrashAbsorbTarget())
 	{
-		IgnoredActors.Add(Target->GetOwner());
+		IgnoredActors.AddUnique(Target->GetOwner());
 	}
 }
 

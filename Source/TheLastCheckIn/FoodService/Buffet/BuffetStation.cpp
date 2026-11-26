@@ -2,7 +2,9 @@
 
 #include "FoodService/Data/FoodDefinition.h"
 #include "FoodService/Items/FoodItemActor.h"
-#include "FoodService/Pool/FoodPoolSubsystem.h"
+#include "FoodService/Items/FoodPlateActor.h"
+#include "FoodService/Placement/FoodPlacement.h"
+#include "FoodService/Placement/FoodSnapSlotComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -15,21 +17,13 @@ ABuffetStation::ABuffetStation()
 {
     PrimaryActorTick.bCanEverTick = false;
 
-    SceneRoot = CreateDefaultSubobject<USceneComponent>(
-        TEXT("SceneRoot"));
+    SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
     SetRootComponent(SceneRoot);
 
-    StationMesh = CreateDefaultSubobject<UStaticMeshComponent>(
-        TEXT("StationMesh"));
+    StationMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StationMesh"));
     StationMesh->SetupAttachment(SceneRoot);
-
-    // 음식은 메시 하나로 표시하고, 남은 양은 RemainingServings로 관리한다.
-    FoodDisplay = CreateDefaultSubobject<UStaticMeshComponent>(
-        TEXT("FoodDisplay"));
-    FoodDisplay->SetupAttachment(SceneRoot);
-    FoodDisplay->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    FoodDisplay->SetGenerateOverlapEvents(false);
-    FoodDisplay->SetVisibility(false);
+    StationMesh->SetCollisionProfileName(TEXT("BlockAll"));
+    StationMesh->SetCollisionResponseToChannel(ECC_Visibility,ECR_Block);
 
     ArrivalArea = CreateDefaultSubobject<UBoxComponent>(TEXT("ArrivalArea"));
     ArrivalArea->SetupAttachment(SceneRoot);
@@ -37,98 +31,187 @@ ABuffetStation::ABuffetStation()
     ArrivalArea->SetRelativeLocation(FVector(150.0, 0.0, 0.0));
     ArrivalArea->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     ArrivalArea->SetGenerateOverlapEvents(false);
-
-    // 손님 EQS가 도착 영역을 찾을 때 사용하는 태그
     ArrivalArea->ComponentTags.Add(TEXT("GuestArrivalArea"));
 
     ServingDirection = CreateDefaultSubobject<UArrowComponent>(TEXT("ServingDirection"));
-
     ServingDirection->SetupAttachment(SceneRoot);
     ServingDirection->SetHiddenInGame(true);
     ServingDirection->SetCanEverAffectNavigation(false);
+
+    constexpr int32 SlotCount = 12;
+    constexpr int32 Columns = 4;
+    constexpr float Spacing = 12.0f;
+
+    for (int32 Index = 0; Index < SlotCount; ++Index)
+    {
+        const FName SlotName(*FString::Printf(TEXT("FoodSlot_%02d"), Index + 1));
+
+        UFoodSnapSlotComponent* Slot =
+            CreateDefaultSubobject<UFoodSnapSlotComponent>(SlotName);
+
+        Slot->SetupAttachment(SceneRoot);
+        Slot->Rule = EFoodSlotRule::ReadyToEat;
+
+        // 진열된 음식이 트레이의 E키 판정을 가리지 않게 한다.
+        Slot->bAllowPickup = false;
+
+        const int32 Column = Index % Columns;
+        const int32 Row = Index / Columns;
+
+        Slot->SetRelativeLocation(FVector(
+            (Column - 1.5f) * Spacing,
+            (Row - 1.0f) * Spacing,
+            5.0f));
+
+        FoodSlots.Add(Slot);
+    }
 }
 
-int32 ABuffetStation::TryAddFood(
-    AFoodItemActor* Food,
-    FGuid ExpectedLeaseId)
+int32 ABuffetStation::TryAddFood(AFoodItemActor* Food, FGuid ExpectedLeaseId)
 {
-    if (bUpdatingStock)
+    if (bUpdatingStock
+        || !IsValid(Food)
+        || !Food->MatchesLease(ExpectedLeaseId)
+        || Food->IsCarried())
+    {
+        return 0;
+    }
+
+    UFoodSnapSlotComponent* Slot = FindEmptySlot(Food);
+
+    if (!Slot)
     {
         return 0;
     }
 
     TGuardValue<bool> StockGuard(bUpdatingStock, true);
 
-    UFoodPoolSubsystem* Pool =
-        GetWorld()->GetSubsystem<UFoodPoolSubsystem>();
-
-    if (!Pool
-        || !IsValid(Food)
-        || Food->GetWorld() != GetWorld()
-        || Food->PoolOwner.Get() != Pool
-        || !Food->MatchesLease(ExpectedLeaseId)
-        || Food->IsCarried()
-        || Food->GetAttachParentActor() != nullptr
-        || Food->GetPresentation() != EFoodPresentation::Batch)
-    {
-        return 0;
-    }
-
-    UFoodDefinition* Incoming = Food->GetFoodDefinition();
-
-    if (!IsValid(Incoming)
-        || !IsValid(Incoming->ServingMesh.Get()))
-    {
-        return 0;
-    }
-
-    // 음식이 남아 있으면 같은 종류만 보충한다.
-    if (RemainingServings > 0 && StockDefinition.Get() != Incoming)
-    {
-        return 0;
-    }
-
-    const int32 Space = FMath::Max(
-        0,
-        Capacity - RemainingServings);
-
-    const int32 Added = FMath::Min(Space, Food->Servings);
-
-    if (Added <= 0)
-    {
-        return 0;
-    }
-
-    Food->Servings -= Added;
-
-    // 모든 인분을 옮겼으면 운반용 음식 액터를 풀 반환한다.
-    if (Food->Servings == 0)
-    {
-        if (!Pool->ReleaseFood(Food, ExpectedLeaseId))
-        {
-            // 풀 반환 실패 시 옮기려던 수량을 복구한다.
-            Food->Servings += Added;
-            return 0;
-        }
-    }
-
-    StockDefinition = Incoming;
-    RemainingServings += Added;
-
-    RefreshFoodDisplay();
-
-    return Added;
+    return Slot->TryPlaceFood(Food) ? 1 : 0;
 }
 
 bool ABuffetStation::HasFood() const
 {
-    return RemainingServings > 0
-        && IsValid(StockDefinition.Get());
+    return FindOccupiedSlot() != nullptr;
 }
 
-bool ABuffetStation::TryReserveServingPoint(
-    AActor* Requester,
-    FGuid RequestId)
+/*
+음식 슬롯 조회
+*/
+int32 ABuffetStation::GetRemainingServings() const
+{
+    int32 Count = 0;
+
+    for (const TObjectPtr<UFoodSnapSlotComponent>& SlotRef : FoodSlots)
+    {
+        UFoodSnapSlotComponent* Slot = SlotRef.Get();
+        AFoodItemActor* Food = IsValid(Slot) ? Slot->GetFood() : nullptr;
+
+        if (IsValid(Food) && Food->IsReadyToEat())
+        {
+            ++Count;
+        }
+    }
+
+    return Count;
+}
+
+UFoodDefinition* ABuffetStation::GetFoodDefinition() const
+{
+    UFoodSnapSlotComponent* Slot = FindOccupiedSlot();
+    AFoodItemActor* Food = Slot ? Slot->GetFood() : nullptr;
+
+    return IsValid(Food) ? Food->GetFoodDefinition() : nullptr;
+}
+
+UFoodSnapSlotComponent* ABuffetStation::FindOccupiedSlot() const
+{
+    for (const TObjectPtr<UFoodSnapSlotComponent>& SlotRef : FoodSlots)
+    {
+        UFoodSnapSlotComponent* Slot = SlotRef.Get();
+        AFoodItemActor* Food = IsValid(Slot) ? Slot->GetFood() : nullptr;
+
+        if (IsValid(Food) && Food->IsReadyToEat())
+        {
+            return Slot;
+        }
+    }
+
+    return nullptr;
+}
+
+UFoodSnapSlotComponent* ABuffetStation::FindEmptySlot(
+    const AFoodItemActor* Food) const
+{
+    if (!IsValid(Food)
+        || !Food->IsReadyToEat()
+        || Food->GetWorld() != GetWorld())
+    {
+        return nullptr;
+    }
+
+    // 한 트레이에는 같은 종류의 음식만 담는다.
+    UFoodDefinition* ExistingDefinition = GetFoodDefinition();
+
+    if (ExistingDefinition
+        && ExistingDefinition != Food->GetFoodDefinition())
+    {
+        return nullptr;
+    }
+
+    for (const TObjectPtr<UFoodSnapSlotComponent>& SlotRef : FoodSlots)
+    {
+        UFoodSnapSlotComponent* Slot = SlotRef.Get();
+
+        if (IsValid(Slot) && Slot->CanAccept(Food))
+        {
+            return Slot;
+        }
+    }
+
+    return nullptr;
+}
+
+/*
+Interact : E키
+*/
+bool ABuffetStation::CanInteract_Implementation(AActor* Interactor) const
+{
+    return !bUpdatingStock
+        && FindEmptySlot(FoodPlacement::GetHeldFood(Interactor)) != nullptr;
+}
+
+bool ABuffetStation::CanInteractWhileCarrying_Implementation(AActor* Interactor) const
+{
+    return CanInteract_Implementation(Interactor);
+}
+
+FText ABuffetStation::GetInteractPrompt_Implementation(AActor* Interactor) const
+{
+    return NSLOCTEXT("Food", "PlaceOnBuffet", "트레이에 음식 옮기기");
+}
+
+void ABuffetStation::Interact_Implementation(AActor* Interactor)
+{
+    if (bUpdatingStock)
+    {
+        return;
+    }
+
+    UFoodSnapSlotComponent* Slot = FindEmptySlot(
+        FoodPlacement::GetHeldFood(Interactor));
+
+    if (!Slot)
+    {
+        return;
+    }
+
+    TGuardValue<bool> StockGuard(bUpdatingStock, true);
+
+    // 접시는 계속 들고 있고 음식만 빈 슬롯으로 옮긴다.
+    FoodPlacement::TryPlaceHeldFood(Interactor, Slot);
+}
+
+bool ABuffetStation::TryReserveServingPoint(AActor* Requester, FGuid RequestId)
 {
     RemoveInvalidQueueGuests();
 
@@ -245,9 +328,7 @@ void ABuffetStation::LeaveQueue(AActor* Requester, FGuid RequestId)
     ReleaseServingPoint(Requester, RequestId);
 }
 
-bool ABuffetStation::OwnsReservation(
-    AActor* Requester,
-    FGuid RequestId) const
+bool ABuffetStation::OwnsReservation(AActor* Requester, FGuid RequestId) const
 {
     return IsValid(Requester)
         && !Requester->IsActorBeingDestroyed()
@@ -256,9 +337,7 @@ bool ABuffetStation::OwnsReservation(
         && ReservationId == RequestId;
 }
 
-void ABuffetStation::ReleaseServingPoint(
-    AActor* Requester,
-    FGuid RequestId)
+void ABuffetStation::ReleaseServingPoint(AActor* Requester, FGuid RequestId)
 {
     // 손님과 방문 번호가 모두 일치해야 예약을 해제한다.
     if (ReservedGuest.Get() == Requester
@@ -270,44 +349,67 @@ void ABuffetStation::ReleaseServingPoint(
     }
 }
 
-AFoodItemActor* ABuffetStation::TryTakeServing(
+AFoodPlateActor* ABuffetStation::TryTakeServing(
     AActor* Requester,
     FGuid RequestId,
     const FTransform& PlateTransform)
 {
     if (bUpdatingStock
-        || !HasFood()
-        || !OwnsReservation(Requester, RequestId))
+        || !OwnsReservation(Requester, RequestId)
+        || Requester->GetWorld() != GetWorld()
+        || !IsValid(Requester->GetRootComponent())
+        || !GuestPlateClass
+        || PlateTransform.ContainsNaN())
+    {
+        return nullptr;
+    }
+
+    UFoodSnapSlotComponent* SourceSlot = FindOccupiedSlot();
+    AFoodItemActor* Food = SourceSlot ? SourceSlot->GetFood() : nullptr;
+
+    if (!IsValid(Food))
     {
         return nullptr;
     }
 
     TGuardValue<bool> StockGuard(bUpdatingStock, true);
 
-    UFoodPoolSubsystem* Pool =
-        GetWorld()->GetSubsystem<UFoodPoolSubsystem>();
+    FActorSpawnParameters Params;
+    Params.Owner = Requester;
+    Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    Params.ObjectFlags |= RF_Transient;
 
-    if (!Pool)
-    {
-        return nullptr;
-    }
-
-    AFoodItemActor* Plate = Pool->AcquireFood(
-        StockDefinition.Get(),
-        1,
-        EFoodPresentation::Serving,
-        PlateTransform);
+    AFoodPlateActor* Plate = GetWorld()->SpawnActor<AFoodPlateActor>(
+        GuestPlateClass,
+        PlateTransform,
+        Params);
 
     if (!IsValid(Plate))
     {
         return nullptr;
     }
 
-    // 접시가 준비된 뒤에만 재고에서 1인분을 차감한다.
-    --RemainingServings;
+    Plate->SetGuestOwned();
+
+    // 접시 부착에 실패하면 음식은 트레이에 남는다.
+    if (!Plate->AttachToComponent(
+        Requester->GetRootComponent(),
+        FAttachmentTransformRules::KeepWorldTransform))
+    {
+        Plate->Destroy();
+        return nullptr;
+    }
+
+    UFoodSnapSlotComponent* DestinationSlot = Plate->GetFoodSlot();
+
+    if (!IsValid(DestinationSlot)
+        || !DestinationSlot->TryPlaceFood(Food))
+    {
+        Plate->Destroy();
+        return nullptr;
+    }
 
     ReleaseServingPoint(Requester, RequestId);
-    RefreshFoodDisplay();
 
     return Plate;
 }
@@ -322,10 +424,4 @@ FRotator ABuffetStation::GetServingRotation() const
     return FRotator(0.0f, Yaw, 0.0f);
 }
 
-void ABuffetStation::RefreshFoodDisplay()
-{
-    FoodDisplay->SetStaticMesh(
-        HasFood() ? StockDefinition->BatchMesh.Get() : nullptr);
 
-    FoodDisplay->SetVisibility(HasFood());
-}

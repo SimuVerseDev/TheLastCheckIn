@@ -26,6 +26,12 @@ public:
 	{
 		return false;
 	}
+
+	// 포커스를 차단하는 중에도 특정 대상만 허용할 수 있다.
+	virtual bool AllowsFocusOn(AActor* Target) const
+	{
+		return false;
+	}
 	
 	virtual FText GetBlockingPrompt() const
 	{

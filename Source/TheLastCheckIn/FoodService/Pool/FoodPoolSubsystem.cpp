@@ -35,37 +35,21 @@ AFoodItemActor* UFoodPoolSubsystem::CreateFoodActor()
     return Food;
 }
 
-AFoodItemActor* UFoodPoolSubsystem::AcquireFood(
-    UFoodDefinition* Definition,
-    int32 Servings,
-    EFoodPresentation Presentation,
-    const FTransform& Transform)
+AFoodItemActor* UFoodPoolSubsystem::AcquireFood(UFoodDefinition* Definition, EFoodCookState InitialState, const FTransform& Transform)
 {
     if (bShuttingDown
         || !IsValid(Definition)
         || Definition->FoodId.IsNone()
-        || Servings <= 0
+        || InitialState == EFoodCookState::Cooking
         || Transform.ContainsNaN())
     {
         return nullptr;
     }
 
-    if (Presentation != EFoodPresentation::Batch
-        && Presentation != EFoodPresentation::Serving)
-    {
-        return nullptr;
-    }
-
-    // 손님용 접시는 1인분만 허용한다.
-    if (Presentation == EFoodPresentation::Serving && Servings != 1)
-    {
-        return nullptr;
-    }
-
     UStaticMesh* SelectedMesh =
-        Presentation == EFoodPresentation::Batch
-        ? Definition->BatchMesh.Get()
-        : Definition->ServingMesh.Get();
+        (!Definition->bRequiresCooking || InitialState == EFoodCookState::Cooked)
+        ? Definition->CookedMesh.Get()
+        : Definition->RawMesh.Get();
 
     if (!IsValid(SelectedMesh))
     {
@@ -93,19 +77,12 @@ AFoodItemActor* UFoodPoolSubsystem::AcquireFood(
 
     if (IsValid(Food))
     {
-        Food->ActivateFood(
-            Definition,
-            Servings,
-            Presentation,
-            Transform);
+        Food->ActivateFood(Definition, InitialState, Transform);
     }
 
     return Food;
 }
-
-bool UFoodPoolSubsystem::ReleaseFood(
-    AFoodItemActor* Food,
-    FGuid ExpectedLeaseId)
+bool UFoodPoolSubsystem::ReleaseFood(AFoodItemActor* Food, FGuid ExpectedLeaseId)
 {
     // 들고 있는 음식은 물리 핸들이 연결되어 있으므로 풀 반환을 거절한다.
     if (bShuttingDown
@@ -134,11 +111,9 @@ bool UFoodPoolSubsystem::ReleaseFood(
 
 void UFoodPoolSubsystem::WarmupPool(int32 DesiredCount)
 {
-    AvailableFoods.RemoveAll(
-        [](const TObjectPtr<AFoodItemActor>& Food)
+    AvailableFoods.RemoveAll([](const TObjectPtr<AFoodItemActor>& Food)
         {
-            return !IsValid(Food.Get())
-                || Food->IsActorBeingDestroyed();
+            return !IsValid(Food.Get()) || Food->IsActorBeingDestroyed();
         });
 
     const int32 TargetCount =
