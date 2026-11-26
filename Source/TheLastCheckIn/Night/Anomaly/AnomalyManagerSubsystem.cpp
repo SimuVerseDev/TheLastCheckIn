@@ -312,7 +312,7 @@ int32 UAnomalyManagerSubsystem::PlayScare(FName ScareId)
 	{
 		if (It->ScareId == ScareId)
 		{
-			It->PlayScare();
+			It->Trigger();
 			++Count;
 		}
 	}
