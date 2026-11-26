@@ -19,7 +19,6 @@ public:
 	UFUNCTION(CallInEditor, Category = "Scare")
 	void TestPlay()
 	{
-		PlayScare();
 		Trigger();
 	}
 	
