@@ -1,4 +1,4 @@
-﻿#include "Guests/Party/GuestParty.h"
+#include "Guests/Party/GuestParty.h"
 #include "TheLastCheckIn.h"
 
 #include "Guests/GuestCharacter.h"
@@ -8,6 +8,7 @@
 #include "Rooms/RoomActor.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "FoodService/GuestDiningComponent.h"
 
 UWorld* UGuestParty::GetWorld() const
 {
@@ -390,8 +391,8 @@ bool UGuestParty::TryAssignRoom(ARoomActor* Room)
     bWillStayBehind =
         CheckoutPolicy == EGuestCheckoutPolicy::RequireRequest ||
         (CheckoutPolicy == EGuestCheckoutPolicy::Random &&
-         (StayBehindChance >= 1.0f ||
-          (StayBehindChance > 0.0f &&
+        (StayBehindChance >= 1.0f ||
+        (StayBehindChance > 0.0f &&
            FMath::FRand() < StayBehindChance)));
 
     OnRoomAssigned.Broadcast(this);
@@ -455,6 +456,7 @@ bool UGuestParty::CanRequestCheckout() const
 {
     return State == EGuestPartyState::WaitingForCheckoutRequest
         && !HasAnomalyParticipants()
+        && !HasDiningParticipants()
         && IsValid(AssignedRoom.Get())
         && IsValid(LobbyTarget.Get());
 }
@@ -529,10 +531,12 @@ void UGuestParty::Advance(double CurrentSeconds)
         }
     }
 
-    if (State == EGuestPartyState::Staying &&
-        !HasAnomalyParticipants() && //사건 참여자가 있는 일행은 자동 퇴실을 보류
-        CheckoutAtSeconds >= 0.0 &&
-        CurrentSeconds >= CheckoutAtSeconds)
+    // 사건과 식당 방문이 끝난 뒤 퇴실을 시작한다.
+    if (State == EGuestPartyState::Staying
+        && !HasAnomalyParticipants()
+        && !HasDiningParticipants()
+        && CheckoutAtSeconds >= 0.0
+        && CurrentSeconds >= CheckoutAtSeconds)
     {
         if (bWillStayBehind)
         {
@@ -570,12 +574,13 @@ void UGuestParty::Advance(double CurrentSeconds)
     }
 }
 
+// 이상행동 참여 조건
 bool UGuestParty::CanParticipateInAnomaly() const
 {
     return State == EGuestPartyState::Staying
         && IsValid(AssignedRoom.Get())
         && GetMembers().Num() == GetSize()
-        && AllMembersInState(EGuestState::Staying);
+        && !bDinnerDepartureReserved;
 }
 
 bool UGuestParty::HasAnomalyParticipants() const
@@ -592,4 +597,70 @@ bool UGuestParty::HasAnomalyParticipants() const
     }
 
     return false;
+}
+
+// 식당 이용 확인과 석식 출발 예약
+bool UGuestParty::HasDiningParticipants() const
+{
+    if (bDinnerDepartureReserved)
+    {
+        return true;
+    }
+
+    for (AGuestCharacter* Member : GetMembers())
+    {
+        const UGuestDiningComponent* Dining = Member->GetDiningComponent();
+
+        if (IsValid(Dining) && Dining->IsBusy())
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool UGuestParty::CanStartDinner() const
+{
+    if (State != EGuestPartyState::Staying
+        || !IsValid(AssignedRoom.Get())
+        || !StayId.IsValid()
+        || HasDiningParticipants()
+        || HasAnomalyParticipants())
+    {
+        return false;
+    }
+
+    const TArray<AGuestCharacter*> CurrentMembers = GetMembers();
+
+    if (CurrentMembers.IsEmpty()
+        || CurrentMembers.Num() != GetSize()
+        || !AllMembersInState(EGuestState::Staying))
+    {
+        return false;
+    }
+
+    for (AGuestCharacter* Member : CurrentMembers)
+    {
+        if (Member->IsActorBeingDestroyed()
+            || Member->IsActionMovementPaused()
+            || !IsValid(Member->GetDiningComponent())
+            || !IsValid(Member->GetAnomalyComponent()))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool UGuestParty::TryReserveDinnerDeparture()
+{
+    if (!CanStartDinner())
+    {
+        return false;
+    }
+
+    bDinnerDepartureReserved = true;
+    return true;
 }

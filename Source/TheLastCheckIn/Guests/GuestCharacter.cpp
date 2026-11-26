@@ -20,6 +20,7 @@
 #include "Animation/AnimMontage.h"
 #include "FoodService/Buffet/BuffetStation.h"
 #include "FoodService/GuestDiningComponent.h"
+#include "FoodService/Data/FoodDefinition.h"
 
 AGuestCharacter::AGuestCharacter()
 {
@@ -121,8 +122,7 @@ bool AGuestCharacter::NotifyDestinationReached(AActor* ReachedTarget)
 
 			GuestState = EGuestState::WaitingAtBuffet;
 
-			const FRotator FacingRotation =
-				Station->GetServingRotation();
+			const FRotator FacingRotation = Station->GetServingRotation();
 
 			SetActorRotation(FacingRotation);
 
@@ -131,6 +131,18 @@ bool AGuestCharacter::NotifyDestinationReached(AActor* ReachedTarget)
 				GuestController->SetControlRotation(FacingRotation);
 			}
 
+			break;
+		}
+
+	case EGuestState::MovingToDiningSeat:
+		{
+			if (!Cast<ATargetPoint>(ReachedTarget))
+			{
+				return false;
+			}
+
+			// 도착 처리가 끝난 뒤 식당 컴포넌트에서 착석
+			GuestState = EGuestState::ReadyToSit;
 			break;
 		}
 
@@ -152,7 +164,6 @@ bool AGuestCharacter::NotifyDestinationReached(AActor* ReachedTarget)
 
 	MoveTarget = nullptr;
 
-	// 기존 switch에서 MovingToRoom -> Staying 전환이 끝난 뒤 알림
 	if (GuestState == EGuestState::Staying &&
 		IsValid(AnomalyComponent) &&
 		AnomalyComponent->GetPhase() ==
@@ -299,26 +310,70 @@ void AGuestCharacter::SetPoolManager(AGuestPoolManager* InPoolManager)
 
 bool AGuestCharacter::CanInteract_Implementation(AActor* Interactor) const
 {
-	return IsValid(Interactor)
-	&& GuestState == EGuestState::WaitingForCheckoutRequest
-	&& IsValid(Party.Get())
-	&& Party->CanRequestCheckout();
+	if (!IsValid(Interactor))
+	{
+		return false;
+	}
+
+	if (IsValid(DiningComponent)
+		&& DiningComponent->CanTakeDinnerOrder())
+	{
+		return true;
+	}
+
+	return GuestState == EGuestState::WaitingForCheckoutRequest
+		&& IsValid(Party.Get())
+		&& Party->CanRequestCheckout();
 }
 
 FText AGuestCharacter::GetInteractPrompt_Implementation(AActor* Interactor) const
 {
-	return NSLOCTEXT("GuestInteraction","RequestCheckout","퇴실 요청");
+	if (IsValid(DiningComponent) && DiningComponent->CanTakeDinnerOrder())
+	{
+		FFoodOrderRecord Order;
+
+		if (DiningComponent->GetDinnerOrder(Order)
+			&& !Order.Items.IsEmpty()
+			&& IsValid(Order.Items[0].Food.Get()))
+		{
+			return FText::Format(
+				NSLOCTEXT(
+					"GuestInteraction",
+					"TakeDinnerOrderWithFood",
+					"{0} 주문받기"),
+				Order.Items[0].Food->DisplayName);
+		}
+
+		return NSLOCTEXT("GuestInteraction", "TakeDinnerOrder", "주문받기");
+	}
+
+	if (GuestState == EGuestState::WaitingForCheckoutRequest)
+	{
+		return NSLOCTEXT("GuestInteraction", "RequestCheckout", "퇴실 요청");
+	}
+
+	return FText::GetEmpty();
 }
 
 void AGuestCharacter::Interact_Implementation(AActor* Interactor)
 {
-	// 실행 순간에도 조건 재확인
 	if (!IInteractable::Execute_CanInteract(this, Interactor))
 	{
 		return;
 	}
 
-	Party->RequestCheckout();
+	if (IsValid(DiningComponent)
+		&& DiningComponent->CanTakeDinnerOrder())
+	{
+		DiningComponent->TakeDinnerOrder();
+		return;
+	}
+
+	if (GuestState == EGuestState::WaitingForCheckoutRequest
+		&& IsValid(Party.Get()))
+	{
+		Party->RequestCheckout();
+	}
 }
 
 void AGuestCharacter::BeginPlay()
@@ -433,6 +488,11 @@ bool AGuestCharacter::BeginMoveTo(AActor* Target, EGuestState MovingState)
 		return false;
 	}
 
+	if (IsValid(DiningComponent) && !DiningComponent->PrepareForMovement())
+	{
+		return false;
+	}
+
 	if (IsValid(AnomalyComponent))
 	{
 		AnomalyComponent->CancelAnomaly();
@@ -488,7 +548,8 @@ bool AGuestCharacter::CanReserveMoveLocation(const FVector& Location) const
 			return false;
 		}
 	}
-	else if (GuestState == EGuestState::MovingToBuffetQueue)
+	else if (GuestState == EGuestState::MovingToBuffetQueue
+			|| GuestState == EGuestState::MovingToDiningSeat)
 	{
 		const ATargetPoint* QueuePoint = Cast<ATargetPoint>(Destination);
 		if (!IsValid(QueuePoint))

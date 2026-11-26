@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
@@ -78,7 +78,7 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Guests|Party")
     bool TryAssignRoom(ARoomActor* Room);
-    
+
     // 체크인을 마치고 투숙 중인 일행
     bool IsStaying() const
     {
@@ -118,18 +118,31 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "Guests|Party")
     FGuestPartyRoomAssigned OnRoomAssigned;
-    
+
     UPROPERTY(BlueprintAssignable, Category = "Guests|Party")
     FGuestPartyCheckedIn OnCheckedIn;
 
-    //일행 전체의 입실 완료 여부를 검사
+    // 투숙 중이며 석식 출발 준비 중이 아닌지 확인한다. 개인 상태는 각 컴포넌트에서 검사한다.
     bool CanParticipateInAnomaly() const;
-    
+
     //아직 사건에 묶여 있는 손님이 있는지 검사
     bool HasAnomalyParticipants() const;
-    
+
+    // 일행 전원이 객실에서 다른 활동 없이 대기 중인지 확인
+    bool CanStartDinner() const;
+
+    bool TryReserveDinnerDeparture();
+
+    void ReleaseDinnerDeparture()
+    {
+        bDinnerDepartureReserved = false;
+    }
+
 private:
     bool AllMembersInState(EGuestState RequiredState) const;
+
+    // 출발 준비 중이거나 식당 방문을 마치지 않은 구성원이 있는지 확인한다.
+    bool HasDiningParticipants() const;
 
     void MoveMembersToRoom();
     void MoveMembersToLobby();
@@ -172,4 +185,7 @@ private:
 
     double CheckInDeadlineSeconds = -1.0;
     double CheckoutAtSeconds = -1.0;
+
+    // 좌석을 확보하는 동안 이상행동 참여와 퇴실을 보류한다.
+    bool bDinnerDepartureReserved = false;
 };
