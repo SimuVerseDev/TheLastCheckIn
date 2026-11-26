@@ -5,6 +5,8 @@
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/PrimitiveComponent.h"
+#include "Components/TextBlock.h"
+#include "Core/Economy/HotelEconomySubsystem.h"
 #include "InputCoreTypes.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
@@ -26,6 +28,11 @@ UCheckInInteractionComponent::UCheckInInteractionComponent()
 void UCheckInInteractionComponent::BeginPlay()
 {
     Super::BeginPlay();
+
+    if (UHotelEconomySubsystem* Economy = GetWorld()->GetSubsystem<UHotelEconomySubsystem>())
+    {
+        Economy->OnCapitalChanged.AddUniqueDynamic(this, &ThisClass::HandleCapitalChanged);
+    }
 
     // Blueprint components and their initial overlaps must finish initializing first.
     InitialCounterCheckTimer = GetWorld()->GetTimerManager().SetTimerForNextTick(
@@ -287,7 +294,22 @@ bool UCheckInInteractionComponent::OpenCheckIn()
     CheckInWidget->SetUserFocus(LocalController.Get());
 
     OnRoomListChanged.Broadcast();
+    // Populate on every open, including changes that happened while the UI was closed.
+    if (UHotelEconomySubsystem* Economy = GetWorld()->GetSubsystem<UHotelEconomySubsystem>())
+    {
+        HandleCapitalChanged(Economy->GetCapital());
+    }
     return true;
+}
+
+void UCheckInInteractionComponent::HandleCapitalChanged(float NewCapital)
+{
+    if (!IsValid(CheckInWidget) || !bCheckInOpen) return;
+
+    if (UTextBlock* MoneyText = Cast<UTextBlock>(CheckInWidget->GetWidgetFromName(TEXT("MoneyAmountText"))))
+    {
+        MoneyText->SetText(FText::AsNumber(FMath::RoundToInt(NewCapital)));
+    }
 }
 
 void UCheckInInteractionComponent::CloseCheckIn()
@@ -422,6 +444,10 @@ void UCheckInInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayRea
 {
     if (GetWorld())
     {
+        if (UHotelEconomySubsystem* Economy = GetWorld()->GetSubsystem<UHotelEconomySubsystem>())
+        {
+            Economy->OnCapitalChanged.RemoveDynamic(this, &ThisClass::HandleCapitalChanged);
+        }
         GetWorld()->GetTimerManager().ClearTimer(InitialCounterCheckTimer);
     }
 
