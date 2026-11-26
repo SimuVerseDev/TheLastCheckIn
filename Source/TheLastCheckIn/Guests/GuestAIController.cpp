@@ -307,10 +307,6 @@ void AGuestAIController::CheckFinalApproach()
 	Crowd->SuspendCrowdSteering(true);
 	GetWorldTimerManager().ClearTimer(FinalApproachTimerHandle);
 	NearGoalStallStartedAt = -1.0;
-
-	UE_LOG(LogGuests, Log,
-		TEXT("Guest %s: Recovering stalled final approach; distance=%.1f location=(%s) goal=(%s)."),
-		*Guest->GetName(), FMath::Sqrt(DistanceSquared), *Location.ToString(), *Goal.ToString());
 }
 
 
