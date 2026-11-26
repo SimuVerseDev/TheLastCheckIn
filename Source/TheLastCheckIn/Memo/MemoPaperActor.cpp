@@ -2,6 +2,7 @@
 #include "Memo/MemoSubsystem.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
+#include "Memo/MemoBoardActor.h"
 
 AMemoPaperActor::AMemoPaperActor()
 {
@@ -10,6 +11,9 @@ AMemoPaperActor::AMemoPaperActor()
     PaperMesh =
         CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PaperMesh"));
     SetRootComponent(PaperMesh);
+    
+    // 선택한 메모를 런타임에 이동·확대하기 위해 필요합니다.
+    PaperMesh->SetMobility(EComponentMobility::Movable);
 
     // 플레이어 이동을 막지 않고 상호작용 시선 검사에만 반응합니다.
     PaperMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
@@ -53,24 +57,44 @@ void AMemoPaperActor::EndPlay(
     Super::EndPlay(EndPlayReason);
 }
 
+bool AMemoPaperActor::TryGetReadableMemo(
+    FMemoDefinition& OutData) const
+{
+    return MemoSystem
+        && !Memo.RowName.IsNone()
+        && MemoSystem->GetMemoState(Memo.RowName)
+            != EMemoState::Locked
+        && MemoSystem->GetMemoData(Memo.RowName, OutData);
+}
+
 bool AMemoPaperActor::CanInteract_Implementation(
     AActor* Interactor) const
 {
-    if (!MemoSystem || Memo.RowName.IsNone())
+    FMemoDefinition Data;
+
+    if (!TryGetReadableMemo(Data))
     {
         return false;
     }
 
-    FMemoDefinition Data;
+    if (IsValid(MemoBoard.Get()))
+    {
+        return IInteractable::Execute_CanInteract(
+            MemoBoard.Get(), Interactor);
+    }
 
-    return MemoSystem->GetMemoState(Memo.RowName)
-            != EMemoState::Locked
-        && MemoSystem->GetMemoData(Memo.RowName, Data);
+    return true;
 }
 
 FText AMemoPaperActor::GetInteractPrompt_Implementation(
     AActor* Interactor) const
 {
+    if (IsValid(MemoBoard.Get()))
+    {
+        return IInteractable::Execute_GetInteractPrompt(
+            MemoBoard.Get(), Interactor);
+    }
+
     return NSLOCTEXT("Memo", "ReadPrompt", "메모 읽기");
 }
 
@@ -82,9 +106,19 @@ void AMemoPaperActor::Interact_Implementation(
         return;
     }
 
+    // 보드에 붙은 메모를 바라보고 E를 눌러도
+    // 먼저 보드 전체를 보는 화면으로 들어갑니다.
+    if (IsValid(MemoBoard.Get()))
+    {
+        IInteractable::Execute_Interact(
+            MemoBoard.Get(), Interactor);
+        return;
+    }
+
+    // 보드에 연결하지 않은 메모는 기존 방식을 유지합니다.
     FMemoDefinition Data;
 
-    if (MemoSystem->GetMemoData(Memo.RowName, Data))
+    if (TryGetReadableMemo(Data))
     {
         ShowMemo(Data.Title, Data.Body);
     }
