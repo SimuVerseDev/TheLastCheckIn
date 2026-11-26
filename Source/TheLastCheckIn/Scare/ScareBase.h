@@ -56,6 +56,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Scare|Look", meta = (EditCondition = "bWaitForLook", Units = "s"))
 	float LookCheckInterval = 0.1f;
+
+	// 인형 정면 기준 플레이어 위치 허용 범위 (0.5 = 정면 ±60°, -1 = 끔)
+	UPROPERTY(EditAnywhere, Category = "Scare|Look", meta = (EditCondition = "bWaitForLook", ClampMin = -1, ClampMax = 1))
+	float FacingDotThreshold = 0.5f;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Scare|Light")
 	TObjectPtr<UBoxComponent> LightArea;

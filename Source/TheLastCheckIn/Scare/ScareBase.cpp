@@ -45,6 +45,10 @@ void AScareBase::CheckLook()
 	if (Dist > MaxLookDistance || Dist < KINDA_SMALL_NUMBER) return;
 	
 	if (FVector::DotProduct(Cam->GetCameraRotation().Vector(), ToTarget / Dist) < LookDotThreshold) return;
+
+	// 정면에서 볼 때만 (뒷모습 노출 방지)
+	const FVector ToCam = (CamLoc - GetActorLocation()).GetSafeNormal2D();
+	if (FVector::DotProduct(GetActorForwardVector().GetSafeNormal2D(), ToCam) < FacingDotThreshold) return;
 	
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(ScareLook), false, this);
 	Params.AddIgnoredActor(UGameplayStatics::GetPlayerPawn(this, 0));
