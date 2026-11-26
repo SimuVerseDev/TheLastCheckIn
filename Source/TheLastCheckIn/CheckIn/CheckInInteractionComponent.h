@@ -83,6 +83,9 @@ protected:
 
 	
 private:
+	UFUNCTION()
+	void HandleCapitalChanged(float NewCapital);
+
 	void CheckInitialCounterOverlap();
 	void CheckCounterState();
 
