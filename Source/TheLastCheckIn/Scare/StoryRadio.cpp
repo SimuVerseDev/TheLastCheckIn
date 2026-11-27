@@ -43,7 +43,7 @@ void AStoryRadio::BeginPlay()
 	Super::BeginPlay();
 	CounterZone->OnComponentBeginOverlap.AddDynamic(this, &AStoryRadio::HandleCounterBeginOverlap);
 	
-	WindowStartSeconds = GameTime::GetDayStartSeconds(BroadcastDay - 1) + GameTime::GetDayStartSeconds(StartHour);
+	WindowStartSeconds = GameTime::GetDayStartSeconds(BroadcastDay - 1) + GameTime::HoursToSeconds(StartHour);
 	WindowEndSeconds = WindowStartSeconds + GameTime::HoursToSeconds(WindowHours);
 	
 	if (UWorld* World = GetWorld())
@@ -73,19 +73,19 @@ void AStoryRadio::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void AStoryRadio::HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds)
 {
+	if (State == EStoryRadioState::Static && CurrentSeconds >= StaticEndSeconds)
+	{
+		StopRadioAudio(StaticFadeOutSeconds);
+		SetState(EStoryRadioState::Done);
+		return;
+	}
+	
 	if (CurrentSeconds >= WindowEndSeconds)
 	{
 		if (State == EStoryRadioState::Off || State == EStoryRadioState::Waiting)
 		{
 			SetState(EStoryRadioState::Done);
 		}
-		return;
-	}
-	
-	if (State == EStoryRadioState::Static && CurrentSeconds >= StaticEndSeconds)
-	{
-		StopRadioAudio(StaticFadeOutSeconds);
-		SetState(EStoryRadioState::Done);
 		return;
 	}
 	
