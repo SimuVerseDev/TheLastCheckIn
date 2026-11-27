@@ -82,4 +82,32 @@ protected:
 	// ---------- 상태 ----------
 	UPROPERTY(VisibleInstanceOnly, Category = "Radio|Debug")
 	EStoryRadioState State = EStoryRadioState::Off;
+	
+	UFUNCTION()
+	void HandleCounterBeginOverlap(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex,
+		bool bFromSweep,
+		const FHitResult& SweepResult);
+	
+	bool IsPlayerActor(const AActor* Actor) const;
+	bool IsPlayerInCounter() const;
+	
+	void StartStatic();
+	void StopRadioAudio(float FadeOutSeconds);
+	
+	double GetNowSeconds() const;
+	
+	/*
+	잡음이 꺼지는 시각
+	*/
+	double StaticEndSeconds = 0.0;
+	
+	UPROPERTY(EditAnywhere, Category = "Radio|Sound", meta = (ClampMin = "0", Units = "s"))
+	float StaticFadeInSeconds = 1.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Radio|Sound", meta = (ClampMin = "0", Units = "s"))
+	float StaticFadeOutSeconds = 1.5f;
 };
