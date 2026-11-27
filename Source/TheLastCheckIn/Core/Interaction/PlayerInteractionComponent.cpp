@@ -1,6 +1,7 @@
 ﻿#include "Core/Interaction/PlayerInteractionComponent.h"
 #include "Core/Interaction/InteractionExtension.h"
 #include "Core/Interaction/Interactable.h"
+#include "Housekeeping/Core/Carry/HKCarryComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
@@ -306,6 +307,15 @@ void UPlayerInteractionComponent::UpdatePrompt()
 			}
 			Message += FString::Printf(TEXT("[LMB] %s"), *UsePrompt.ToString());
 		}
+	}
+	if (const UHKCarryComponent* Carry = GetOwner()->FindComponentByClass<UHKCarryComponent>();
+		Carry && Carry->IsCarrying())
+	{
+		if (!Message.IsEmpty())
+		{
+			Message += TEXT("   ");
+		}
+		Message += Carry->GetBlockingPrompt().ToString();
 	}
 	if (Message != LastPrompt)
 	{

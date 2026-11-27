@@ -110,8 +110,16 @@ bool AFoodSupplyStation::Use_Implementation(AActor* Interactor)
 
     TGuardValue<bool> DispensingGuard(bDispensing, true);
     UFoodPoolSubsystem* Pool = GetWorld()->GetSubsystem<UFoodPoolSubsystem>();
+    FTransform PickupTransform = PickupPoint->GetComponentTransform();
+    // 꺼낸 재료도 진열 음식의 방향을 유지한다.
+    if (!DisplayTransforms.IsEmpty())
+    {
+        PickupTransform.SetRotation(
+            PickupTransform.GetRotation() * DisplayTransforms[0].GetRotation());
+    }
+
     AFoodItemActor* Food = Pool->AcquireFood(
-        FoodDefinition, EFoodCookState::Raw, PickupPoint->GetComponentTransform());
+        FoodDefinition, EFoodCookState::Raw, PickupTransform);
     if (!IsValid(Food))
     {
         return false;

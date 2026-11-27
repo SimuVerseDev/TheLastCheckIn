@@ -155,3 +155,40 @@ void ACookingStation::CancelCurrentCooking()
     CookingLease.Invalidate();
     FinishAtGameSeconds = -1.0;
 }
+
+bool ACookingStation::CanUse_Implementation(AActor* Interactor) const
+{
+    if (!IsValid(Interactor) || !IsValid(CookingSlot.Get()))
+    {
+        return false;
+    }
+
+    AFoodItemActor* Food = CookingSlot->GetFood();
+
+    // 조리가 끝나고 집을 수 있는 음식만 꺼낸다.
+    return IsValid(Food)
+        && Food->GetCookState() == EFoodCookState::Cooked
+        && IInteractable::Execute_CanUse(Food, Interactor);
+}
+
+FText ACookingStation::GetUsePrompt_Implementation(AActor* Interactor) const
+{
+    return NSLOCTEXT(
+        "Food",
+        "TakeCookedFood",
+        "완성된 음식 꺼내기");
+}
+
+bool ACookingStation::Use_Implementation(AActor* Interactor)
+{
+    if (!CanUse_Implementation(Interactor))
+    {
+        return false;
+    }
+
+    AFoodItemActor* Food = CookingSlot->GetFood();
+
+    // 기존 음식 집기에서 물리 핸들 연결과 슬롯 비우기를 처리한다.
+    return IsValid(Food)
+        && IInteractable::Execute_Use(Food, Interactor);
+}

@@ -82,7 +82,6 @@ bool UHKCarryComponent::TryPickup(UPrimitiveComponent* Target)
 	{
 		return false;
 	}
-	
 	FVector HoldLocation;
 	FRotator ViewRotation;
 	if (!GetViewTransform(HoldLocation, ViewRotation))
@@ -388,7 +387,6 @@ void UHKCarryComponent::Release(bool bInheritHandVelocity)
 {
 	UPrimitiveComponent* Released = CarriedComponent;
 	CarriedComponent = nullptr;
-	
 	/*
 	blanket
 	*/

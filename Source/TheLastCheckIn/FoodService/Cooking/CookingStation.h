@@ -31,6 +31,11 @@ public:
 
 	virtual void Interact_Implementation(AActor* Interactor) override;
 
+	// 좌클릭으로 완성된 음식 꺼내기
+	virtual bool CanUse_Implementation(AActor* Interactor) const override;
+	virtual FText GetUsePrompt_Implementation(AActor* Interactor) const override;
+	virtual bool Use_Implementation(AActor* Interactor) override;
+
 protected:
 	virtual void BeginPlay() override;
 

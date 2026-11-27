@@ -28,7 +28,7 @@ AFoodItemActor* FoodPlacement::GetHeldFood(AActor* Interactor)
     if (AFoodPlateActor* Plate =
         Cast<AFoodPlateActor>(Held->GetOwner()))
     {
-        return Plate->GetFoodSlot()->GetFood();
+        return Plate->GetFood();
     }
 
     return nullptr;
