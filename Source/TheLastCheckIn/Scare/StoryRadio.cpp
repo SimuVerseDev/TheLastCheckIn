@@ -133,7 +133,18 @@ void AStoryRadio::PlayNews()
 			{
 				SubtitleWidget->AddToViewport(UILayer::PhoneSubtitle);
 				SubtitleIndex = 0;
-				ShowNextSubtitle();
+
+				const float FirstDelay = NewsSubtitles[0].StartTime;
+				if (FirstDelay > 0.f)
+				{
+					GetWorldTimerManager().SetTimer(
+						SubtitleTimer, this, &AStoryRadio::ShowNextSubtitle,
+						FirstDelay, false);
+				}
+				else
+				{
+					ShowNextSubtitle();
+				}
 			}
 		}
 	}
