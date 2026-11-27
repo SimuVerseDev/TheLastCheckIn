@@ -291,6 +291,22 @@ void UPlayerInteractionComponent::UpdatePrompt()
 			Message = FString::Printf(TEXT("[E] %s"), *IInteractable::Execute_GetInteractPrompt(Target, Pawn).ToString());
 		}
 	}
+	// 좌클릭 안내는 실제 사용 대상에 표시한다. E키 안내는 그대로 유지한다.
+	AActor* UseTarget = FocusedActor.Get();
+	if (IsInteractable(UseTarget)
+		&& !IsFocusBlockedFor(UseTarget)
+		&& IInteractable::Execute_CanUse(UseTarget, GetOwner()))
+	{
+		const FText UsePrompt = IInteractable::Execute_GetUsePrompt(UseTarget, GetOwner());
+		if (!UsePrompt.IsEmpty())
+		{
+			if (!Message.IsEmpty())
+			{
+				Message += TEXT("   ");
+			}
+			Message += FString::Printf(TEXT("[LMB] %s"), *UsePrompt.ToString());
+		}
+	}
 	if (Message != LastPrompt)
 	{
 		LastPrompt = Message;
