@@ -94,14 +94,17 @@ void AStoryRadio::StartListening(APlayerController* PC)
 	
 	RadioAudio->Stop();
 
-	if (TuningSound)
+	const float TuningDuration =
+		TuningSound ? TuningSound->GetDuration() : 0.f;
+
+	if (TuningSound && TuningDuration > 0.f)
 	{
 		RadioAudio->SetSound(TuningSound);
 		RadioAudio->Play();
 
 		GetWorldTimerManager().SetTimer(
 			ListenTimer, this, &AStoryRadio::PlayNews,
-			TuningSound->GetDuration(), false);
+			TuningDuration, false);
 	}
 	else
 	{
