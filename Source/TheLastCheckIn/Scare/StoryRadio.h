@@ -11,6 +11,7 @@ class UAudioComponent;
 class UBoxComponent;
 class UCameraComponent;
 class USoundBase;
+class UPhoneSubtitleWidget;
 
 UENUM(BlueprintType)
 enum class EStoryRadioState : uint8
@@ -20,6 +21,18 @@ enum class EStoryRadioState : uint8
 	Static,     // 잡음 재생 중 (E로 들을 수 있음)
 	Listening,
 	Done
+};
+
+USTRUCT(BlueprintType)
+struct FStoryRadioSubtitleLine
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, meta = (ClampMin = "0", Units = "s"))
+	float StartTime = 0.f;
+
+	UPROPERTY(EditAnywhere, meta = (MultiLine = "true"))
+	FText Text;
 };
 
 UCLASS()
@@ -131,4 +144,18 @@ protected:
 
 	TWeakObjectPtr<APlayerController> ListenerPC;
 	FTimerHandle ListenTimer;
+
+	/*
+	자막
+	*/
+	UPROPERTY(EditAnywhere, Category = "Radio|Subtitle")
+	TArray<FStoryRadioSubtitleLine> NewsSubtitles;
+
+	void ShowNextSubtitle();
+	void HideSubtitle();
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPhoneSubtitleWidget> SubtitleWidget;
+	FTimerHandle SubtitleTimer;
+	int32 SubtitleIndex = 0;
 };

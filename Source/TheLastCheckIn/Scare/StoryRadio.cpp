@@ -9,6 +9,8 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "Sound/SoundBase.h"
+#include "Phone/UI/PhoneSubtitleWidget.h"
+#include "Core/UI/UILayers.h"
 
 AStoryRadio::AStoryRadio()
 {
@@ -117,6 +119,21 @@ void AStoryRadio::PlayNews()
 	
 	RadioAudio->SetSound(NewsSound);
 	RadioAudio->Play();
+	
+	if (APlayerController* PC = ListenerPC.Get())
+	{
+		if (NewsSubtitles.Num() > 0)
+		{
+			SubtitleWidget = CreateWidget<UPhoneSubtitleWidget>(
+				PC, UPhoneSubtitleWidget::StaticClass());
+			if (SubtitleWidget)
+			{
+				SubtitleWidget->AddToViewport(UILayer::PhoneSubtitle);
+				SubtitleIndex = 0;
+				ShowNextSubtitle();
+			}
+		}
+	}
 
 	GetWorldTimerManager().SetTimer(
 		ListenTimer, this, &AStoryRadio::FinishListening,
@@ -127,6 +144,7 @@ void AStoryRadio::FinishListening()
 {
 	GetWorldTimerManager().ClearTimer(ListenTimer);
 	RadioAudio->Stop();
+	HideSubtitle();
 
 	if (APlayerController* PC = ListenerPC.Get())
 	{
@@ -226,10 +244,6 @@ void AStoryRadio::SetState(EStoryRadioState NewState)
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[StoryRadio] %s -> %s"),
-		*UEnum::GetValueAsString(State),
-		*UEnum::GetValueAsString(NewState));
-
 	State = NewState;
 }
 
@@ -291,6 +305,41 @@ void AStoryRadio::StopRadioAudio(float FadeOutSeconds)
 	if (RadioAudio->IsPlaying())
 	{
 		RadioAudio->FadeOut(FadeOutSeconds, 0.f);
+	}
+}
+
+void AStoryRadio::ShowNextSubtitle()
+{
+	if (!SubtitleWidget || !NewsSubtitles.IsValidIndex(SubtitleIndex))
+	{
+		return;
+	}
+
+	const FStoryRadioSubtitleLine& Line = NewsSubtitles[SubtitleIndex];
+	SubtitleWidget->SetSubtitle(Line.Text);
+
+	// 다음 줄 예약: 다음 줄 시작 시각 - 현재 줄 시작 시각
+	const int32 NextIndex = SubtitleIndex + 1;
+	if (NewsSubtitles.IsValidIndex(NextIndex))
+	{
+		const float Delay = FMath::Max(
+			0.01f, NewsSubtitles[NextIndex].StartTime - Line.StartTime);
+
+		SubtitleIndex = NextIndex;
+		GetWorldTimerManager().SetTimer(
+			SubtitleTimer, this, &AStoryRadio::ShowNextSubtitle,
+			Delay, false);
+	}
+}
+
+void AStoryRadio::HideSubtitle()
+{
+	GetWorldTimerManager().ClearTimer(SubtitleTimer);
+
+	if (SubtitleWidget)
+	{
+		SubtitleWidget->RemoveFromParent();
+		SubtitleWidget = nullptr;
 	}
 }
 
