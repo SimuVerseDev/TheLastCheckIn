@@ -29,6 +29,17 @@ public:
 	AStoryRadio();
 	
 protected:
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	
+	UFUNCTION()
+	void HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds);
+
+	void SetState(EStoryRadioState NewState);
+
+	double WindowStartSeconds = 0.0;
+	double WindowEndSeconds = 0.0;
+	
 	// ---------- 컴포넌트 ----------
 	UPROPERTY(VisibleAnywhere, Category = "Radio")
 	TObjectPtr<UStaticMeshComponent> Mesh;
