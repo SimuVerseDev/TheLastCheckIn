@@ -7,6 +7,8 @@
 #include "Core/Time/GameClockSubsystem.h"
 #include "Core/Time/GameTimeMath.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
+#include "Sound/SoundBase.h"
 
 AStoryRadio::AStoryRadio()
 {
@@ -38,6 +40,118 @@ AStoryRadio::AStoryRadio()
 	ViewCamera->SetRelativeLocation(FVector(-60.f, 0.f, 25.f));
 }
 
+/*
+Interactable
+*/
+
+bool AStoryRadio::CanInteract_Implementation(AActor* Interactor) const
+{
+	return State == EStoryRadioState::Static;
+}
+
+FText AStoryRadio::GetInteractPrompt_Implementation(AActor* Interactor) const
+{
+	return ListenPrompt;
+}
+
+void AStoryRadio::Interact_Implementation(AActor* Interactor)
+{
+	if (State != EStoryRadioState::Static)
+	{
+		return;
+	}
+
+	const APawn* Pawn = Cast<APawn>(Interactor);
+	APlayerController* PC =
+		Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr;
+
+	if (PC)
+	{
+		StartListening(PC);
+	}
+}
+
+void AStoryRadio::StartListening(APlayerController* PC)
+{
+	SetState(EStoryRadioState::Listening);
+	ListenerPC = PC;
+	
+	if (UGameClockSubsystem* Clock =
+		GetWorld()->GetSubsystem<UGameClockSubsystem>())
+	{
+		Clock->StopClock();
+	}
+
+	/* 
+	Phone과 동일
+	*/
+	PC->SetIgnoreMoveInput(true);
+	PC->SetIgnoreLookInput(true);
+	PC->SetViewTargetWithBlend(
+		this, CameraBlendTime, VTBlend_EaseInOut, 2.0f);
+	
+	RadioAudio->Stop();
+
+	if (TuningSound)
+	{
+		RadioAudio->SetSound(TuningSound);
+		RadioAudio->Play();
+
+		GetWorldTimerManager().SetTimer(
+			ListenTimer, this, &AStoryRadio::PlayNews,
+			TuningSound->GetDuration(), false);
+	}
+	else
+	{
+		PlayNews();
+	}
+}
+
+void AStoryRadio::PlayNews()
+{
+	if (!NewsSound)
+	{
+		FinishListening();
+		return;
+	}
+	
+	RadioAudio->SetSound(NewsSound);
+	RadioAudio->Play();
+
+	GetWorldTimerManager().SetTimer(
+		ListenTimer, this, &AStoryRadio::FinishListening,
+		NewsSound->GetDuration() + NewsTailSeconds, false);
+}
+
+void AStoryRadio::FinishListening()
+{
+	GetWorldTimerManager().ClearTimer(ListenTimer);
+	RadioAudio->Stop();
+
+	if (APlayerController* PC = ListenerPC.Get())
+	{
+		if (APawn* Pawn = PC->GetPawn())
+		{
+			PC->SetViewTargetWithBlend(
+				Pawn, CameraBlendTime, VTBlend_EaseInOut, 2.0f);
+		}
+		PC->SetIgnoreMoveInput(false);
+		PC->SetIgnoreLookInput(false);
+	}
+	ListenerPC.Reset();
+	
+	if (UWorld* World = GetWorld())
+	{
+		if (UGameClockSubsystem* Clock =
+			World->GetSubsystem<UGameClockSubsystem>())
+		{
+			Clock->ResumeClock();
+		}
+	}
+	SetState(EStoryRadioState::Done);
+}
+
+
 void AStoryRadio::BeginPlay()
 {
 	Super::BeginPlay();
@@ -60,6 +174,11 @@ void AStoryRadio::BeginPlay()
 
 void AStoryRadio::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (State == EStoryRadioState::Listening)
+	{
+		FinishListening();
+	}
+	
 	if (UWorld* World = GetWorld())
 	{
 		if (UGameClockSubsystem* Clock = World->GetSubsystem<UGameClockSubsystem>())

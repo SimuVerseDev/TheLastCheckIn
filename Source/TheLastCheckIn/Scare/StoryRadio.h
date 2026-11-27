@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "TimerManager.h"
 #include "GameFramework/Actor.h"
 #include "Core/Interaction/Interactable.h"
 #include "StoryRadio.generated.h"
@@ -27,6 +28,13 @@ class THELASTCHECKIN_API AStoryRadio : public AActor, public IInteractable
 	GENERATED_BODY()
 public:
 	AStoryRadio();
+	
+	/*
+	Interactable
+	*/
+	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
+	virtual FText GetInteractPrompt_Implementation(AActor* Interactor) const override;
+	virtual void Interact_Implementation(AActor* Interactor) override;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -110,4 +118,17 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Radio|Sound", meta = (ClampMin = "0", Units = "s"))
 	float StaticFadeOutSeconds = 1.5f;
+	
+	UPROPERTY(EditAnywhere, Category = "Radio|Sound", meta = (ClampMin = "0", Units = "s"))
+	float NewsTailSeconds = 0.8f;
+	
+	UPROPERTY(EditAnywhere, Category = "Radio|View")
+	FText ListenPrompt = NSLOCTEXT("StoryRadio", "Listen", "라디오 듣기");
+
+	void StartListening(APlayerController* PC);
+	void PlayNews();
+	void FinishListening();
+
+	TWeakObjectPtr<APlayerController> ListenerPC;
+	FTimerHandle ListenTimer;
 };
