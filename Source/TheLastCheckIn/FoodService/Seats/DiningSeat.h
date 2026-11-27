@@ -29,6 +29,12 @@ public:
     ATargetPoint* GetApproachPoint() const;
 
     FTransform GetSeatTransform() const;
+    
+    USceneComponent* GetPlatePoint() const
+    {
+        return PlatePoint.Get();
+    }
+    
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dining")
@@ -44,6 +50,10 @@ protected:
     // 의자에 앉기 전과 일어난 직후에 서 있을 위치.
     UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Dining")
     TObjectPtr<ATargetPoint> ApproachPoint;
+    
+    // 이 좌석의 손님이 접시를 놓는 식탁 위치.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dining")
+    TObjectPtr<USceneComponent> PlatePoint;
 
 private:
     UPROPERTY(Transient)

@@ -130,6 +130,11 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Schedule|Dinner",
         meta = (ClampMin = "1", ClampMax = "24"))
     int32 DinnerEndHour = 20;
+    
+    // 일행 간 석식 출발 간격. 게임 시간의 분 단위.
+    UPROPERTY(EditAnywhere, Category = "Schedule|Dinner",
+        meta = (ClampMin = "1"))
+    int32 DinnerDepartureIntervalMinutes = 20;
 
     // 석식 출발 후에도 객실에 남겨 둘 대기 인원.
     UPROPERTY(EditAnywhere, Category = "Schedule|Dinner",
@@ -179,4 +184,7 @@ private:
     // 투숙 번호별 당일 석식 일정.
     TMap<FGuid, FGuestDinnerPlan> DinnerPlans;
     int64 DinnerPlanDay = -1;
+    
+    // 다음 일행이 석식에 출발할 수 있는 게임 시각.
+    double NextDinnerDepartureSeconds = 0.0;
 };

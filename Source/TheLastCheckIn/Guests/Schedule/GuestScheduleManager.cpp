@@ -94,6 +94,7 @@ void AGuestScheduleManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
     ActiveParties.Reset();
     DinnerPlans.Reset();
     DinnerPlanDay = -1;
+    NextDinnerDepartureSeconds = 0.0;
     NextPartySize = 0;
 
     Super::EndPlay(EndPlayReason);
@@ -467,6 +468,9 @@ void AGuestScheduleManager::UpdateDinner(double CurrentSeconds)
     {
         DinnerPlans.Reset();
         DinnerPlanDay = DayIndex;
+
+        // 새날의 첫 일행은 석식 시작 시각부터 출발할 수 있다.
+        NextDinnerDepartureSeconds = 0.0;
     }
 
     const double DayStart = GameTime::GetDayStartSeconds(DayIndex);
@@ -475,11 +479,14 @@ void AGuestScheduleManager::UpdateDinner(double CurrentSeconds)
 
     const double EndSeconds = DayStart + GameTime::HoursToSeconds(DinnerEndHour);
 
-    if (CurrentSeconds >= EndSeconds)
+    // 석식 시간 밖이거나 다음 출발 시각 전이면 출발하지 않는다.
+    if (CurrentSeconds < StartSeconds
+        || CurrentSeconds >= EndSeconds
+        || CurrentSeconds < NextDinnerDepartureSeconds)
     {
         return;
     }
-
+    
     // 입실한 일행은 석식 시작 시각부터 출발한다. 시작 후 입실하면 바로 출발을 시도한다.
     for (const TObjectPtr<UGuestParty>& PartyRef : ActiveParties)
     {
@@ -497,11 +504,6 @@ void AGuestScheduleManager::UpdateDinner(double CurrentSeconds)
         Plan.ScheduledSeconds = FMath::Max(CurrentSeconds, StartSeconds);
 
         DinnerPlans.Add(Party->GetStayId(), Plan);
-    }
-
-    if (CurrentSeconds < StartSeconds)
-    {
-        return;
     }
 
     const double WorldNow = GetWorld()->GetTimeSeconds();
@@ -565,14 +567,22 @@ void AGuestScheduleManager::UpdateDinner(double CurrentSeconds)
 
         if (TryStartPartyDinner(Party, CurrentSeconds))
         {
-            // 일부만 출발했다면 복귀 후 남은 손님도 다시 보낸다.
+            // 아직 출발하지 않은 구성원이 있으면 다음 출발 대상으로 남긴다.
             Plan.bStarted = !Party->GetMembers().ContainsByPredicate(
                 [CurrentSeconds](const AGuestCharacter* Member)
                 {
                     const UGuestDiningComponent* Dining =
                         IsValid(Member) ? Member->GetDiningComponent() : nullptr;
+
                     return !IsValid(Dining) || !Dining->HasVisitedDinner(CurrentSeconds);
                 });
+
+            // 실제 출발이 성공한 시각부터 다음 일행의 간격을 계산한다.
+            NextDinnerDepartureSeconds =
+                CurrentSeconds + GameTime::MinutesToSeconds(FMath::Max(1, DinnerDepartureIntervalMinutes));
+
+            // 이번에는 한 일행만 출발시킨다.
+            break;
         }
     }
 }

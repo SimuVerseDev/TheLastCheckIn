@@ -18,8 +18,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Food|Pool")
     AFoodItemActor* AcquireFood(
         UFoodDefinition* Definition,
-        int32 Servings,
-        EFoodPresentation Presentation,
+        EFoodCookState InitialState,
         const FTransform& Transform);
 
     // 음식을 풀에 반환한다. 대여 당시 저장한 LeaseId를 전달한다.

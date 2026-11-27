@@ -6,16 +6,15 @@
 #include "FoodItemActor.generated.h"
 
 class UFoodPoolSubsystem;
-class ABuffetStation;
+class UFoodSnapSlotComponent;
 
-// 집기와 운반이 가능한 음식 액터. 사용 후 풀 반환.
 UCLASS()
 class THELASTCHECKIN_API AFoodItemActor : public AHKPhysicsPickupActor
 {
     GENERATED_BODY()
 
     friend class UFoodPoolSubsystem;
-    friend class ABuffetStation;
+    friend class UFoodSnapSlotComponent;
 
 public:
     AFoodItemActor();
@@ -27,58 +26,65 @@ public:
     }
 
     UFUNCTION(BlueprintPure, Category = "Food")
-    int32 GetServings() const
+    EFoodCookState GetCookState() const
     {
-        return Servings;
+        return CookState;
     }
 
     UFUNCTION(BlueprintPure, Category = "Food")
-    EFoodPresentation GetPresentation() const
-    {
-        return Presentation;
-    }
+    bool IsReadyToEat() const;
 
-    UFUNCTION(BlueprintPure, Category = "Food|Pool")
+    UFUNCTION(BlueprintPure, Category = "Food")
     bool IsActiveFood() const
     {
         return bActiveFood;
     }
 
-    // 현재 대여 번호. 풀에서 꺼낸 직후 저장해 두고 풀 반환 시 전달한다.
     UFUNCTION(BlueprintPure, Category = "Food|Pool")
     FGuid GetLeaseId() const
     {
         return LeaseId;
     }
 
-    // 사용 중인 음식의 대여 번호가 일치하는지 확인한다.
-    UFUNCTION(BlueprintPure, Category = "Food|Pool")
     bool MatchesLease(FGuid ExpectedLeaseId) const;
 
+    UFoodSnapSlotComponent* GetCurrentSlot() const;
+
+    bool BeginCooking();
+    void FinishCooking();
+    void CancelCooking();
+
+    virtual bool CanUse_Implementation(AActor* Interactor) const override;
+    virtual bool Use_Implementation(AActor* Interactor) override;
+
+    virtual void OnConstruction(const FTransform& Transform) override;
+
+protected:
+    virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+    // 레벨에 직접 배치한 음식에도 지정할 수 있다.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Food")
+    TObjectPtr<UFoodDefinition> Definition;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Food")
+    EFoodCookState CookState = EFoodCookState::Raw;
+
 private:
-    // 음식 종류, 인분 수, 위치를 설정하고 액터를 활성화한다.
     void ActivateFood(
         UFoodDefinition* InDefinition,
-        int32 InServings,
-        EFoodPresentation InPresentation,
+        EFoodCookState InState,
         const FTransform& Transform);
 
-    // 음식 정보와 움직임을 초기화하고 액터를 숨긴다.
     void ResetForPool();
+    void RefreshAppearance();
 
     UPROPERTY(Transient)
-    TObjectPtr<UFoodDefinition> Definition;
+    TWeakObjectPtr<UFoodSnapSlotComponent> CurrentSlot;
 
     UPROPERTY(Transient)
     TWeakObjectPtr<UFoodPoolSubsystem> PoolOwner;
 
-    // 이 액터에 남아 있는 인분 수
-    int32 Servings = 0;
-
-    EFoodPresentation Presentation = EFoodPresentation::Batch;
-
-    // 재사용 전후를 구분하는 대여 번호
     FGuid LeaseId;
-
     bool bActiveFood = false;
 };

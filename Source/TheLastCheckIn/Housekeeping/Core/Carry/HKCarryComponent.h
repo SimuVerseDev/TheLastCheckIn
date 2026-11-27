@@ -26,6 +26,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Housekeeping|Carry")
 	void Drop();
 
+	// 현재 들고 있는 물체가 일치할 때만 배치를 위해 해제한다.
+	bool ReleaseForPlacement(UPrimitiveComponent* ExpectedComponent);
+
 	UFUNCTION(BlueprintPure, Category="Housekeeping|Carry")
 	bool IsCarrying() const
 	{
@@ -65,6 +68,7 @@ public:
 	IInteractionExtension
 	*/
 	virtual AActor* FindInteractionTarget(const FVector& Start, const FVector& End) const override;
+	virtual bool AllowsFocusOn(AActor* Target) const override;
 	virtual bool BlocksFocus() const override
 	{
 		return IsCarrying();
