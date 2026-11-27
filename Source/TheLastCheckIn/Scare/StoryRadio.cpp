@@ -318,7 +318,6 @@ void AStoryRadio::ShowNextSubtitle()
 	const FStoryRadioSubtitleLine& Line = NewsSubtitles[SubtitleIndex];
 	SubtitleWidget->SetSubtitle(Line.Text);
 
-	// 다음 줄 예약: 다음 줄 시작 시각 - 현재 줄 시작 시각
 	const int32 NextIndex = SubtitleIndex + 1;
 	if (NewsSubtitles.IsValidIndex(NextIndex))
 	{
