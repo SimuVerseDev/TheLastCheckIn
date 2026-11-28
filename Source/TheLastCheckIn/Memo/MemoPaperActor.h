@@ -9,6 +9,7 @@
 class UStaticMeshComponent;
 class UMemoSubsystem;
 class AMemoBoardActor;
+class UMemoBoardWidget;
 
 UCLASS()
 class THELASTCHECKIN_API AMemoPaperActor
@@ -37,6 +38,10 @@ public:
 	// 레벨에 배치한 메모마다 지정합니다.
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Memo")
 	TObjectPtr<AMemoBoardActor> MemoBoard;
+
+	// Optional per-paper layout. Duplicate the example widget for other paper shapes.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Memo")
+	TSubclassOf<UMemoBoardWidget> ReaderWidgetClass;
 
 	// 해금된 메모인지 확인하면서 제목·내용을 가져옵니다.
 	bool TryGetReadableMemo(FMemoDefinition& OutData) const;

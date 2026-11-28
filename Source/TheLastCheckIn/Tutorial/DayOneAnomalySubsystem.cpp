@@ -161,10 +161,10 @@ void UDayOneAnomalySubsystem::Evaluate(double Now)
 		const bool bFlicker = Id == EDayOneAnomaly::LobbyFlicker;
 
 		const bool bCondition = bFlicker
-			? bInLobby
+			? (bInLobby || Now >= Entry.WindowEndSeconds)
 			: (Id == EDayOneAnomaly::ShadowFigure
-				? bViewingCCTV
-				: bViewingCCTV || bInStaffRoom);
+			   ? bViewingCCTV
+			   : bViewingCCTV || bInStaffRoom);
 
 		if (Entry.State == EDayOneAnomalyState::Active)
 		{
@@ -186,10 +186,9 @@ void UDayOneAnomalySubsystem::Evaluate(double Now)
 			continue;
 		}
 
-		// 조명은 정확히 18:30까지 진입을 허용합니다.
-		const bool bExpired = bFlicker
-			? Now > Entry.WindowEndSeconds
-			: Now >= Entry.WindowEndSeconds;
+		// 조명은 18:30 이후에도 미발생 상태라면 강제로 시작합니다.
+		const bool bExpired =
+			!bFlicker && Now >= Entry.WindowEndSeconds;
 
 		if (bExpired)
 		{
@@ -253,14 +252,14 @@ void UDayOneAnomalySubsystem::StartPresentation(
 	Entry.StartedAtSeconds = Now;
 	Entry.EndAtSeconds = EndAt;
 	
-// 조명은 로비에 있을 때 시작하므로 이를 목격으로 인정합니다.
-// 노크는 플레이어 근처에서 재생이 시작된 것을 청취로 인정합니다.
-// 형체는 CCTV 시야 검사를 통과해야 목격으로 인정합니다.
-if (Presentation == EDayOneAnomaly::LobbyFlicker
-	|| Presentation == EDayOneAnomaly::DoorKnock)
-{
-	ReportPresentationWitnessed(Presentation);
-}
+	// 조명은 플레이어가 로비에 있을 때만 목격으로 인정합니다.
+    // 노크는 플레이어 근처에서 재생이 시작된 것을 청취로 인정합니다.
+    // 형체는 CCTV 시야 검사를 통과해야 목격으로 인정합니다.
+	if ((Presentation == EDayOneAnomaly::LobbyFlicker && bInLobby)
+		|| Presentation == EDayOneAnomaly::DoorKnock)
+	{
+		ReportPresentationWitnessed(Presentation);
+	}
 
 	OnPresentationStarted.Broadcast(Presentation);
 }
@@ -343,12 +342,21 @@ void UDayOneAnomalySubsystem::SetLobbyLightActors(
 
 void UDayOneAnomalySubsystem::SetPlayerInLobby(bool bInside)
 {
-    bInLobby = bInside;
+	bInLobby = bInside;
 
-    if (Clock)
-    {
-        Evaluate(Clock->GetTotalGameSeconds());
-    }
+	if (Clock)
+	{
+		Evaluate(Clock->GetTotalGameSeconds());
+	}
+
+	// 조명 이상현상 진행 중 로비에 들어오면 목격 처리합니다.
+	if (bInLobby
+		&& GetProgress(EDayOneAnomaly::LobbyFlicker).State
+			== EDayOneAnomalyState::Active)
+	{
+		ReportPresentationWitnessed(
+			EDayOneAnomaly::LobbyFlicker);
+	}
 }
 
 bool UDayOneAnomalySubsystem::StartLobbyFlicker()

@@ -2,6 +2,7 @@
 
 #include "Memo/MemoPaperActor.h"
 #include "Memo/MemoType.h"
+#include "Memo/MemoBoardWidget.h"
 
 #include "Blueprint/UserWidget.h"
 #include "Camera/CameraComponent.h"
@@ -142,7 +143,14 @@ void AMemoBoardActor::OpenBoard(APlayerController* PC)
     BoardWidget->AddToViewport(100);
 
     // BP에서 위젯의 BoardReference 등을 설정합니다.
-    SetupBoardWidget();
+    if (UMemoBoardWidget* MemoUI = Cast<UMemoBoardWidget>(BoardWidget))
+    {
+        MemoUI->InitializeBoard(this);
+    }
+    else
+    {
+        SetupBoardWidget();
+    }
 
     FInputModeUIOnly InputMode;
     InputMode.SetWidgetToFocus(BoardWidget->TakeWidget());
@@ -275,7 +283,46 @@ void AMemoBoardActor::Tick(float DeltaSeconds)
 
         if (Paper->TryGetReadableMemo(Data))
         {
-            ShowMemoDetails(Data.Title, Data.Body);
+            // A paper may use its own duplicated UMG layout. Keep the same board camera.
+            UClass* DesiredWidgetClass = Paper->ReaderWidgetClass
+                ? Paper->ReaderWidgetClass.Get() : BoardWidgetClass.Get();
+            if (DesiredWidgetClass && BoardWidget->GetClass() != DesiredWidgetClass)
+            {
+                APlayerController* PC = ViewingPC.Get();
+                if (UUserWidget* Replacement = CreateWidget<UUserWidget>(PC, DesiredWidgetClass))
+                {
+                    BoardWidget->RemoveFromParent();
+                    BoardWidget = Replacement;
+                    Replacement->AddToViewport(100);
+                    Replacement->SetIsFocusable(true);
+                    if (UMemoBoardWidget* MemoUI = Cast<UMemoBoardWidget>(Replacement))
+                    {
+                        MemoUI->InitializeBoard(this);
+                    }
+                    else
+                    {
+                        SetupBoardWidget();
+                    }
+                    FInputModeUIOnly InputMode;
+                    InputMode.SetWidgetToFocus(Replacement->TakeWidget());
+                    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+                    PC->SetInputMode(InputMode);
+                }
+            }
+            if (UMemoBoardWidget* MemoUI = Cast<UMemoBoardWidget>(BoardWidget))
+            {
+                if (MemoUI->DisplayMemo(Data.Title, Data.Body))
+                {
+                    ConfirmFocusedMemoRead();
+                    // The PNG reader replaces the enlarged paper while it is open.
+                    Paper->SetActorHiddenInGame(true);
+                    bPaperHiddenForReader = true;
+                }
+            }
+            else
+            {
+                ShowMemoDetails(Data.Title, Data.Body);
+            }
         }
         else
         {
@@ -301,6 +348,10 @@ void AMemoBoardActor::RestoreSelectedMemo()
 {
     if (AMemoPaperActor* Paper = SelectedMemo.Get())
     {
+        if (bPaperHiddenForReader)
+        {
+            Paper->SetActorHiddenInGame(false);
+        }
         Paper->SetActorTransform(
             OriginalMemoTransform,
             false,
@@ -309,6 +360,7 @@ void AMemoBoardActor::RestoreSelectedMemo()
     }
 
     SelectedMemo.Reset();
+    bPaperHiddenForReader = false;
     bHasSelection = false;
     bMemoArrived = false;
     MemoMoveElapsed = 0.0f;
@@ -324,7 +376,14 @@ void AMemoBoardActor::Back()
     if (bHasSelection)
     {
         RestoreSelectedMemo();
-        HideMemoDetails();
+        if (UMemoBoardWidget* MemoUI = Cast<UMemoBoardWidget>(BoardWidget))
+        {
+            MemoUI->HideMemo();
+        }
+        else
+        {
+            HideMemoDetails();
+        }
 
         if (BoardWidget)
         {

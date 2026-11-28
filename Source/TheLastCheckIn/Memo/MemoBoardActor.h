@@ -112,6 +112,7 @@ private:
     bool bBoardOpen = false;
     bool bHasSelection = false;
     bool bMemoArrived = false;
+    bool bPaperHiddenForReader = false;
     bool bPreviousMouseCursor = false;
 
     float CameraWaitRemaining = 0.0f;

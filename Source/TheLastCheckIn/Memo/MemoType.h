@@ -8,9 +8,9 @@
 UENUM(BlueprintType)
 enum class EMemoState : uint8
 {
-	Locked, // 보이지 않음
-	Unread, // 활성화되었지만 아직 읽지 않음
-	Read    // 읽었으며 다시 열람 가능
+	Locked, // 종이는 보이지만 아직 읽을 수 없음
+	Unread, // 해금됨: 첫 열람 전까지 하이라이트
+	Read    // 읽음: 하이라이트 없이 다시 열람 가능
 };
 
 USTRUCT(BlueprintType)
