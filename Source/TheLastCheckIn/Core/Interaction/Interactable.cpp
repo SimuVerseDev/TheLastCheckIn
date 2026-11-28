@@ -1,5 +1,8 @@
 #include "Core/Interaction/Interactable.h"
 
+/*
+Interact : E키
+*/
 bool IInteractable::IsInteractionActive_Implementation(AActor* Interactor) const
 {
 	return false;
@@ -8,6 +11,11 @@ bool IInteractable::IsInteractionActive_Implementation(AActor* Interactor) const
 bool IInteractable::CanInteract_Implementation(AActor* Interactor) const
 {
 	return true;
+}
+
+bool IInteractable::CanInteractWhileCarrying_Implementation(AActor* Interactor) const
+{
+	return false;
 }
 
 FText IInteractable::GetInteractPrompt_Implementation(AActor* Interactor) const
@@ -24,6 +32,9 @@ void IInteractable::Interact_Implementation(AActor* Interactor)
 {
 }
 
+/*
+Use : LMB
+*/
 bool IInteractable::CanUse_Implementation(AActor* Interactor) const
 {
 	return false;
@@ -39,6 +50,9 @@ bool IInteractable::Use_Implementation(AActor* Interactor)
 	return false;
 }
 
+/*
+Focus
+*/
 void IInteractable::OnInteractFocusBegin_Implementation(AActor* Interactor)
 {
 }

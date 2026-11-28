@@ -78,6 +78,23 @@ bool UPlayerInteractionComponent::CanFocus(AActor* Actor) const
 	return IInteractable::Execute_CanUse(Actor, Pawn) || IInteractable::Execute_CanInteract(Actor, Pawn);
 }
 
+bool UPlayerInteractionComponent::IsFocusBlockedFor(AActor* Target, bool bAllowExceptions) const
+{
+	for (const IInteractionExtension* Extension : GetExtensions())
+	{
+		if (!Extension->BlocksFocus())
+		{
+			continue;
+		}
+
+		if (!bAllowExceptions || !IsValid(Target) || !Extension->AllowsFocusOn(Target))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void UPlayerInteractionComponent::EnsureInputSetup(APlayerController* PC)
 {
 	if (InputOwner.Get() == PC)
@@ -114,17 +131,15 @@ void UPlayerInteractionComponent::UpdateFocus(APlayerController* PC)
 	*/
 	AActor* Active = GetActiveInteraction();
 	const TArray<IInteractionExtension*> Extensions = GetExtensions();
-	if (!Active)
+	const auto CanSelectTarget = [this, Active](AActor* Target)
 	{
-		for (const IInteractionExtension* Extension : Extensions)
+		// 카트 등 진행 중인 상호작용의 기존 포커스 규칙은 유지한다.
+		if (!Active && IsFocusBlockedFor(Target))
 		{
-			if (Extension->BlocksFocus())
-			{
-				SetFocus(nullptr);
-				return;
-			}
+			return false;
 		}
-	}
+		return CanFocus(Target);
+	};
 
 	APawn* Pawn = Cast<APawn>(GetOwner());
 	FVector ViewLocation;
@@ -160,13 +175,13 @@ void UPlayerInteractionComponent::UpdateFocus(APlayerController* PC)
 		if (Hit.bBlockingHit)
 		{
 			RayEnd = Hit.Location;
-			if (CanFocus(Hit.GetActor()))
+			if (CanSelectTarget(Hit.GetActor()))
 			{
 				Found = Hit.GetActor();
 				break;
 			}
 		}
-		else if (!OverlapTarget && CanFocus(Hit.GetActor()))
+		else if (!OverlapTarget && CanSelectTarget(Hit.GetActor()))
 		{
 			// An overlapping cart body remains selectable without hiding the items it carries.
 			// Multi traces stop at the first blocking hit, so targets behind walls stay excluded.
@@ -183,7 +198,7 @@ void UPlayerInteractionComponent::UpdateFocus(APlayerController* PC)
 		for (const IInteractionExtension* Extension : Extensions)
 		{
 			AActor* Target = Extension->FindInteractionTarget(ViewLocation, RayEnd);
-			if (CanFocus(Target))
+			if (CanSelectTarget(Target))
 			{
 				Found = Target;
 				break;
@@ -263,20 +278,11 @@ void UPlayerInteractionComponent::CancelHold()
 void UPlayerInteractionComponent::UpdatePrompt()
 {
 	FString Message;
-	bool bBlocked = false;
-	for (const IInteractionExtension* Extension : GetExtensions())
-	{
-		if (Extension->BlocksFocus())
-		{
-			bBlocked = true;
-			break;
-		}
-	}
-	AActor* Target = GetActiveInteraction();
-	if (!Target)
-	{
-		Target = FocusedActor.Get();
-	}
+	AActor* Active = GetActiveInteraction();
+	AActor* Target = Active ? Active : FocusedActor.Get();
+
+	// 진행 중인 상호작용은 기존 차단 규칙을 유지한다.
+	const bool bBlocked = IsFocusBlockedFor(Target, Active == nullptr);
 	if (!bBlocked && IsInteractable(Target))
 	{
 		AActor* Pawn = GetOwner();
@@ -300,6 +306,10 @@ void UPlayerInteractionComponent::HandleInteractStarted()
 	if (!Target)
 	{
 		Target = FocusedActor.Get();
+		if (IsFocusBlockedFor(Target))
+		{
+			return;
+		}
 	}
 	if (!IsInteractable(Target) || !IInteractable::Execute_CanInteract(Target, Pawn))
 	{
@@ -332,6 +342,21 @@ AActor* UPlayerInteractionComponent::GetActiveInteraction()
 
 void UPlayerInteractionComponent::ExecuteInteraction(AActor* Target)
 {
+	if (!IsInteractable(Target))
+	{
+		return;
+	}
+
+	AActor* Active = GetActiveInteraction();
+	if (!Active && IsFocusBlockedFor(Target))
+	{
+		return;
+	}
+	if (!IInteractable::Execute_CanInteract(Target, GetOwner()))
+	{
+		return;
+	}
+
 	IInteractable::Execute_Interact(Target, GetOwner());
 	ActiveInteraction = IsValid(Target)
 		&& IInteractable::Execute_IsInteractionActive(Target, GetOwner()) ? Target : nullptr;

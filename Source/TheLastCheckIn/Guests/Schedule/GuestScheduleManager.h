@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -11,6 +11,17 @@ class AGuestCharacter;
 class ARoomActor;
 class UGuestParty;
 class ABuffetStation;
+class ADiningSeat;
+class UFoodDefinition;
+
+struct FGuestDinnerPlan
+{
+    double ScheduledSeconds = 0.0;
+    double NextAttemptWorldSeconds = 0.0;
+
+    // 일행 전원이 석식에 출발했으면 당일 출발 시도를 마친다.
+    bool bStarted = false;
+};
 
 UCLASS()
 class THELASTCHECKIN_API AGuestScheduleManager : public AActor
@@ -30,7 +41,7 @@ protected:
 
     UPROPERTY(EditInstanceOnly, Category = "Schedule|References")
     TObjectPtr<AActor> SpawnPoint;
-    
+
     // 두 번째~네 번째 손님이 등장할 위치(일행)
     // 첫 번째 손님은 SpawnPoint 사용
     UPROPERTY(EditInstanceOnly, Category = "Schedule|Party")
@@ -55,7 +66,7 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Schedule|Guests",
         meta = (ClampMin = "0"))
     int32 DailyGuestLimit = 12;
-    
+
     // 한 일행의 최소 인원
     UPROPERTY(EditAnywhere, Category = "Schedule|Party",
         meta = (ClampMin = "1", ClampMax = "4"))
@@ -89,7 +100,7 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Schedule|Guests",
         meta = (ClampMin = "1"))
     int32 MaxArrivalIntervalMinutes = 30;
-    
+
     UPROPERTY(EditAnywhere, Category = "Schedule|Breakfast")
     bool bEnableBreakfast = true;
 
@@ -105,32 +116,75 @@ protected:
     UPROPERTY(EditInstanceOnly, Category = "Schedule|Breakfast")
     TArray<TObjectPtr<ABuffetStation>> BreakfastBuffets;
 
-private:
+    // 조식과 석식 손님이 함께 사용할 좌석.
+    UPROPERTY(EditInstanceOnly, Category = "Schedule|Dining")
+    TArray<TObjectPtr<ADiningSeat>> DiningSeats;
 
+    UPROPERTY(EditAnywhere, Category = "Schedule|Dinner")
+    bool bEnableDinner = true;
+
+    UPROPERTY(EditAnywhere, Category = "Schedule|Dinner",
+        meta = (ClampMin = "0", ClampMax = "23"))
+    int32 DinnerStartHour = 16;
+
+    UPROPERTY(EditAnywhere, Category = "Schedule|Dinner",
+        meta = (ClampMin = "1", ClampMax = "24"))
+    int32 DinnerEndHour = 20;
+    
+    // 일행 간 석식 출발 간격. 게임 시간의 분 단위.
+    UPROPERTY(EditAnywhere, Category = "Schedule|Dinner",
+        meta = (ClampMin = "1"))
+    int32 DinnerDepartureIntervalMinutes = 20;
+
+    // 석식 출발 후에도 객실에 남겨 둘 대기 인원.
+    UPROPERTY(EditAnywhere, Category = "Schedule|Dinner",
+        meta = (ClampMin = "1"))
+    int32 MinRoomGuestsForAnomaly = 1;
+
+    // 현재는 스테이크와 샐러드 데이터 에셋을 등록한다.
+    UPROPERTY(EditAnywhere, Category = "Schedule|Dinner")
+    TArray<TObjectPtr<UFoodDefinition>> DinnerMenu;
+
+private:
     UFUNCTION()
     void HandleTimeAdvanced(double PreviousSeconds, double CurrentSeconds);
-    
+
+    // 입실과 객실 배정.
     void TryAdmitGuest(double CurrentSeconds);
     bool HasAvailableRoom() const;
 
+    UFUNCTION()
+    void HandlePartyRoomAssigned(UGuestParty* Party);
+
+    UFUNCTION()
+    void HandlePartyCheckedIn(UGuestParty* Party);
+
+    // 식당 방문 진행과 석식 교대.
+    void UpdateDining(double CurrentSeconds);
+    void UpdateDinner(double CurrentSeconds);
+
+    bool IsDinnerCandidate(const UGuestParty* Party, double CurrentSeconds) const;
+    int32 CountAvailableRoomGuests(double CurrentSeconds) const;
+
+    // 일부라도 출발했다면 true를 반환
+    bool TryStartPartyDinner(UGuestParty* Party, double CurrentSeconds);
+
     TWeakObjectPtr<UGameClockSubsystem> Clock;
 
-    
     int32 NextPartySize = 0;
     int32 SpawnFailureCount = 0;
     bool bArrivalsDisabled = false;
     int64 ArrivalDayIndex = -1;
     int32 AdmittedToday = 0;
     double NextArrivalSeconds = 0.0;
-    
+
     UPROPERTY(Transient)
     TArray<TObjectPtr<UGuestParty>> ActiveParties;
 
-    UFUNCTION()
-    void HandlePartyRoomAssigned(UGuestParty* Party);
+    // 투숙 번호별 당일 석식 일정.
+    TMap<FGuid, FGuestDinnerPlan> DinnerPlans;
+    int64 DinnerPlanDay = -1;
     
-    UFUNCTION()
-    void HandlePartyCheckedIn(UGuestParty* Party);
-    
-    void UpdateBreakfast(double CurrentSeconds);
+    // 다음 일행이 석식에 출발할 수 있는 게임 시각.
+    double NextDinnerDepartureSeconds = 0.0;
 };

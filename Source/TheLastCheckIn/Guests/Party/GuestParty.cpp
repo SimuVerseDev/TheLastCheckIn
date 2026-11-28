@@ -1,4 +1,4 @@
-﻿#include "Guests/Party/GuestParty.h"
+#include "Guests/Party/GuestParty.h"
 #include "TheLastCheckIn.h"
 
 #include "Guests/GuestCharacter.h"
@@ -8,6 +8,7 @@
 #include "Rooms/RoomActor.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "FoodService/GuestDiningComponent.h"
 
 UWorld* UGuestParty::GetWorld() const
 {
@@ -238,33 +239,6 @@ void UGuestParty::CheckMovementProgress()
         return;
     }
 
-    const int32 RoomNumber = IsValid(AssignedRoom.Get()) ? AssignedRoom->GetRoomNumber() : -1;
-    const FString StateName = StaticEnum<EGuestPartyState>()->GetNameStringByValue(static_cast<int64>(State));
-    const bool bRetriesExhausted = MovementRetryCount >= MaxMovementRetries;
-    UE_LOG(LogGuests, Warning,
-        TEXT("GuestParty %s: Movement timeout; room=%d roomActor=%s state=%s(%d) elapsed=%.2fs timeout=%.2fs; %s retry=%d/%d pending=%d/%d."),
-        *PartyId.ToString(), RoomNumber, *GetNameSafe(AssignedRoom.Get()), *StateName, static_cast<int32>(State),
-        Now - MovementAttemptStartedAt, MovementTimeoutSeconds,
-        bRetriesExhausted ? TEXT("cancelling visit") : TEXT("retrying"),
-        bRetriesExhausted ? MovementRetryCount : MovementRetryCount + 1, MaxMovementRetries,
-        PendingMembers.Num(), GetSize());
-
-    // AI 재시작/풀 반환 전에 기록해야 기존 목표와 예약 좌표를 확인할 수 있음.
-    for (const AGuestCharacter* Member : PendingMembers)
-    {
-        const AActor* MemberTarget = Member->GetDestinationActor();
-        const FString ReservedLocation = Member->bHasReservedMoveLocation
-            ? Member->ReservedMoveLocation.ToString() : TEXT("unset");
-        const FString TargetLocation = IsValid(MemberTarget)
-            ? MemberTarget->GetActorLocation().ToString() : TEXT("unset");
-        UE_LOG(LogGuests, Warning,
-            TEXT("GuestParty %s: Pending guest; room=%d guest=%s state=%s location=(%s) velocity=(%s) target=%s targetLocation=(%s) reservedLocation=(%s)."),
-            *PartyId.ToString(), RoomNumber, *Member->GetName(),
-            *StaticEnum<EGuestState>()->GetNameStringByValue(static_cast<int64>(Member->GetGuestState())),
-            *Member->GetActorLocation().ToString(), *Member->GetVelocity().ToString(),
-            *GetNameSafe(MemberTarget), *TargetLocation, *ReservedLocation);
-    }
-
     if (MovementRetryCount >= MaxMovementRetries)
     {
         CancelVisitAfterMovementFailure();
@@ -283,12 +257,6 @@ void UGuestParty::CheckMovementProgress()
 
 void UGuestParty::CancelVisitAfterMovementFailure()
 {
-    UE_LOG(LogGuests, Warning,
-        TEXT("GuestParty %s: Cancelling visit after movement failure; room=%d roomActor=%s state=%s retries=%d/%d; returning %d guests to pool."),
-        *PartyId.ToString(), IsValid(AssignedRoom.Get()) ? AssignedRoom->GetRoomNumber() : -1,
-        *GetNameSafe(AssignedRoom.Get()),
-        *StaticEnum<EGuestPartyState>()->GetNameStringByValue(static_cast<int64>(State)),
-        MovementRetryCount, MaxMovementRetries, GetMembers().Num());
     StopMovementMonitoring();
 
     if (IsValid(AssignedRoom.Get()))
@@ -390,8 +358,8 @@ bool UGuestParty::TryAssignRoom(ARoomActor* Room)
     bWillStayBehind =
         CheckoutPolicy == EGuestCheckoutPolicy::RequireRequest ||
         (CheckoutPolicy == EGuestCheckoutPolicy::Random &&
-         (StayBehindChance >= 1.0f ||
-          (StayBehindChance > 0.0f &&
+        (StayBehindChance >= 1.0f ||
+        (StayBehindChance > 0.0f &&
            FMath::FRand() < StayBehindChance)));
 
     OnRoomAssigned.Broadcast(this);
@@ -455,6 +423,7 @@ bool UGuestParty::CanRequestCheckout() const
 {
     return State == EGuestPartyState::WaitingForCheckoutRequest
         && !HasAnomalyParticipants()
+        && !HasDiningParticipants()
         && IsValid(AssignedRoom.Get())
         && IsValid(LobbyTarget.Get());
 }
@@ -529,10 +498,12 @@ void UGuestParty::Advance(double CurrentSeconds)
         }
     }
 
-    if (State == EGuestPartyState::Staying &&
-        !HasAnomalyParticipants() && //사건 참여자가 있는 일행은 자동 퇴실을 보류
-        CheckoutAtSeconds >= 0.0 &&
-        CurrentSeconds >= CheckoutAtSeconds)
+    // 사건과 식당 방문이 끝난 뒤 퇴실을 시작한다.
+    if (State == EGuestPartyState::Staying
+        && !HasAnomalyParticipants()
+        && !HasDiningParticipants()
+        && CheckoutAtSeconds >= 0.0
+        && CurrentSeconds >= CheckoutAtSeconds)
     {
         if (bWillStayBehind)
         {
@@ -570,12 +541,13 @@ void UGuestParty::Advance(double CurrentSeconds)
     }
 }
 
+// 이상행동 참여 조건
 bool UGuestParty::CanParticipateInAnomaly() const
 {
     return State == EGuestPartyState::Staying
         && IsValid(AssignedRoom.Get())
         && GetMembers().Num() == GetSize()
-        && AllMembersInState(EGuestState::Staying);
+        && !bDinnerDepartureReserved;
 }
 
 bool UGuestParty::HasAnomalyParticipants() const
@@ -592,4 +564,70 @@ bool UGuestParty::HasAnomalyParticipants() const
     }
 
     return false;
+}
+
+// 식당 이용 확인과 석식 출발 예약
+bool UGuestParty::HasDiningParticipants() const
+{
+    if (bDinnerDepartureReserved)
+    {
+        return true;
+    }
+
+    for (AGuestCharacter* Member : GetMembers())
+    {
+        const UGuestDiningComponent* Dining = Member->GetDiningComponent();
+
+        if (IsValid(Dining) && Dining->IsBusy())
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool UGuestParty::CanStartDinner() const
+{
+    if (State != EGuestPartyState::Staying
+        || !IsValid(AssignedRoom.Get())
+        || !StayId.IsValid()
+        || HasDiningParticipants()
+        || HasAnomalyParticipants())
+    {
+        return false;
+    }
+
+    const TArray<AGuestCharacter*> CurrentMembers = GetMembers();
+
+    if (CurrentMembers.IsEmpty()
+        || CurrentMembers.Num() != GetSize()
+        || !AllMembersInState(EGuestState::Staying))
+    {
+        return false;
+    }
+
+    for (AGuestCharacter* Member : CurrentMembers)
+    {
+        if (Member->IsActorBeingDestroyed()
+            || Member->IsActionMovementPaused()
+            || !IsValid(Member->GetDiningComponent())
+            || !IsValid(Member->GetAnomalyComponent()))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool UGuestParty::TryReserveDinnerDeparture()
+{
+    if (!CanStartDinner())
+    {
+        return false;
+    }
+
+    bDinnerDepartureReserved = true;
+    return true;
 }

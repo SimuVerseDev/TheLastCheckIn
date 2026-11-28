@@ -6,6 +6,7 @@
 #include "Guests/GuestCharacter.h"
 #include "Guests/GuestAIController.h"
 #include "Guests/Party/GuestParty.h"
+#include "FoodService/GuestDiningComponent.h"
 #include "Animation/AnimMontage.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -193,9 +194,13 @@ bool UGuestAnomalyComponent::CanStartFor(UGuestAnomalyDefinition* InDefinition, 
     }
 
     UGuestParty* Party = Guest->GetParty();
+    const UGuestDiningComponent* Dining = Guest->GetDiningComponent();
 
+    // 같은 일행의 다른 손님이 식사 중이어도 객실에 남은 손님은 참여할 수 있다.
     return IsValid(Party)
         && Party->CanParticipateInAnomaly()
+        && (!IsValid(Dining) || !Dining->IsBusy())
+        && !Guest->IsActionMovementPaused()
         && Guest->GetGuestState() == EGuestState::Staying;
 }
 

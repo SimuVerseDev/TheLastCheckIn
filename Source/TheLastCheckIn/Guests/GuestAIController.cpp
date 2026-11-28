@@ -60,18 +60,17 @@ bool AGuestAIController::StartGuestAI(AActor* StartTarget)
 		return false;
 	}
 
-	const bool bUseCounterSlot =
-		Guest->GetGuestState() == EGuestState::MovingToCounter;
-	const bool bUseQueuePoint =
-		Guest->GetGuestState() == EGuestState::MovingToBuffetQueue;
-	const bool bUseFixedLocation = bUseCounterSlot || bUseQueuePoint;
+	const EGuestState State = Guest->GetGuestState();
 
-	BlackboardComponent->SetValueAsObject(
-		TEXT("TargetActor"), StartTarget);
+	const bool bUseCounterSlot = State == EGuestState::MovingToCounter;
+	const bool bUseQueuePoint = State == EGuestState::MovingToBuffetQueue;
+	const bool bUseSeatPoint = State == EGuestState::MovingToDiningSeat;
+	const bool bUseFixedLocation = bUseCounterSlot || bUseQueuePoint || bUseSeatPoint;
 
-	// 기존 BT의 고정 위치 이동 경로를 카운터와 식당 줄에서 함께 사용한다.
-	BlackboardComponent->SetValueAsBool(
-		TEXT("UseCounterSlot"), bUseFixedLocation);
+	BlackboardComponent->SetValueAsObject(TEXT("TargetActor"), StartTarget);
+
+	// 카운터, 식당 줄, 의자 앞 이동은 지정된 고정 위치를 사용한다.
+	BlackboardComponent->SetValueAsBool(TEXT("UseCounterSlot"), bUseFixedLocation);
 
 	if (bUseFixedLocation)
 	{
@@ -95,8 +94,7 @@ bool AGuestAIController::StartGuestAI(AActor* StartTarget)
 		}
 
 		UNavigationSystemV1* Nav =
-			FNavigationSystem::GetCurrent<UNavigationSystemV1>(
-				GetWorld());
+			FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
 
 		FNavLocation ProjectedLocation;
 
@@ -240,6 +238,7 @@ void AGuestAIController::CheckFinalApproach()
 	AGuestCharacter* Guest = Cast<AGuestCharacter>(GetPawn());
 	UCrowdFollowingComponent* Crowd = Cast<UCrowdFollowingComponent>(GetPathFollowingComponent());
 	const UBlackboardComponent* BlackboardComponent = GetBlackboardComponent();
+
 	if (!IsValid(Guest) ||
 		!IsValid(Crowd) ||
 		!IsValid(BlackboardComponent)
@@ -256,6 +255,7 @@ void AGuestAIController::CheckFinalApproach()
 		&& State != EGuestState::MovingToLobby
 		&& State != EGuestState::MovingToExit
 		&& State != EGuestState::MovingToBuffetQueue
+		&& State != EGuestState::MovingToDiningSeat
 		&& State != EGuestState::MovingToBuffet
 		&& State != EGuestState::ReturningFromBuffet)
 	{
@@ -269,6 +269,7 @@ void AGuestAIController::CheckFinalApproach()
 	const FVector Goal = BlackboardComponent->GetValueAsVector(TEXT("MoveLocation"));
 	const double DistanceSquared = FVector::DistSquared2D(Location, Goal);
 	const float ApproachRadius = Radius * 2.0f + AGuestCharacter::MoveAcceptanceRadius;
+
 	if (Goal.ContainsNaN() || DistanceSquared > FMath::Square(ApproachRadius) ||
 		DistanceSquared <= FMath::Square(AGuestCharacter::MoveAcceptanceRadius) ||
 		FMath::Abs(Location.Z - HalfHeight - Goal.Z) > AGuestCharacter::MoveAcceptanceRadius ||
@@ -295,6 +296,7 @@ void AGuestAIController::CheckFinalApproach()
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(Guest);
 	const FVector GoalCenter(Goal.X, Goal.Y, Location.Z);
+
 	if (GetWorld()->SweepTestByProfile(Location, GoalCenter, FQuat::Identity,
 		Capsule->GetCollisionProfileName(), FCollisionShape::MakeCapsule(Radius, HalfHeight), Params))
 	{
@@ -305,9 +307,6 @@ void AGuestAIController::CheckFinalApproach()
 	Crowd->SuspendCrowdSteering(true);
 	GetWorldTimerManager().ClearTimer(FinalApproachTimerHandle);
 	NearGoalStallStartedAt = -1.0;
-	UE_LOG(LogGuests, Log,
-		TEXT("Guest %s: Recovering stalled final approach; distance=%.1f location=(%s) goal=(%s)."),
-		*Guest->GetName(), FMath::Sqrt(DistanceSquared), *Location.ToString(), *Goal.ToString());
 }
 
 

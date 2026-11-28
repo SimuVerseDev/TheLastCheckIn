@@ -70,6 +70,7 @@ private:
 	
 	static bool IsInteractable(AActor* Actor);
 	bool CanFocus(AActor* Actor) const;
+	bool IsFocusBlockedFor(AActor* Target, bool bAllowExceptions = true) const;
 
 	void EnsureInputSetup(APlayerController* PC);
 	void UpdateFocus(APlayerController* PC);
